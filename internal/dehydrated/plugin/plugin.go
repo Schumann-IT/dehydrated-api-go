@@ -5,15 +5,12 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
-// Plugin defines the interface that all plugins must implement
+// Plugin is the interface that must be implemented by all plugins
 type Plugin interface {
-	// Name returns the unique name of the plugin
-	Name() string
-
-	// Initialize sets up the plugin with the given configuration
+	// Initialize initializes the plugin with configuration
 	Initialize(cfg *config.Config) error
 
-	// EnrichDomainEntry allows the plugin to add information to a domain entry
+	// EnrichDomainEntry enriches a domain entry with additional metadata
 	EnrichDomainEntry(entry *model.DomainEntry) error
 
 	// Close cleans up any resources used by the plugin
