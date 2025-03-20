@@ -8,13 +8,13 @@ import (
 
 // DomainHandler handles HTTP requests for domain operations
 type DomainHandler struct {
-	domainService *service.DomainService
+	service *service.DomainService
 }
 
 // NewDomainHandler creates a new DomainHandler instance
-func NewDomainHandler(domainService *service.DomainService) *DomainHandler {
+func NewDomainHandler(service *service.DomainService) *DomainHandler {
 	return &DomainHandler{
-		domainService: domainService,
+		service: service,
 	}
 }
 
@@ -30,7 +30,7 @@ func (h *DomainHandler) RegisterRoutes(app *fiber.App) {
 
 // ListDomains handles GET /api/v1/domains
 func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
-	entries, err := h.domainService.ListDomains()
+	entries, err := h.service.ListDomains()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.DomainsResponse{
 			Success: false,
@@ -54,7 +54,7 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.GetDomain(domain)
+	entry, err := h.service.GetDomain(domain)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
@@ -78,7 +78,7 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.CreateDomain(req)
+	entry, err := h.service.CreateDomain(req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(model.DomainResponse{
 			Success: false,
@@ -110,7 +110,7 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.UpdateDomain(domain, req)
+	entry, err := h.service.UpdateDomain(domain, req)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
@@ -134,7 +134,7 @@ func (h *DomainHandler) DeleteDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.domainService.DeleteDomain(domain); err != nil {
+	if err := h.service.DeleteDomain(domain); err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
 			Error:   err.Error(),

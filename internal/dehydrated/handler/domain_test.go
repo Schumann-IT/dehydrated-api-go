@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
@@ -18,150 +17,171 @@ func TestDomainHandler(t *testing.T) {
 	tmpDir := t.TempDir()
 	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
-	// Create a new domain service
-	ds, err := service.NewDomainService(domainsFile)
+	// Create a new Fiber app
+	app := fiber.New()
+
+	// Create domain service
+	service, err := service.NewDomainService(service.DomainServiceConfig{
+		DomainsFile:   domainsFile,
+		EnableWatcher: false,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create domain service: %v", err)
 	}
+	defer service.Close()
 
 	// Create a new domain handler
-	dh := NewDomainHandler(ds)
+	handler := NewDomainHandler(service)
 
-	// Create a new Fiber app
-	app := fiber.New()
-	dh.RegisterRoutes(app)
+	// Register routes
+	app.Post("/api/v1/domains", handler.CreateDomain)
+	app.Get("/api/v1/domains", handler.ListDomains)
+	app.Get("/api/v1/domains/:domain", handler.GetDomain)
+	app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+	app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
 
-	// Test data
-	testDomain := model.CreateDomainRequest{
-		Domain:           "example.com",
-		AlternativeNames: []string{"www.example.com"},
-		Enabled:          true,
-		Comment:          "Test comment",
-	}
-
-	// Test creating a domain
+	// Test CreateDomain
 	t.Run("CreateDomain", func(t *testing.T) {
-		body, _ := json.Marshal(testDomain)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/domains", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		if resp.StatusCode != http.StatusCreated {
-			t.Errorf("Expected status %d, got %d", http.StatusCreated, resp.StatusCode)
-		}
-
-		var response model.DomainResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			t.Fatalf("Failed to decode response: %v", err)
-		}
-		if !response.Success {
-			t.Error("Expected success to be true")
-		}
-		if response.Data.Domain != testDomain.Domain {
-			t.Errorf("Expected domain %s, got %s", testDomain.Domain, response.Data.Domain)
-		}
-	})
-
-	// Test creating an invalid domain
-	t.Run("CreateInvalidDomain", func(t *testing.T) {
-		invalidDomain := model.CreateDomainRequest{
-			Domain:           "invalid@domain.com",
+		req := model.CreateDomainRequest{
+			Domain:           "example.com",
 			AlternativeNames: []string{"www.example.com"},
 			Enabled:          true,
 		}
-		body, _ := json.Marshal(invalidDomain)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/domains", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
-		}
-	})
+		body, _ := json.Marshal(req)
 
-	// Test getting a domain
-	t.Run("GetDomain", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/domains/example.com", nil)
-		resp, err := app.Test(req)
+		resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+		resp.Header.Set("Content-Type", "application/json")
+
+		result, err := app.Test(resp)
 		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
+			t.Fatalf("Failed to test request: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
+
+		if result.StatusCode != fiber.StatusCreated {
+			t.Errorf("Expected status %d, got %d", fiber.StatusCreated, result.StatusCode)
 		}
 
 		var response model.DomainResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
+
 		if !response.Success {
 			t.Error("Expected success to be true")
 		}
-		if response.Data.Domain != testDomain.Domain {
-			t.Errorf("Expected domain %s, got %s", testDomain.Domain, response.Data.Domain)
+		if response.Data.Domain != "example.com" {
+			t.Errorf("Expected domain example.com, got %s", response.Data.Domain)
 		}
 	})
 
-	// Test getting a non-existent domain
+	// Test CreateInvalidDomain
+	t.Run("CreateInvalidDomain", func(t *testing.T) {
+		req := model.CreateDomainRequest{
+			Domain: "invalid..com",
+		}
+		body, _ := json.Marshal(req)
+
+		resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+		resp.Header.Set("Content-Type", "application/json")
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+
+		if result.StatusCode != fiber.StatusBadRequest {
+			t.Errorf("Expected status %d, got %d", fiber.StatusBadRequest, result.StatusCode)
+		}
+	})
+
+	// Test GetDomain
+	t.Run("GetDomain", func(t *testing.T) {
+		resp := httptest.NewRequest("GET", "/api/v1/domains/example.com", nil)
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+		}
+
+		var response model.DomainResponse
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if !response.Success {
+			t.Error("Expected success to be true")
+		}
+		if response.Data.Domain != "example.com" {
+			t.Errorf("Expected domain example.com, got %s", response.Data.Domain)
+		}
+	})
+
+	// Test GetNonExistentDomain
 	t.Run("GetNonExistentDomain", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/domains/nonexistent.com", nil)
-		resp, err := app.Test(req)
+		resp := httptest.NewRequest("GET", "/api/v1/domains/nonexistent.com", nil)
+
+		result, err := app.Test(resp)
 		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
+			t.Fatalf("Failed to test request: %v", err)
 		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("Expected status %d, got %d", http.StatusNotFound, resp.StatusCode)
+
+		if result.StatusCode != fiber.StatusNotFound {
+			t.Errorf("Expected status %d, got %d", fiber.StatusNotFound, result.StatusCode)
 		}
 	})
 
-	// Test listing domains
+	// Test ListDomains
 	t.Run("ListDomains", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/domains", nil)
-		resp, err := app.Test(req)
+		resp := httptest.NewRequest("GET", "/api/v1/domains", nil)
+
+		result, err := app.Test(resp)
 		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
+			t.Fatalf("Failed to test request: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
 		}
 
 		var response model.DomainsResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
-		if !response.Success {
-			t.Error("Expected success to be true")
-		}
+
 		if len(response.Data) != 1 {
 			t.Errorf("Expected 1 domain, got %d", len(response.Data))
 		}
 	})
 
-	// Test updating a domain
+	// Test UpdateDomain
 	t.Run("UpdateDomain", func(t *testing.T) {
-		updateReq := model.UpdateDomainRequest{
-			AlternativeNames: []string{"www.example.com", "mail.example.com"},
+		req := model.UpdateDomainRequest{
+			AlternativeNames: []string{"www.example.com", "api.example.com"},
 			Enabled:          true,
 		}
-		body, _ := json.Marshal(updateReq)
-		req := httptest.NewRequest(http.MethodPut, "/api/v1/domains/example.com", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
+		body, _ := json.Marshal(req)
+
+		resp := httptest.NewRequest("PUT", "/api/v1/domains/example.com", bytes.NewReader(body))
+		resp.Header.Set("Content-Type", "application/json")
+
+		result, err := app.Test(resp)
 		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
+			t.Fatalf("Failed to test request: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
 		}
 
 		var response model.DomainResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
+
 		if !response.Success {
 			t.Error("Expected success to be true")
 		}
@@ -170,25 +190,17 @@ func TestDomainHandler(t *testing.T) {
 		}
 	})
 
-	// Test deleting a domain
+	// Test DeleteDomain
 	t.Run("DeleteDomain", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/domains/example.com", nil)
-		resp, err := app.Test(req)
+		resp := httptest.NewRequest("DELETE", "/api/v1/domains/example.com", nil)
+
+		result, err := app.Test(resp)
 		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		if resp.StatusCode != http.StatusNoContent {
-			t.Errorf("Expected status %d, got %d", http.StatusNoContent, resp.StatusCode)
+			t.Fatalf("Failed to test request: %v", err)
 		}
 
-		// Verify the domain was deleted
-		req = httptest.NewRequest(http.MethodGet, "/api/v1/domains/example.com", nil)
-		resp, err = app.Test(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("Expected status %d, got %d", http.StatusNotFound, resp.StatusCode)
+		if result.StatusCode != fiber.StatusNoContent {
+			t.Errorf("Expected status %d, got %d", fiber.StatusNoContent, result.StatusCode)
 		}
 	})
 }

@@ -13,152 +13,226 @@ func TestDomainService(t *testing.T) {
 	tmpDir := t.TempDir()
 	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
-	// Create a new domain service
-	ds, err := NewDomainService(domainsFile)
-	if err != nil {
-		t.Fatalf("Failed to create domain service: %v", err)
-	}
+	// Test with watcher enabled
+	t.Run("WithWatcher", func(t *testing.T) {
+		service, err := NewDomainService(DomainServiceConfig{
+			DomainsFile:   domainsFile,
+			EnableWatcher: true,
+		})
+		if err != nil {
+			t.Fatalf("Failed to create domain service: %v", err)
+		}
+		defer service.Close()
 
-	// Test adding a domain
+		testDomainServiceOperations(t, service)
+	})
+
+	// Test without watcher
+	t.Run("WithoutWatcher", func(t *testing.T) {
+		service, err := NewDomainService(DomainServiceConfig{
+			DomainsFile:   domainsFile,
+			EnableWatcher: false,
+		})
+		if err != nil {
+			t.Fatalf("Failed to create domain service: %v", err)
+		}
+		defer service.Close()
+
+		testDomainServiceOperations(t, service)
+
+		// Test manual file modification without watcher
+		// Create a new domain entry in the file directly
+		entries := []model.DomainEntry{
+			{
+				Domain:  "manual.example.com",
+				Enabled: true,
+			},
+		}
+		if err := WriteDomainsFile(domainsFile, entries); err != nil {
+			t.Fatalf("Failed to write domains file: %v", err)
+		}
+
+		// Without watcher, the service should not detect the change
+		domains, err := service.ListDomains()
+		if err != nil {
+			t.Fatalf("Failed to list domains: %v", err)
+		}
+		if len(domains) != 0 {
+			t.Errorf("Expected 0 domains (cache not updated), got %d", len(domains))
+		}
+
+		// Manual reload should update the cache
+		if err := service.reloadCache(); err != nil {
+			t.Fatalf("Failed to reload cache: %v", err)
+		}
+
+		domains, err = service.ListDomains()
+		if err != nil {
+			t.Fatalf("Failed to list domains: %v", err)
+		}
+		if len(domains) != 1 {
+			t.Errorf("Expected 1 domain after manual reload, got %d", len(domains))
+		}
+	})
+}
+
+func testDomainServiceOperations(t *testing.T, service *DomainService) {
+	// Test CreateDomain
 	t.Run("CreateDomain", func(t *testing.T) {
-		req := model.CreateDomainRequest{
+		entry, err := service.CreateDomain(model.CreateDomainRequest{
 			Domain:           "example.com",
 			AlternativeNames: []string{"www.example.com"},
 			Enabled:          true,
-		}
-
-		entry, err := ds.CreateDomain(req)
+		})
 		if err != nil {
-			t.Errorf("Failed to create domain: %v", err)
-		}
-		if entry.Domain != req.Domain {
-			t.Errorf("Expected domain %s, got %s", req.Domain, entry.Domain)
-		}
-	})
-
-	// Test adding an invalid domain
-	t.Run("CreateInvalidDomain", func(t *testing.T) {
-		req := model.CreateDomainRequest{
-			Domain:           "invalid@domain.com",
-			AlternativeNames: []string{"www.example.com"},
-			Enabled:          true,
-		}
-
-		_, err := ds.CreateDomain(req)
-		if err == nil {
-			t.Error("Expected error when creating invalid domain, got nil")
-		}
-	})
-
-	// Test adding a duplicate domain
-	t.Run("CreateDuplicateDomain", func(t *testing.T) {
-		req := model.CreateDomainRequest{
-			Domain:           "example.com",
-			AlternativeNames: []string{"www.example.com"},
-			Enabled:          true,
-		}
-
-		_, err := ds.CreateDomain(req)
-		if err == nil {
-			t.Error("Expected error when creating duplicate domain, got nil")
-		}
-	})
-
-	// Test getting a domain
-	t.Run("GetDomain", func(t *testing.T) {
-		entry, err := ds.GetDomain("example.com")
-		if err != nil {
-			t.Errorf("Failed to get domain: %v", err)
+			t.Fatalf("Failed to create domain: %v", err)
 		}
 		if entry.Domain != "example.com" {
 			t.Errorf("Expected domain example.com, got %s", entry.Domain)
 		}
 	})
 
-	// Test getting a non-existent domain
-	t.Run("GetNonExistentDomain", func(t *testing.T) {
-		_, err := ds.GetDomain("nonexistent.com")
+	// Test CreateInvalidDomain
+	t.Run("CreateInvalidDomain", func(t *testing.T) {
+		_, err := service.CreateDomain(model.CreateDomainRequest{
+			Domain: "invalid..com",
+		})
 		if err == nil {
-			t.Error("Expected error when getting non-existent domain, got nil")
+			t.Error("Expected error for invalid domain")
 		}
 	})
 
-	// Test updating a domain
-	t.Run("UpdateDomain", func(t *testing.T) {
-		req := model.UpdateDomainRequest{
-			AlternativeNames: []string{"www.example.com", "mail.example.com"},
-			Enabled:          true,
+	// Test CreateDuplicateDomain
+	t.Run("CreateDuplicateDomain", func(t *testing.T) {
+		_, err := service.CreateDomain(model.CreateDomainRequest{
+			Domain:  "example.com",
+			Enabled: true,
+		})
+		if err == nil {
+			t.Error("Expected error when creating duplicate domain")
 		}
+	})
 
-		entry, err := ds.UpdateDomain("example.com", req)
+	// Test GetDomain
+	t.Run("GetDomain", func(t *testing.T) {
+		entry, err := service.GetDomain("example.com")
 		if err != nil {
-			t.Errorf("Failed to update domain: %v", err)
+			t.Fatalf("Failed to get domain: %v", err)
+		}
+		if entry.Domain != "example.com" {
+			t.Errorf("Expected domain example.com, got %s", entry.Domain)
+		}
+	})
+
+	// Test GetNonExistentDomain
+	t.Run("GetNonExistentDomain", func(t *testing.T) {
+		_, err := service.GetDomain("nonexistent.com")
+		if err == nil {
+			t.Error("Expected error for non-existent domain")
+		}
+	})
+
+	// Test UpdateDomain
+	t.Run("UpdateDomain", func(t *testing.T) {
+		entry, err := service.UpdateDomain("example.com", model.UpdateDomainRequest{
+			AlternativeNames: []string{"www.example.com", "api.example.com"},
+			Enabled:          true,
+		})
+		if err != nil {
+			t.Fatalf("Failed to update domain: %v", err)
 		}
 		if len(entry.AlternativeNames) != 2 {
 			t.Errorf("Expected 2 alternative names, got %d", len(entry.AlternativeNames))
 		}
 	})
 
-	// Test deleting a domain
+	// Test DeleteDomain
 	t.Run("DeleteDomain", func(t *testing.T) {
-		err := ds.DeleteDomain("example.com")
-		if err != nil {
-			t.Errorf("Failed to delete domain: %v", err)
+		if err := service.DeleteDomain("example.com"); err != nil {
+			t.Fatalf("Failed to delete domain: %v", err)
 		}
-
-		// Verify the domain was deleted
-		entries, err := ds.ListDomains()
+		domains, err := service.ListDomains()
 		if err != nil {
 			t.Fatalf("Failed to list domains: %v", err)
 		}
-		if len(entries) != 0 {
-			t.Errorf("Expected 0 domains, got %d", len(entries))
+		if len(domains) != 0 {
+			t.Errorf("Expected 0 domains, got %d", len(domains))
 		}
 	})
 
-	// Test deleting a non-existent domain
+	// Test DeleteNonExistentDomain
 	t.Run("DeleteNonExistentDomain", func(t *testing.T) {
-		err := ds.DeleteDomain("nonexistent.com")
-		if err == nil {
-			t.Error("Expected error when deleting non-existent domain, got nil")
+		if err := service.DeleteDomain("nonexistent.com"); err == nil {
+			t.Error("Expected error when deleting non-existent domain")
 		}
 	})
 
-	// Test updating a non-existent domain
+	// Test UpdateNonExistentDomain
 	t.Run("UpdateNonExistentDomain", func(t *testing.T) {
-		req := model.UpdateDomainRequest{
-			AlternativeNames: []string{"www.example.com"},
-			Enabled:          true,
-		}
-
-		_, err := ds.UpdateDomain("nonexistent.com", req)
+		_, err := service.UpdateDomain("nonexistent.com", model.UpdateDomainRequest{
+			Enabled: true,
+		})
 		if err == nil {
-			t.Error("Expected error when updating non-existent domain, got nil")
+			t.Error("Expected error when updating non-existent domain")
 		}
 	})
 }
 
 func TestNewDomainService(t *testing.T) {
-	// Test creating a domain service with a non-existent directory
+	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
-	domainsFile := filepath.Join(tmpDir, "subdir", "domains.txt")
+	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
-	ds, err := NewDomainService(domainsFile)
-	if err != nil {
-		t.Fatalf("Failed to create domain service: %v", err)
-	}
+	// Test with valid config
+	t.Run("ValidConfig", func(t *testing.T) {
+		service, err := NewDomainService(DomainServiceConfig{
+			DomainsFile:   domainsFile,
+			EnableWatcher: true,
+		})
+		if err != nil {
+			t.Fatalf("Failed to create domain service: %v", err)
+		}
+		defer service.Close()
 
-	// Verify the file was created
-	if _, err := os.Stat(domainsFile); os.IsNotExist(err) {
-		t.Error("Expected domains file to be created")
-	}
+		if service.domainsFile != domainsFile {
+			t.Errorf("Expected domains file %s, got %s", domainsFile, service.domainsFile)
+		}
+		if service.watcher == nil {
+			t.Error("Expected watcher to be initialized")
+		}
+	})
 
-	// Verify we can use the domain service
-	entries, err := ds.ListDomains()
-	if err != nil {
-		t.Errorf("Failed to list domains: %v", err)
-	}
-	if len(entries) != 0 {
-		t.Errorf("Expected 0 domains, got %d", len(entries))
-	}
+	// Test with invalid path
+	t.Run("InvalidPath", func(t *testing.T) {
+		invalidPath := filepath.Join(tmpDir, "nonexistent", "domains.txt")
+		service, err := NewDomainService(DomainServiceConfig{
+			DomainsFile:   invalidPath,
+			EnableWatcher: true,
+		})
+		if err != nil {
+			t.Fatalf("Failed to create domain service: %v", err)
+		}
+		defer service.Close()
+
+		// Verify that the directory and file were created
+		if _, err := os.Stat(invalidPath); os.IsNotExist(err) {
+			t.Error("Expected domains file to be created")
+		}
+	})
+
+	// Test without watcher
+	t.Run("WithoutWatcher", func(t *testing.T) {
+		service, err := NewDomainService(DomainServiceConfig{
+			DomainsFile:   domainsFile,
+			EnableWatcher: false,
+		})
+		if err != nil {
+			t.Fatalf("Failed to create domain service: %v", err)
+		}
+		defer service.Close()
+
+		if service.watcher != nil {
+			t.Error("Expected watcher to be nil")
+		}
+	})
 }

@@ -4,32 +4,80 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
+// DomainServiceConfig holds configuration options for the DomainService
+type DomainServiceConfig struct {
+	DomainsFile   string
+	EnableWatcher bool
+}
+
 // DomainService handles domain-related business logic
 type DomainService struct {
 	domainsFile string
+	watcher     *FileWatcher
+	cache       []model.DomainEntry
+	mutex       sync.RWMutex
 }
 
 // NewDomainService creates a new DomainService instance
-func NewDomainService(domainsFile string) (*DomainService, error) {
+func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	// Ensure the domains file exists
-	if _, err := os.Stat(domainsFile); os.IsNotExist(err) {
+	if _, err := os.Stat(config.DomainsFile); os.IsNotExist(err) {
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(domainsFile), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(config.DomainsFile), 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 		// Create an empty domains file
-		if err := os.WriteFile(domainsFile, []byte{}, 0644); err != nil {
+		if err := os.WriteFile(config.DomainsFile, []byte{}, 0644); err != nil {
 			return nil, fmt.Errorf("failed to create domains file: %w", err)
 		}
 	}
 
-	return &DomainService{
-		domainsFile: domainsFile,
-	}, nil
+	s := &DomainService{
+		domainsFile: config.DomainsFile,
+	}
+
+	// Initialize the cache
+	if err := s.reloadCache(); err != nil {
+		return nil, fmt.Errorf("failed to load initial cache: %w", err)
+	}
+
+	// Set up file watcher if enabled
+	if config.EnableWatcher {
+		watcher, err := NewFileWatcher(config.DomainsFile, s.reloadCache)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set up file watcher: %w", err)
+		}
+		s.watcher = watcher
+	}
+
+	return s, nil
+}
+
+// reloadCache reloads the domain entries from the file into the cache
+func (s *DomainService) reloadCache() error {
+	entries, err := ReadDomainsFile(s.domainsFile)
+	if err != nil {
+		return fmt.Errorf("failed to read domains file: %w", err)
+	}
+
+	s.mutex.Lock()
+	s.cache = entries
+	s.mutex.Unlock()
+
+	return nil
+}
+
+// Close cleans up resources
+func (s *DomainService) Close() error {
+	if s.watcher != nil {
+		return s.watcher.Close()
+	}
+	return nil
 }
 
 // CreateDomain adds a new domain entry
@@ -47,24 +95,23 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 		return nil, fmt.Errorf("invalid domain entry: %v", entry)
 	}
 
-	// Read existing entries
-	entries, err := ReadDomainsFile(s.domainsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read domains file: %w", err)
-	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// Check if domain already exists
-	for _, existing := range entries {
+	for _, existing := range s.cache {
 		if existing.Domain == entry.Domain {
 			return nil, fmt.Errorf("domain already exists: %s", entry.Domain)
 		}
 	}
 
 	// Add the new entry
-	entries = append(entries, entry)
+	s.cache = append(s.cache, entry)
 
 	// Write back to file
-	if err := WriteDomainsFile(s.domainsFile, entries); err != nil {
+	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
+		// Revert cache on error
+		s.cache = s.cache[:len(s.cache)-1]
 		return nil, fmt.Errorf("failed to write domains file: %w", err)
 	}
 
@@ -73,14 +120,13 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 
 // GetDomain retrieves a domain entry
 func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
-	entries, err := ReadDomainsFile(s.domainsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read domains file: %w", err)
-	}
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	for _, entry := range entries {
+	for _, entry := range s.cache {
 		if entry.Domain == domain {
-			return &entry, nil
+			entryCopy := entry
+			return &entryCopy, nil
 		}
 	}
 
@@ -89,24 +135,27 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 
 // ListDomains returns all domain entries
 func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
-	entries, err := ReadDomainsFile(s.domainsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read domains file: %w", err)
-	}
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	// Return a copy of the cache
+	entries := make([]model.DomainEntry, len(s.cache))
+	copy(entries, s.cache)
 	return entries, nil
 }
 
 // UpdateDomain updates an existing domain entry
 func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
-	entries, err := ReadDomainsFile(s.domainsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read domains file: %w", err)
-	}
+	s.mutex.RLock()
+	// Make a copy of the current entries
+	currentEntries := make([]model.DomainEntry, len(s.cache))
+	copy(currentEntries, s.cache)
+	s.mutex.RUnlock()
 
 	// Find and update the domain
 	found := false
 	var updatedEntry model.DomainEntry
-	for i, existing := range entries {
+	for i, existing := range currentEntries {
 		if existing.Domain == domain {
 			updatedEntry = model.DomainEntry{
 				Domain:           domain,
@@ -121,7 +170,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 				return nil, fmt.Errorf("invalid domain entry: %v", updatedEntry)
 			}
 
-			entries[i] = updatedEntry
+			currentEntries[i] = updatedEntry
 			found = true
 			break
 		}
@@ -132,7 +181,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	}
 
 	// Write back to file
-	if err := WriteDomainsFile(s.domainsFile, entries); err != nil {
+	if err := WriteDomainsFile(s.domainsFile, currentEntries); err != nil {
 		return nil, fmt.Errorf("failed to write domains file: %w", err)
 	}
 
@@ -141,14 +190,12 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 // DeleteDomain removes a domain entry
 func (s *DomainService) DeleteDomain(domain string) error {
-	entries, err := ReadDomainsFile(s.domainsFile)
-	if err != nil {
-		return fmt.Errorf("failed to read domains file: %w", err)
-	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	found := false
-	newEntries := make([]model.DomainEntry, 0, len(entries))
-	for _, entry := range entries {
+	newEntries := make([]model.DomainEntry, 0, len(s.cache))
+	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			found = true
 			continue
@@ -160,9 +207,12 @@ func (s *DomainService) DeleteDomain(domain string) error {
 		return fmt.Errorf("domain not found: %s", domain)
 	}
 
+	// Write back to file
 	if err := WriteDomainsFile(s.domainsFile, newEntries); err != nil {
 		return fmt.Errorf("failed to write domains file: %w", err)
 	}
 
+	// Update cache only after successful write
+	s.cache = newEntries
 	return nil
 }
