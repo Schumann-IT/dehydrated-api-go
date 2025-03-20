@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/service"
 )
 
 func TestDomainHandler(t *testing.T) {

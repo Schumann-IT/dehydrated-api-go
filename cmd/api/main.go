@@ -8,14 +8,20 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/handler"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/handler"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/service"
 )
 
 func main() {
 	// Load configuration
-	cfg := config.NewConfig().Load()
+	cfg := config.NewConfig()
+
+	if os.Getenv("DEHYDRATED_BASE_DIR") != "" {
+		cfg.WithBaseDir(os.Getenv("DEHYDRATED_BASE_DIR"))
+	}
+
+	cfg.Load()
 
 	// Create domain service
 	domainService, err := service.NewDomainService(cfg.DomainsFile)
@@ -42,7 +48,7 @@ func main() {
 	// Get port from environment or use default
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "3000"
 	}
 
 	log.Printf("Starting server on port %s", port)

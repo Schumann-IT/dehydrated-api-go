@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
 func TestDomainService(t *testing.T) {

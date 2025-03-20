@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
 // DomainService handles domain-related business logic
