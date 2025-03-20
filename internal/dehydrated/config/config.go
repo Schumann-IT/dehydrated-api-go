@@ -120,15 +120,6 @@ func (c *Config) Load() *Config {
 		c.BaseDir = abs
 	}
 
-	if c.ConfigFile != "" {
-		c.ConfigFile = c.ensureAbs(c.ConfigFile)
-	}
-
-	if c.ConfigFile == "" {
-		c.findAndSetConfigFile()
-	}
-
-
 	c.load()
 	c.resolvePaths()
 
@@ -150,10 +141,15 @@ func (c *Config) findAndSetConfigFile() {
 // load loads configuration from a config file if it exists
 func (c *Config) load() {
 	if c.ConfigFile == "" {
-		c.ConfigFile = getConfigFile(c.BaseDir)
-		if c.ConfigFile == "" {
-			return
-		}
+		c.findAndSetConfigFile()
+	}
+
+	if c.ConfigFile != "" {
+		c.ConfigFile = c.ensureAbs(c.ConfigFile)
+	}
+
+	if c.ConfigFile == "" {
+		return
 	}
 
 	// Read config file
