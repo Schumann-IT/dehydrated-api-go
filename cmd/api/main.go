@@ -8,19 +8,17 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/schumann-it/dehydrated-api-go/internal/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
 
 func main() {
-	// Get domains file path from environment variable or use default
-	domainsFile := os.Getenv("DOMAINS_FILE")
-	if domainsFile == "" {
-		domainsFile = "domains.txt"
-	}
+	// Load configuration
+	cfg := config.NewConfig().Load()
 
 	// Create domain service
-	domainService, err := service.NewDomainService(domainsFile)
+	domainService, err := service.NewDomainService(cfg.DomainsFile)
 	if err != nil {
 		log.Fatalf("Failed to create domain service: %v", err)
 	}
@@ -41,13 +39,14 @@ func main() {
 	// Register routes
 	domainHandler.RegisterRoutes(app)
 
-	// Start server
+	// Get port from environment or use default
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
 	log.Printf("Starting server on port %s", port)
+	log.Printf("Using domains file: %s", cfg.DomainsFile)
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
