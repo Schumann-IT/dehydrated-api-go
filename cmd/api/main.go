@@ -7,6 +7,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/handler"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin/certs"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/service"
 )
 
@@ -21,10 +23,19 @@ func main() {
 	// Create fiber app
 	app := fiber.New()
 
+	// Initialize plugin registry
+	pluginRegistry := plugin.NewRegistry(cfg)
+
+	// Register plugins
+	if err := pluginRegistry.Register(certs.New()); err != nil {
+		log.Fatalf("Failed to register certs plugin: %v", err)
+	}
+
 	// Create domain service
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{
-		DomainsFile:   cfg.DomainsFile,
-		EnableWatcher: true,
+		DomainsFile:    cfg.DomainsFile,
+		EnableWatcher:  true,
+		PluginRegistry: pluginRegistry,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create domain service: %v", err)

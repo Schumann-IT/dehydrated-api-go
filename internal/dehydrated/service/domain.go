@@ -7,12 +7,14 @@ import (
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin"
 )
 
 // DomainServiceConfig holds configuration options for the DomainService
 type DomainServiceConfig struct {
-	DomainsFile   string
-	EnableWatcher bool
+	DomainsFile    string
+	EnableWatcher  bool
+	PluginRegistry *plugin.Registry
 }
 
 // DomainService handles domain-related business logic
@@ -21,6 +23,7 @@ type DomainService struct {
 	watcher     *FileWatcher
 	cache       []model.DomainEntry
 	mutex       sync.RWMutex
+	plugins     *plugin.Registry
 }
 
 // NewDomainService creates a new DomainService instance
@@ -39,6 +42,7 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 
 	s := &DomainService{
 		domainsFile: config.DomainsFile,
+		plugins:     config.PluginRegistry,
 	}
 
 	// Initialize the cache
@@ -76,6 +80,16 @@ func (s *DomainService) reloadCache() error {
 func (s *DomainService) Close() error {
 	if s.watcher != nil {
 		return s.watcher.Close()
+	}
+	return nil
+}
+
+// enrichEntry runs all plugins on a domain entry
+func (s *DomainService) enrichEntry(entry *model.DomainEntry) error {
+	if s.plugins != nil {
+		if err := s.plugins.EnrichDomainEntry(entry); err != nil {
+			return fmt.Errorf("failed to enrich domain entry: %w", err)
+		}
 	}
 	return nil
 }
@@ -126,6 +140,9 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			entryCopy := entry
+			if err := s.enrichEntry(&entryCopy); err != nil {
+				return nil, err
+			}
 			return &entryCopy, nil
 		}
 	}
@@ -141,6 +158,14 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	// Return a copy of the cache
 	entries := make([]model.DomainEntry, len(s.cache))
 	copy(entries, s.cache)
+
+	// Enrich each entry
+	for i := range entries {
+		if err := s.enrichEntry(&entries[i]); err != nil {
+			return nil, err
+		}
+	}
+
 	return entries, nil
 }
 
