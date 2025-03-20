@@ -7,10 +7,13 @@ A Go implementation of an API for managing dehydrated domains and certificates.
 The project uses a Makefile to automate the build process. Here are the available make targets:
 
 ```bash
-make        # Build both the API server and certs plugin
-make build  # Same as above
-make test   # Run all tests
-make clean  # Remove build artifacts
+make            # Build both the API server and certs plugin
+make build      # Same as above
+make test       # Run all tests
+make clean      # Remove build artifacts
+make run        # Build and start the API server
+make run-plugin # Run the certs plugin standalone
+make debug-plugin # Run the certs plugin with debug output
 ```
 
 Individual components can be built using:
@@ -21,17 +24,45 @@ make build-plugin  # Build only the certs plugin
 
 ## Running
 
-1. Build the project:
+You can start the API server in one of two ways:
+
+1. Using make (recommended):
 ```bash
-make
+make run
 ```
 
-2. Start the API server:
+2. Manually:
 ```bash
+# First build the project
+make
+
+# Then start the server
 ./bin/api
 ```
 
 The API server will automatically start the certs plugin as a separate process.
+
+### Debugging the Certs Plugin
+
+During development, you can run and debug the certs plugin independently:
+
+1. Run the plugin standalone:
+```bash
+make run-plugin
+```
+This will start the plugin and output its gRPC server address.
+
+2. Run with debug output:
+```bash
+make debug-plugin
+```
+This will start the plugin with additional debug logging enabled via the `DEHYDRATED_DEBUG=1` environment variable.
+
+When running the plugin standalone, you can observe its behavior and interactions with the API server. This is useful for:
+- Debugging gRPC communication issues
+- Testing plugin functionality in isolation
+- Monitoring certificate operations
+- Verifying plugin initialization and shutdown
 
 ## API Documentation
 
