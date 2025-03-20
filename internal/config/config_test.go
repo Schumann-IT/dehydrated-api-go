@@ -78,14 +78,15 @@ func TestLoadConfig(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config")
+	baseDir := "/test/base"
 
 	// Create a test config file
 	configContent := `# Test config file
 BASEDIR=/test/base
-CERTDIR=certs
-DOMAINSD=domains
-ACCOUNTDIR=accounts
-CHALLENGEDIR=challenges
+CERTDIR=/etc/certs/override
+DOMAINSD=domains/override
+ACCOUNTDIR=accounts/override
+CHALLENGEDIR=challenges/override
 DOMAINS_TXT=domains.txt
 HOOK=hook.sh
 CA=letsencrypt
@@ -128,30 +129,42 @@ API=v2
 		t.Fatalf("Failed to write test config file: %v", err)
 	}
 
-	// Load the config
-	cfg := NewConfig().WithBaseDir(tmpDir).Load()
+	// Load the config using the builder pattern
+	cfg := NewConfig().
+		WithConfigFile(configPath).
+		Load()
 
-	// Test loaded values
-	if cfg.BaseDir != "/test/base" {
-		t.Errorf("Expected BaseDir to be /test/base, got %s", cfg.BaseDir)
+	// Test that values from config.sh override config file values
+	if cfg.BaseDir != baseDir {
+		t.Errorf("Expected BaseDir to be %s, got %s", baseDir, cfg.BaseDir)
 	}
-	if cfg.CertDir != filepath.Join("/test/base", "certs") {
-		t.Errorf("Expected CertDir to be /test/base/certs, got %s", cfg.CertDir)
+	if cfg.CertDir != "/etc/certs/override" {
+		t.Errorf("Expected CertDir to be /etc/certs/override, got %s", cfg.CertDir)
 	}
-	if cfg.DomainsDir != filepath.Join("/test/base", "domains") {
-		t.Errorf("Expected DomainsDir to be /test/base/domains, got %s", cfg.DomainsDir)
+	if cfg.DomainsDir != filepath.Join(baseDir, "domains/override") {
+		t.Errorf("Expected DomainsDir to be %s, got %s", filepath.Join(baseDir, "domains/override"), cfg.DomainsDir)
 	}
-	if cfg.AccountsDir != filepath.Join("/test/base", "accounts") {
-		t.Errorf("Expected AccountsDir to be /test/base/accounts, got %s", cfg.AccountsDir)
+	if cfg.KeyAlgo != "prime256v1" {
+		t.Errorf("Expected KeyAlgo to be prime256v1, got %s", cfg.KeyAlgo)
 	}
-	if cfg.ChallengesDir != filepath.Join("/test/base", "challenges") {
-		t.Errorf("Expected ChallengesDir to be /test/base/challenges, got %s", cfg.ChallengesDir)
+	if cfg.RenewDays != 45 {
+		t.Errorf("Expected RenewDays to be 45, got %d", cfg.RenewDays)
 	}
-	if cfg.DomainsFile != filepath.Join("/test/base", "domains.txt") {
-		t.Errorf("Expected DomainsFile to be /test/base/domains.txt, got %s", cfg.DomainsFile)
+	if cfg.ChallengeType != "dns-01" {
+		t.Errorf("Expected ChallengeType to be dns-01, got %s", cfg.ChallengeType)
 	}
-	if cfg.HookScript != filepath.Join("/test/base", "hook.sh") {
-		t.Errorf("Expected HookScript to be /test/base/hook.sh, got %s", cfg.HookScript)
+
+	if cfg.AccountsDir != filepath.Join(baseDir, "accounts/override") {
+		t.Errorf("Expected AccountsDir to be %s, got %s", filepath.Join(baseDir, "accounts"), cfg.AccountsDir)
+	}
+	if cfg.ChallengesDir != filepath.Join(baseDir, "challenges/override") {
+		t.Errorf("Expected ChallengesDir to be %s, got %s", filepath.Join(baseDir, "challenges"), cfg.ChallengesDir)
+	}
+	if cfg.DomainsFile != filepath.Join(baseDir, "domains.txt") {
+		t.Errorf("Expected DomainsFile to be %s, got %s", filepath.Join(baseDir, "domains.txt\""), cfg.DomainsFile)
+	}
+	if cfg.HookScript != filepath.Join(baseDir, "hook.sh") {
+		t.Errorf("Expected HookScript to be %s, got %s", filepath.Join(baseDir, "hook.sh"), cfg.HookScript)
 	}
 	if cfg.CA != "letsencrypt" {
 		t.Errorf("Expected CA to be letsencrypt, got %s", cfg.CA)
@@ -171,14 +184,8 @@ API=v2
 	if cfg.PreferredChain != "ISRG" {
 		t.Errorf("Expected PreferredChain to be ISRG, got %s", cfg.PreferredChain)
 	}
-	if cfg.KeyAlgo != "prime256v1" {
-		t.Errorf("Expected KeyAlgo to be prime256v1, got %s", cfg.KeyAlgo)
-	}
 	if cfg.KeySize != 2048 {
 		t.Errorf("Expected KeySize to be 2048, got %d", cfg.KeySize)
-	}
-	if cfg.RenewDays != 45 {
-		t.Errorf("Expected RenewDays to be 45, got %d", cfg.RenewDays)
 	}
 	if !cfg.ForceRenew {
 		t.Error("Expected ForceRenew to be true")
@@ -186,17 +193,14 @@ API=v2
 	if cfg.ForceValidation {
 		t.Error("Expected ForceValidation to be false")
 	}
-	if cfg.ChallengeType != "dns-01" {
-		t.Errorf("Expected ChallengeType to be dns-01, got %s", cfg.ChallengeType)
-	}
 	if cfg.WellKnownDir != "/var/www/dehydrated" {
 		t.Errorf("Expected WellKnownDir to be /var/www/dehydrated, got %s", cfg.WellKnownDir)
 	}
 	if cfg.ALPNDir != "/var/www/alpn" {
 		t.Errorf("Expected ALPNDir to be /var/www/alpn, got %s", cfg.ALPNDir)
 	}
-	if cfg.LockFile != filepath.Join("/test/base", "dehydrated.lock") {
-		t.Errorf("Expected LockFile to be /test/base/dehydrated.lock, got %s", cfg.LockFile)
+	if cfg.LockFile != filepath.Join(baseDir, "dehydrated.lock") {
+		t.Errorf("Expected LockFile to be %s, got %s", filepath.Join(baseDir, "dehydrated.lock"), cfg.LockFile)
 	}
 	if cfg.NoLock {
 		t.Error("Expected NoLock to be false")
@@ -294,7 +298,7 @@ export OCSP=yes
 		t.Fatalf("Failed to write test config.sh file: %v", err)
 	}
 
-	cfg := NewConfig().WithBaseDir(tmpDir).Load()
+	cfg := NewConfig().WithConfigFile(configPath).Load()
 
 	// Test loaded values
 	if cfg.BaseDir != "/test/base" {

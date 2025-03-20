@@ -74,8 +74,8 @@ type Config struct {
 	ConfigD      string // Directory containing additional config files
 }
 
-// DefaultConfig returns a Config with default values
-func DefaultConfig() *Config {
+// NewConfig creates a new Config with default values
+func NewConfig() *Config {
 	return &Config{
 		BaseDir:         ".",
 		CertDir:         "certs",
@@ -100,47 +100,66 @@ func DefaultConfig() *Config {
 	}
 }
 
-func NewConfig() *Config {
-	return DefaultConfig()
-}
-
+// WithBaseDir sets the base directory for the config
 func (c *Config) WithBaseDir(baseDir string) *Config {
 	c.BaseDir = baseDir
-	if !filepath.IsAbs(c.BaseDir) {
-		if abs, err := filepath.Abs(c.BaseDir); err == nil {
-			c.BaseDir = abs
-		}
-	}
-
 	return c
 }
 
+// WithConfigFile sets the path to the config file
 func (c *Config) WithConfigFile(configFile string) *Config {
 	c.ConfigFile = configFile
-	if !filepath.IsAbs(c.ConfigFile) {
-		if abs, err := filepath.Abs(c.ConfigFile); err == nil {
-			c.ConfigFile = abs
-		}
+	return c
+}
+
+// Load loads the configuration from files
+func (c *Config) Load() *Config {
+	// make baseDir absolute
+	if !filepath.IsAbs(c.BaseDir) {
+		abs, _ := filepath.Abs(c.BaseDir)
+		c.BaseDir = abs
 	}
+
+	if c.ConfigFile != "" {
+		c.ConfigFile = c.ensureAbs(c.ConfigFile)
+	}
+
+	if c.ConfigFile == "" {
+		c.findAndSetConfigFile()
+	}
+
+
+	c.load()
+	c.resolvePaths()
 
 	return c
 }
 
-func (c *Config) Load() *Config {
+func (c *Config) findAndSetConfigFile() {
 	if c.ConfigFile == "" {
-		_ = c.findConfigFile()
+		files := []string{"config", "config.sh"}
+		for _, file := range files {
+			if _, err := os.Stat(filepath.Join(c.BaseDir, file)); err == nil {
+				c.ConfigFile = filepath.Join(c.BaseDir, file)
+				return
+			}
+		}
 	}
+}
 
-	c.resolvePaths()
-
+// load loads configuration from a config file if it exists
+func (c *Config) load() {
 	if c.ConfigFile == "" {
-		return c
+		c.ConfigFile = getConfigFile(c.BaseDir)
+		if c.ConfigFile == "" {
+			return
+		}
 	}
 
 	// Read config file
 	data, err := os.ReadFile(c.ConfigFile)
 	if err != nil {
-		return c
+		return
 	}
 
 	// Parse config file
@@ -198,6 +217,10 @@ func (c *Config) Load() *Config {
 			c.API = value
 		case "KEY_ALGO":
 			c.KeyAlgo = value
+		case "KEY_SIZE":
+			if size, err := strconv.Atoi(value); err == nil {
+				c.KeySize = size
+			}
 		case "RENEW_DAYS":
 			if days, err := strconv.Atoi(value); err == nil {
 				c.RenewDays = days
@@ -242,49 +265,19 @@ func (c *Config) Load() *Config {
 			c.OpenSSLConfig = value
 		case "OPENSSL":
 			c.OpenSSL = value
-		case "KEY_SIZE":
-			if size, err := strconv.Atoi(value); err == nil {
-				c.KeySize = size
-			}
 		case "PRIVATE_KEY_RENEW":
 			c.PrivateKeyRenew = value == "yes"
 		case "PRIVATE_KEY_ROLLOVER":
 			c.PrivateKeyRollover = value == "yes"
 		case "HOOK_CHAIN":
 			c.HookChain = value == "yes"
+		case "CHAIN_CACHE":
+			c.ChainCache = value
 		}
 	}
 
+	// Resolve relative paths
 	c.resolvePaths()
-
-	return c
-}
-
-// findConfigFile searches for the config file in the standard locations
-func (c *Config) findConfigFile() error {
-	locations := []string{
-		filepath.Join(c.BaseDir, "config.sh"),
-		filepath.Join(c.BaseDir, "config"),
-		"/usr/local/etc/dehydrated/config",
-		"/etc/dehydrated/config",
-	}
-
-	for _, loc := range locations {
-		// Convert relative paths to absolute
-		absPath := loc
-		if !filepath.IsAbs(loc) {
-			if abs, err := filepath.Abs(loc); err == nil {
-				absPath = abs
-			}
-		}
-
-		if _, err := os.Stat(absPath); err == nil {
-			c.ConfigFile = absPath
-			return nil
-		}
-	}
-
-	return os.ErrNotExist
 }
 
 func (c *Config) ensureAbs(p string) string {
