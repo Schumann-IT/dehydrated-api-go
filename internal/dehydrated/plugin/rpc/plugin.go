@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
@@ -45,6 +46,7 @@ func NewClient(pluginPath string) (plugin.Plugin, error) {
 		return nil, fmt.Errorf("failed to read plugin address: %w", err)
 	}
 	addr := string(buf[:n])
+	addr = strings.TrimSpace(addr) // Remove any whitespace, including newlines
 
 	// Connect to plugin
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
