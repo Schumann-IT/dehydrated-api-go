@@ -8,7 +8,7 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin/rpc"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin/certs"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/service"
 )
 
@@ -25,15 +25,9 @@ func main() {
 
 	// Initialize plugin registry
 	pluginRegistry := plugin.NewRegistry(cfg)
-	defer pluginRegistry.Close()
 
-	// Register RPC certs plugin
-	certsPlugin, err := rpc.NewClient("bin/certs-plugin")
-	if err != nil {
-		log.Fatalf("Failed to create certs plugin client: %v", err)
-	}
-	if err := pluginRegistry.Register(certsPlugin); err != nil {
-		certsPlugin.Close()
+	// Register plugins
+	if err := pluginRegistry.Register(certs.New()); err != nil {
 		log.Fatalf("Failed to register certs plugin: %v", err)
 	}
 
