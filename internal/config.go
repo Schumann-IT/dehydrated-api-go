@@ -2,10 +2,9 @@ package internal
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Config holds the API configuration
@@ -32,7 +31,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Port:              8080,
 		Plugins:           make(map[string]PluginConfig),
-		DehydratedBaseDir: "",
+		DehydratedBaseDir: "/etc/dehydrated",
 	}
 }
 
@@ -40,15 +39,23 @@ func DefaultConfig() *Config {
 func LoadConfig(path string) (*Config, error) {
 	cfg := DefaultConfig()
 
-	// Read the config file
-	data, err := os.ReadFile(path)
+	absConfigPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return nil, err
 	}
 
-	// Parse the YAML
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	// load config if it exists
+	if _, err := os.Stat(absConfigPath); err == nil {
+		// Read the config file
+		data, err := os.ReadFile(absConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+
+		// Parse the YAML
+		if err := yaml.Unmarshal(data, cfg); err != nil {
+			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		}
 	}
 
 	// Validate the configuration
@@ -66,9 +73,9 @@ func (c *Config) validate() error {
 		return fmt.Errorf("invalid port number: %d", c.Port)
 	}
 
-	// Validate dehydrated config
-	if c.DehydratedBaseDir == "" {
-		return fmt.Errorf("dehydrated base directory is required")
+	// Validate dehydrated base dir
+	if _, err := os.Stat(c.DehydratedBaseDir); os.IsNotExist(err) {
+		return fmt.Errorf("dehydrated base dir does not exist: %s", c.DehydratedBaseDir)
 	}
 
 	// Validate plugin configurations

@@ -86,6 +86,10 @@ func (c *Client) Initialize(config map[string]string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	if c.client == nil {
+		return fmt.Errorf("client is nil")
+	}
+
 	_, err := c.client.Initialize(context.Background(), &pb.InitializeRequest{
 		Config: config,
 	})
@@ -96,6 +100,10 @@ func (c *Client) Initialize(config map[string]string) error {
 func (c *Client) GetMetadata(domain string, config map[string]string) (map[string]string, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if c.client == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
 
 	resp, err := c.client.GetMetadata(context.Background(), &pb.GetMetadataRequest{
 		Domain: domain,

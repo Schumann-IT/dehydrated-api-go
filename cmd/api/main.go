@@ -1,23 +1,23 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
+
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
-	"log"
-	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	// Create fiber app
-	app := fiber.New()
+	// Parse command line flags
+	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
+	flag.Parse()
 
-	// Load configuration
-	configPath, _ := filepath.Abs("config.yaml")
-	cfg, err := internal.LoadConfig(configPath)
+	cfg, err := internal.LoadConfig(*configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,10 +32,14 @@ func main() {
 	}
 	defer domainService.Close()
 
+	// Create fiber app
+	app := fiber.New()
+
 	// Create domain handler
 	domainHandler := handler.NewDomainHandler(domainService)
 	domainHandler.RegisterRoutes(app)
 
 	// Start server
+	log.Printf("Starting server on port %d with config from %s", cfg.Port, *configPath)
 	log.Fatal(app.Listen(fmt.Sprintf(":%d", cfg.Port)))
 }

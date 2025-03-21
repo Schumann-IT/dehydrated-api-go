@@ -97,21 +97,10 @@ dehydratedBaseDir: /etc/dehydrated
 			expected: "invalid port number: 0",
 		},
 		{
-			name: "Missing dehydrated config",
-			content: `
-port: 8080
-plugins:
-  test:
-    enabled: true
-    path: /usr/local/bin/test-plugin
-`,
-			expected: "dehydrated base directory is required",
-		},
-		{
 			name: "Missing plugin path",
 			content: `
 port: 8080
-dehydratedBaseDir: /etc/dehydrated
+dehydratedBaseDir: /
 plugins:
   test:
     enabled: true
