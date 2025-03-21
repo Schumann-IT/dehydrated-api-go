@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"path/filepath"
 	"testing"

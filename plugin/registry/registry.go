@@ -3,10 +3,9 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/plugin/grpc"
+	"github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"sync"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/plugin/grpc"
-	plugininterface "github.com/schumann-it/dehydrated-api-go/pkg/plugin/interface"
 )
 
 // Registry manages plugin instances

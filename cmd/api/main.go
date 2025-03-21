@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/dehydrated"
-	"github.com/schumann-it/dehydrated-api-go/dehydrated/handler"
-	"github.com/schumann-it/dehydrated-api-go/dehydrated/service"
+	"github.com/schumann-it/dehydrated-api-go/internal"
+	"github.com/schumann-it/dehydrated-api-go/internal/handler"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"log"
 	"path/filepath"
 
@@ -17,7 +17,7 @@ func main() {
 
 	// Load configuration
 	configPath, _ := filepath.Abs("config.yaml")
-	cfg, err := dehydrated.LoadConfig(configPath)
+	cfg, err := internal.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
