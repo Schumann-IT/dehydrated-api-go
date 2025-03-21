@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -172,6 +173,80 @@ func TestClientMethods(t *testing.T) {
 		err := client.Close(context.Background())
 		assert.NoError(t, err)
 	})
+
+	t.Run("GetMetadata Error", func(t *testing.T) {
+		// Create a client with the error plugin
+		tmpDir := t.TempDir()
+		pluginPath := filepath.Join(tmpDir, "error-plugin")
+		pluginContent := `package main
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+
+	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"google.golang.org/grpc"
+)
+
+type mockServer struct {
+	plugin.UnimplementedPluginServer
+}
+
+func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+	return &plugin.InitializeResponse{}, nil
+}
+
+func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
+	return nil, fmt.Errorf("metadata error")
+}
+
+func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
+	return &plugin.CloseResponse{}, nil
+}
+
+func main() {
+	sockFile := os.Getenv("PLUGIN_SOCKET")
+	if sockFile == "" {
+		fmt.Fprintln(os.Stderr, "PLUGIN_SOCKET environment variable not set")
+		os.Exit(1)
+	}
+
+	lis, err := net.Listen("unix", sockFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
+		os.Exit(1)
+	}
+
+	s := grpc.NewServer()
+	plugin.RegisterPluginServer(s, &mockServer{})
+
+	if err := s.Serve(lis); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
+		os.Exit(1)
+	}
+}`
+		pluginFile := filepath.Join(tmpDir, "plugin.go")
+		if err := os.WriteFile(pluginFile, []byte(pluginContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		// Build the plugin
+		cmd := exec.Command("go", "build", "-o", pluginPath, pluginFile)
+		if err := cmd.Run(); err != nil {
+			t.Fatal(err)
+		}
+
+		client, err := NewClient(pluginPath, map[string]string{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer client.Close(context.Background())
+
+		_, err = client.GetMetadata("example.com", map[string]string{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "metadata error")
+	})
 }
 
 func TestClientErrors(t *testing.T) {
@@ -278,5 +353,274 @@ func TestClientConcurrency(t *testing.T) {
 	// Wait for all goroutines to complete
 	for i := 0; i < 10; i++ {
 		<-done
+	}
+}
+
+func TestClientEdgeCases(t *testing.T) {
+	// Save original TMPDIR
+	origTmpDir := os.Getenv("TMPDIR")
+	defer os.Setenv("TMPDIR", origTmpDir)
+
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T) string
+		config      map[string]string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "socket file creation failure",
+			setup: func(t *testing.T) string {
+				// Create a read-only directory
+				tmpDir := t.TempDir()
+				if err := os.Chmod(tmpDir, 0o444); err != nil {
+					t.Fatal(err)
+				}
+				return filepath.Join(tmpDir, "plugin.sock")
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to start plugin: fork/exec",
+		},
+		{
+			name: "plugin process startup failure",
+			setup: func(t *testing.T) string {
+				// Create a temporary directory
+				tmpDir, err := os.MkdirTemp("", "plugin-test-*")
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Create a non-executable file
+				sockFile := filepath.Join(tmpDir, "plugin.sock")
+				if err := os.WriteFile(sockFile, []byte("not executable"), 0644); err != nil {
+					t.Fatal(err)
+				}
+				return sockFile
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to start plugin",
+		},
+		{
+			name: "plugin initialization failure",
+			setup: func(t *testing.T) string {
+				// Create a temporary directory
+				tmpDir, err := os.MkdirTemp("", "plugin-test-*")
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Create a mock plugin that fails to initialize
+				sockFile := filepath.Join(tmpDir, "plugin.sock")
+				pluginContent := `package main
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+
+	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"google.golang.org/grpc"
+)
+
+type mockServer struct {
+	plugin.UnimplementedPluginServer
+}
+
+func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+	return nil, fmt.Errorf("initialization failed")
+}
+
+func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
+	return &plugin.GetMetadataResponse{}, nil
+}
+
+func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
+	return &plugin.CloseResponse{}, nil
+}
+
+func main() {
+	sockFile := os.Getenv("PLUGIN_SOCKET")
+	if sockFile == "" {
+		fmt.Fprintln(os.Stderr, "PLUGIN_SOCKET environment variable not set")
+		os.Exit(1)
+	}
+
+	lis, err := net.Listen("unix", sockFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
+		os.Exit(1)
+	}
+
+	s := grpc.NewServer()
+	plugin.RegisterPluginServer(s, &mockServer{})
+
+	if err := s.Serve(lis); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
+		os.Exit(1)
+	}
+}`
+				pluginFile := filepath.Join(tmpDir, "plugin.go")
+				if err := os.WriteFile(pluginFile, []byte(pluginContent), 0644); err != nil {
+					t.Fatal(err)
+				}
+				// Build the plugin
+				cmd := exec.Command("go", "build", "-o", sockFile, pluginFile)
+				if err := cmd.Run(); err != nil {
+					t.Fatal(err)
+				}
+				return sockFile
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to initialize plugin",
+		},
+		{
+			name: "socket file timeout",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				// Create a mock plugin that doesn't create the socket file
+				pluginPath := filepath.Join(tmpDir, "timeout-plugin")
+				script := `#!/bin/sh
+sleep 1
+exit 0
+`
+				if err := os.WriteFile(pluginPath, []byte(script), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return pluginPath
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to initialize plugin: rpc error: code = Unavailable desc = connection error",
+		},
+		{
+			name: "temp dir creation failure",
+			setup: func(t *testing.T) string {
+				// Set TMPDIR to a non-existent directory
+				nonExistentDir := "/non/existent/dir"
+				os.Setenv("TMPDIR", nonExistentDir)
+				return "testdata/mock-plugin/mock-plugin"
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to create temp dir",
+		},
+		{
+			name: "grpc connection failure",
+			setup: func(t *testing.T) string {
+				// Reset TMPDIR to original value
+				os.Setenv("TMPDIR", origTmpDir)
+				// Create a plugin that exits immediately
+				tmpDir := t.TempDir()
+				pluginPath := filepath.Join(tmpDir, "exit-plugin")
+				script := `#!/bin/sh
+exit 0
+`
+				if err := os.WriteFile(pluginPath, []byte(script), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return pluginPath
+			},
+			config:      map[string]string{},
+			wantErr:     true,
+			errContains: "failed to initialize plugin: rpc error: code = Unavailable desc = connection error",
+		},
+		{
+			name: "get metadata error",
+			setup: func(t *testing.T) string {
+				// Reset TMPDIR to original value
+				os.Setenv("TMPDIR", origTmpDir)
+				// Create a plugin that returns an error for GetMetadata
+				tmpDir := t.TempDir()
+				pluginPath := filepath.Join(tmpDir, "error-plugin")
+				pluginContent := `package main
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+
+	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"google.golang.org/grpc"
+)
+
+type mockServer struct {
+	plugin.UnimplementedPluginServer
+}
+
+func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+	return &plugin.InitializeResponse{}, nil
+}
+
+func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
+	return nil, fmt.Errorf("metadata error")
+}
+
+func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
+	return &plugin.CloseResponse{}, nil
+}
+
+func main() {
+	sockFile := os.Getenv("PLUGIN_SOCKET")
+	if sockFile == "" {
+		fmt.Fprintln(os.Stderr, "PLUGIN_SOCKET environment variable not set")
+		os.Exit(1)
+	}
+
+	lis, err := net.Listen("unix", sockFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
+		os.Exit(1)
+	}
+
+	s := grpc.NewServer()
+	plugin.RegisterPluginServer(s, &mockServer{})
+
+	if err := s.Serve(lis); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
+		os.Exit(1)
+	}
+}`
+				pluginFile := filepath.Join(tmpDir, "plugin.go")
+				if err := os.WriteFile(pluginFile, []byte(pluginContent), 0644); err != nil {
+					t.Fatal(err)
+				}
+				// Build the plugin
+				cmd := exec.Command("go", "build", "-o", pluginPath, pluginFile)
+				if err := cmd.Run(); err != nil {
+					t.Fatal(err)
+				}
+				return pluginPath
+			},
+			config:      map[string]string{},
+			wantErr:     false,
+			errContains: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pluginPath := tt.setup(t)
+			client, err := NewClient(pluginPath, tt.config)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
+			if client != nil {
+				if tt.name == "get metadata error" {
+					_, err := client.GetMetadata("example.com", map[string]string{})
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "metadata error")
+				}
+				client.Close(context.Background())
+			}
+		})
 	}
 }
