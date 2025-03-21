@@ -1,8 +1,8 @@
 package plugin
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 // Plugin defines the interface that all plugins must implement

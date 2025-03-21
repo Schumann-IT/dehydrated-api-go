@@ -14,6 +14,70 @@ The plugin interface is defined in `proto/plugin/plugin.proto` and consists of t
 2. `EnrichDomainEntry`: Called to enrich domain entries with additional information
 3. `Close`: Called when the plugin is being shut down
 
+## Plugin Configuration
+
+The system uses static configuration to manage plugins. Each plugin must be explicitly configured in the dehydrated-api-go configuration file:
+
+```yaml
+plugins:
+  your-plugin:
+    enabled: true
+    path: /path/to/your-plugin
+    config:
+      # Plugin-specific configuration
+```
+
+### Plugin Configuration Structure
+
+Each plugin configuration contains the following fields:
+```go
+type PluginConfig struct {
+    Enabled bool                   // Whether the plugin is enabled
+    Path    string                 // Path to the plugin binary
+    Config  map[string]interface{} // Plugin-specific configuration
+}
+```
+
+**Pros:**
+- Simple to implement and understand
+- Explicit control over which plugins are loaded
+- Easy to manage plugin versions and dependencies
+- No runtime plugin discovery overhead
+- Better security control
+
+**Cons:**
+- Manual configuration required
+- No automatic plugin updates
+- Limited flexibility
+- Requires service restart for plugin changes
+
+### Best Practices for Plugin Configuration
+
+1. **Security**
+   - Use absolute paths for plugin binaries
+   - Set appropriate file permissions
+   - Validate plugin signatures
+   - Implement access controls
+   - Sandbox plugin execution
+
+2. **Reliability**
+   - Use stable plugin versions
+   - Implement proper error handling
+   - Monitor plugin health
+   - Log plugin operations
+
+3. **Performance**
+   - Optimize plugin resource usage
+   - Implement caching where appropriate
+   - Monitor plugin performance
+   - Handle plugin failures gracefully
+
+4. **Monitoring**
+   - Track plugin metrics
+   - Log plugin events
+   - Monitor plugin health
+   - Alert on failures
+
 ## Building a Plugin
 
 ### 1. Project Structure
@@ -21,31 +85,34 @@ The plugin interface is defined in `proto/plugin/plugin.proto` and consists of t
 Create a new directory for your plugin:
 
 ```bash
-mkdir -p internal/dehydrated/plugin/yourplugin/grpc
-cd internal/dehydrated/plugin/yourplugin/grpc
+mkdir -p yourplugin
+cd yourplugin
 ```
 
 ### 2. Server Implementation
 
-Create a new file `server/server.go`:
+Create a new file `plugin.go`:
 
 ```go
-package server
+package main
 
 import (
     "context"
     pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
+// Server implements the gRPC plugin service
 type Server struct {
     pb.UnimplementedPluginServer
     // Add your plugin-specific fields here
 }
 
+// NewServer creates a new gRPC plugin server
 func NewServer() *Server {
     return &Server{}
 }
 
+// Initialize implements the Initialize RPC
 func (s *Server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
     // Initialize your plugin with the provided configuration
     return &pb.InitializeResponse{
@@ -53,6 +120,7 @@ func (s *Server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb
     }, nil
 }
 
+// EnrichDomainEntry implements the EnrichDomainEntry RPC
 func (s *Server) EnrichDomainEntry(ctx context.Context, req *pb.EnrichDomainEntryRequest) (*pb.EnrichDomainEntryResponse, error) {
     // Enrich the domain entry with your plugin's information
     // Add your information to req.Entry.Metadata
@@ -62,16 +130,12 @@ func (s *Server) EnrichDomainEntry(ctx context.Context, req *pb.EnrichDomainEntr
     }, nil
 }
 
+// Close implements the Close RPC
 func (s *Server) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
     // Clean up any resources
     return &pb.CloseResponse{
         Success: true,
     }, nil
-}
-
-func (s *Server) Serve() error {
-    // Start the gRPC server
-    // Implementation similar to the certs plugin
 }
 ```
 
@@ -85,11 +149,13 @@ package main
 import (
     "flag"
     "fmt"
+    "net"
     "os"
     "os/signal"
     "syscall"
 
-    "github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin/yourplugin/grpc/server"
+    "google.golang.org/grpc"
+    pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
 func main() {
@@ -97,7 +163,7 @@ func main() {
     flag.IntVar(&port, "port", 0, "Port to listen on (0 for random)")
     flag.Parse()
 
-    srv := server.NewServer()
+    srv := NewServer()
 
     // Handle graceful shutdown
     sigChan := make(chan os.Signal, 1)
@@ -109,7 +175,17 @@ func main() {
         os.Exit(0)
     }()
 
-    if err := srv.Serve(); err != nil {
+    // Start the gRPC server
+    lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
+        os.Exit(1)
+    }
+
+    grpcServer := grpc.NewServer()
+    pb.RegisterPluginServer(grpcServer, srv)
+
+    if err := grpcServer.Serve(lis); err != nil {
         fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
         os.Exit(1)
     }
@@ -121,7 +197,7 @@ func main() {
 Build your plugin as a standalone binary:
 
 ```bash
-go build -o yourplugin internal/dehydrated/plugin/yourplugin/grpc/main.go
+go build -o yourplugin
 ```
 
 ## Using a Plugin
@@ -153,16 +229,6 @@ The plugin system will automatically start your plugin when the dehydrated-api-g
 - **Initialization**: The plugin receives configuration and sets up its resources
 - **Operation**: The plugin processes domain entries and enriches them with metadata
 - **Shutdown**: The plugin receives a close request and cleans up its resources
-
-## Example: Certs Plugin
-
-The `certs` plugin is a good example of a plugin implementation. It:
-
-1. Reads certificate information from the dehydrated certificates directory
-2. Validates certificates
-3. Adds certificate metadata to domain entries
-
-You can find its implementation in `internal/dehydrated/plugin/certs/grpc/`.
 
 ## Best Practices
 

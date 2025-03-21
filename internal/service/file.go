@@ -2,24 +2,23 @@ package service
 
 import (
 	"bufio"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"strings"
-
-	model2 "github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
 // ReadDomainsFile reads a domains.txt file and returns a slice of DomainEntry
-func ReadDomainsFile(filename string) ([]model2.DomainEntry, error) {
+func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []model2.DomainEntry{}, nil
+			return []model.DomainEntry{}, nil
 		}
 		return nil, err
 	}
 	defer file.Close()
 
-	var entries []model2.DomainEntry
+	var entries []model.DomainEntry
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -58,7 +57,7 @@ func ReadDomainsFile(filename string) ([]model2.DomainEntry, error) {
 			continue
 		}
 
-		entry := model2.DomainEntry{
+		entry := model.DomainEntry{
 			Domain:           fields[0],
 			AlternativeNames: fields[1:],
 			Alias:            alias,
@@ -67,7 +66,7 @@ func ReadDomainsFile(filename string) ([]model2.DomainEntry, error) {
 		}
 
 		// Only add valid domain entries
-		if model2.IsValidDomainEntry(entry) {
+		if model.IsValidDomainEntry(entry) {
 			entries = append(entries, entry)
 		}
 	}
@@ -80,7 +79,7 @@ func ReadDomainsFile(filename string) ([]model2.DomainEntry, error) {
 }
 
 // WriteDomainsFile writes a slice of DomainEntry to a domains.txt file
-func WriteDomainsFile(filename string, entries []model2.DomainEntry) error {
+func WriteDomainsFile(filename string, entries []model.DomainEntry) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

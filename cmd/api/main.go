@@ -1,15 +1,14 @@
 package main
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/internal/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/handler"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"log"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/handler"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/plugin/certs"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/service"
 )
 
 func main() {
@@ -25,11 +24,6 @@ func main() {
 
 	// Initialize plugin registry
 	pluginRegistry := plugin.NewRegistry(cfg)
-
-	// Register plugins
-	if err := pluginRegistry.Register(certs.New()); err != nil {
-		log.Fatalf("Failed to register certs plugin: %v", err)
-	}
 
 	// Create domain service
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{

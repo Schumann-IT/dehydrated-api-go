@@ -2,10 +2,9 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"testing"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
 )
 
 // MockPlugin is a test implementation of the Plugin interface

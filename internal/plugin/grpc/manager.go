@@ -3,6 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/proto/plugin"
 	"io"
 	"net"
 	"os/exec"
@@ -11,10 +14,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated/model"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
 // Manager handles gRPC plugin communication
@@ -25,7 +24,7 @@ type Manager struct {
 
 // PluginClient represents a connected gRPC plugin
 type PluginClient struct {
-	client pb.PluginClient
+	client plugin.PluginClient
 	conn   *grpc.ClientConn
 	cmd    *exec.Cmd
 }
@@ -78,14 +77,14 @@ func (m *Manager) LoadPlugin(name, path string, cfg *config.Config) error {
 	}
 
 	client := &PluginClient{
-		client: pb.NewPluginClient(conn),
+		client: plugin.NewPluginClient(conn),
 		conn:   conn,
 		cmd:    cmd,
 	}
 
 	// Initialize the plugin
 	ctx := context.Background()
-	initReq := &pb.InitializeRequest{
+	initReq := &plugin.InitializeRequest{
 		CertDir: cfg.CertDir,
 		BaseDir: cfg.BaseDir,
 		Config:  make(map[string]string),
@@ -113,8 +112,8 @@ func (m *Manager) EnrichDomainEntry(entry *model.DomainEntry) error {
 
 	for name, client := range m.plugins {
 		ctx := context.Background()
-		req := &pb.EnrichDomainEntryRequest{
-			Entry: &pb.DomainEntry{
+		req := &plugin.EnrichDomainEntryRequest{
+			Entry: &plugin.DomainEntry{
 				Domain:           entry.Domain,
 				AlternativeNames: entry.AlternativeNames,
 				Enabled:          entry.Enabled,
