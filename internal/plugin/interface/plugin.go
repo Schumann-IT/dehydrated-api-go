@@ -2,9 +2,8 @@ package plugininterface
 
 import (
 	"fmt"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
 
 // PluginError represents an error that occurred during plugin operations
@@ -44,7 +43,7 @@ type Plugin interface {
 	// Initialize sets up the plugin with the given configuration.
 	// This method is called when the plugin is first loaded and
 	// should perform any necessary setup or validation.
-	Initialize(cfg *config.Config) error
+	Initialize(cfg *service.Config) error
 
 	// EnrichDomainEntry allows the plugin to add information to a domain entry.
 	// This method is called for each domain entry and should add any

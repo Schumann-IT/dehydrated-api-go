@@ -1,22 +1,22 @@
 package registry
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"sync"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 )
 
 // Registry manages the registered plugins and provides thread-safe access to them.
 type Registry struct {
 	plugins []plugininterface.Plugin
-	config  *config.Config
+	config  *service.Config
 	mu      sync.RWMutex
 }
 
 // NewRegistry creates a new plugin registry with the given configuration.
-func NewRegistry(cfg *config.Config) *Registry {
+func NewRegistry(cfg *service.Config) *Registry {
 	return &Registry{
 		plugins: make([]plugininterface.Plugin, 0),
 		config:  cfg,

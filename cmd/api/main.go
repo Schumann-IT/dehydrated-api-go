@@ -1,35 +1,36 @@
 package main
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
+	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"log"
-	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	// Load configuration
-	cfg := config.NewConfig()
-	if os.Getenv("DEHYDRATED_BASE_DIR") != "" {
-		cfg.WithBaseDir(os.Getenv("DEHYDRATED_BASE_DIR"))
-	}
-	cfg.Load()
-
 	// Create fiber app
 	app := fiber.New()
+
+	// Load configuration
+	configPath, _ := filepath.Abs("config.yaml")
+	cfg, err := internal.LoadConfig(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Initialize plugin registry
 	pluginRegistry := plugin.NewRegistry(cfg)
 
 	// Create domain service
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{
-		DomainsFile:    cfg.DomainsFile,
-		EnableWatcher:  true,
-		PluginRegistry: pluginRegistry,
+		DehydratedBaseDir: cfg.DehydratedBaseDir,
+		EnableWatcher:     true,
+		PluginRegistry:    pluginRegistry,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create domain service: %v", err)
@@ -41,5 +42,5 @@ func main() {
 	domainHandler.RegisterRoutes(app)
 
 	// Start server
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(fmt.Sprintf(":%d", cfg.Port)))
 }

@@ -2,7 +2,7 @@ package service
 
 import (
 	"fmt"
-	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"path/filepath"
@@ -11,36 +11,38 @@ import (
 
 // DomainServiceConfig holds configuration options for the DomainService
 type DomainServiceConfig struct {
-	DomainsFile    string
-	EnableWatcher  bool
-	PluginRegistry *plugin.Registry
+	DehydratedBaseDir string
+	EnableWatcher     bool
+	PluginRegistry    *plugin.Registry
 }
 
 // DomainService handles domain-related business logic
 type DomainService struct {
 	domainsFile string
 	watcher     *FileWatcher
-	cache       []model2.DomainEntry
+	cache       []model.DomainEntry
 	mutex       sync.RWMutex
 	plugins     *plugin.Registry
 }
 
 // NewDomainService creates a new DomainService instance
 func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
+	cfg := NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
+
 	// Ensure the domains file exists
-	if _, err := os.Stat(config.DomainsFile); os.IsNotExist(err) {
+	if _, err := os.Stat(cfg.DomainsFile); os.IsNotExist(err) {
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(config.DomainsFile), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(cfg.DomainsFile), 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 		// Create an empty domains file
-		if err := os.WriteFile(config.DomainsFile, []byte{}, 0644); err != nil {
+		if err := os.WriteFile(cfg.DomainsFile, []byte{}, 0644); err != nil {
 			return nil, fmt.Errorf("failed to create domains file: %w", err)
 		}
 	}
 
 	s := &DomainService{
-		domainsFile: config.DomainsFile,
+		domainsFile: cfg.DomainsFile,
 		plugins:     config.PluginRegistry,
 	}
 
@@ -51,7 +53,7 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 
 	// Set up file watcher if enabled
 	if config.EnableWatcher {
-		watcher, err := NewFileWatcher(config.DomainsFile, s.reloadCache)
+		watcher, err := NewFileWatcher(cfg.DomainsFile, s.reloadCache)
 		if err != nil {
 			return nil, fmt.Errorf("failed to set up file watcher: %w", err)
 		}
@@ -84,7 +86,7 @@ func (s *DomainService) Close() error {
 }
 
 // enrichEntry runs all plugins on a domain entry
-func (s *DomainService) enrichEntry(entry *model2.DomainEntry) error {
+func (s *DomainService) enrichEntry(entry *model.DomainEntry) error {
 	if s.plugins != nil {
 		if err := s.plugins.EnrichDomainEntry(entry); err != nil {
 			return fmt.Errorf("failed to enrich domain entry: %w", err)
@@ -94,8 +96,8 @@ func (s *DomainService) enrichEntry(entry *model2.DomainEntry) error {
 }
 
 // CreateDomain adds a new domain entry
-func (s *DomainService) CreateDomain(req model2.CreateDomainRequest) (*model2.DomainEntry, error) {
-	entry := model2.DomainEntry{
+func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
+	entry := model.DomainEntry{
 		Domain:           req.Domain,
 		AlternativeNames: req.AlternativeNames,
 		Alias:            req.Alias,
@@ -104,7 +106,7 @@ func (s *DomainService) CreateDomain(req model2.CreateDomainRequest) (*model2.Do
 	}
 
 	// Validate the domain entry
-	if !model2.IsValidDomainEntry(entry) {
+	if !model.IsValidDomainEntry(entry) {
 		return nil, fmt.Errorf("invalid domain entry: %v", entry)
 	}
 
@@ -132,7 +134,7 @@ func (s *DomainService) CreateDomain(req model2.CreateDomainRequest) (*model2.Do
 }
 
 // GetDomain retrieves a domain entry
-func (s *DomainService) GetDomain(domain string) (*model2.DomainEntry, error) {
+func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -150,12 +152,12 @@ func (s *DomainService) GetDomain(domain string) (*model2.DomainEntry, error) {
 }
 
 // ListDomains returns all domain entries
-func (s *DomainService) ListDomains() ([]model2.DomainEntry, error) {
+func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	// Return a copy of the cache
-	entries := make([]model2.DomainEntry, len(s.cache))
+	entries := make([]model.DomainEntry, len(s.cache))
 	copy(entries, s.cache)
 
 	// Enrich each entry
@@ -169,19 +171,19 @@ func (s *DomainService) ListDomains() ([]model2.DomainEntry, error) {
 }
 
 // UpdateDomain updates an existing domain entry
-func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainRequest) (*model2.DomainEntry, error) {
+func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
 	s.mutex.RLock()
 	// Make a copy of the current entries
-	currentEntries := make([]model2.DomainEntry, len(s.cache))
+	currentEntries := make([]model.DomainEntry, len(s.cache))
 	copy(currentEntries, s.cache)
 	s.mutex.RUnlock()
 
 	// Find and update the domain
 	found := false
-	var updatedEntry model2.DomainEntry
+	var updatedEntry model.DomainEntry
 	for i, existing := range currentEntries {
 		if existing.Domain == domain {
-			updatedEntry = model2.DomainEntry{
+			updatedEntry = model.DomainEntry{
 				Domain:           domain,
 				AlternativeNames: req.AlternativeNames,
 				Alias:            req.Alias,
@@ -190,7 +192,7 @@ func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainReque
 			}
 
 			// Validate the updated entry
-			if !model2.IsValidDomainEntry(updatedEntry) {
+			if !model.IsValidDomainEntry(updatedEntry) {
 				return nil, fmt.Errorf("invalid domain entry: %v", updatedEntry)
 			}
 
@@ -218,7 +220,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	defer s.mutex.Unlock()
 
 	found := false
-	newEntries := make([]model2.DomainEntry, 0, len(s.cache))
+	newEntries := make([]model.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			found = true

@@ -3,9 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/proto/plugin"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"io"
 	"net"
 	"os/exec"
@@ -37,7 +37,7 @@ func NewManager() *Manager {
 }
 
 // LoadPlugin loads and initializes a plugin
-func (m *Manager) LoadPlugin(name, path string, cfg *config.Config) error {
+func (m *Manager) LoadPlugin(name, path string, cfg *service.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -1,15 +1,15 @@
 package registry
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"testing"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 )
 
 func TestRegistry(t *testing.T) {
-	cfg := config.NewConfig()
+	cfg := service.NewConfig()
 	registry := NewRegistry(cfg)
 
 	t.Run("RegisterPlugin", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestRegistry(t *testing.T) {
 }
 
 func TestRegistryConcurrency(t *testing.T) {
-	cfg := config.NewConfig()
+	cfg := service.NewConfig()
 	registry := NewRegistry(cfg)
 
 	// Create a plugin that will be registered multiple times

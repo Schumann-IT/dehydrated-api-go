@@ -1,10 +1,9 @@
 package plugininterface
 
 import (
-	"sync"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"sync"
 )
 
 // MockPlugin is a test implementation of the Plugin interface
@@ -57,7 +56,7 @@ func (p *MockPlugin) Name() string {
 	return p.name
 }
 
-func (p *MockPlugin) Initialize(cfg *config.Config) error {
+func (p *MockPlugin) Initialize(cfg *service.Config) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.initCalls++
