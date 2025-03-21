@@ -2,8 +2,8 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
 	"testing"
 )
 
@@ -20,7 +20,7 @@ func (p *MockPlugin) Name() string {
 	return p.name
 }
 
-func (p *MockPlugin) Initialize(cfg *service.Config) error {
+func (p *MockPlugin) Initialize(cfg *internal.Config) error {
 	p.initCalls++
 	if p.shouldError {
 		return fmt.Errorf("mock error")
@@ -49,7 +49,7 @@ func (p *MockPlugin) Close() error {
 }
 
 func TestPluginRegistry(t *testing.T) {
-	cfg := service.NewConfig()
+	cfg := &internal.Config{}
 	registry := NewRegistry(cfg)
 
 	t.Run("RegisterPlugin", func(t *testing.T) {

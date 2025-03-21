@@ -3,11 +3,11 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
-	"net/http/httptest"
-	"path/filepath"
-	"testing"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,15 +15,14 @@ import (
 func TestDomainHandler(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
-	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
 	// Create a new Fiber app
 	app := fiber.New()
 
 	// Create domain service
 	service, err := service.NewDomainService(service.DomainServiceConfig{
-		DomainsFile:   domainsFile,
-		EnableWatcher: false,
+		DehydratedBaseDir: tmpDir,
+		EnableWatcher:     false,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create domain service: %v", err)

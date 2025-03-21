@@ -15,8 +15,8 @@ func TestDomainService(t *testing.T) {
 	// Test with watcher enabled
 	t.Run("WithWatcher", func(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
-			DomainsFile:   domainsFile,
-			EnableWatcher: true,
+			DehydratedBaseDir: tmpDir,
+			EnableWatcher:     true,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -29,8 +29,8 @@ func TestDomainService(t *testing.T) {
 	// Test without watcher
 	t.Run("WithoutWatcher", func(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
-			DomainsFile:   domainsFile,
-			EnableWatcher: false,
+			DehydratedBaseDir: tmpDir,
+			EnableWatcher:     false,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -185,8 +185,8 @@ func TestNewDomainService(t *testing.T) {
 	// Test with valid config
 	t.Run("ValidConfig", func(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
-			DomainsFile:   domainsFile,
-			EnableWatcher: true,
+			DehydratedBaseDir: tmpDir,
+			EnableWatcher:     true,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -205,8 +205,8 @@ func TestNewDomainService(t *testing.T) {
 	t.Run("InvalidPath", func(t *testing.T) {
 		invalidPath := filepath.Join(tmpDir, "nonexistent", "domains.txt")
 		service, err := NewDomainService(DomainServiceConfig{
-			DomainsFile:   invalidPath,
-			EnableWatcher: true,
+			DehydratedBaseDir: filepath.Join(tmpDir, "nonexistent"),
+			EnableWatcher:     true,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -222,8 +222,8 @@ func TestNewDomainService(t *testing.T) {
 	// Test without watcher
 	t.Run("WithoutWatcher", func(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
-			DomainsFile:   domainsFile,
-			EnableWatcher: false,
+			DehydratedBaseDir: tmpDir,
+			EnableWatcher:     false,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
