@@ -1,0 +1,44 @@
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin.proto
+
+syntax = "proto3";
+
+package plugin;
+
+option go_package = "github.com/schumann-it/dehydrated-api-go/proto/plugin";
+
+// Plugin service definition
+service Plugin {
+  // Initialize is called when the plugin is loaded
+  rpc Initialize(InitializeRequest) returns (InitializeResponse) {}
+  
+  // GetMetadata returns metadata for a domain entry
+  rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse) {}
+  
+  // Close is called when the plugin is being unloaded
+  rpc Close(CloseRequest) returns (CloseResponse) {}
+}
+
+// InitializeRequest contains the configuration for the plugin
+message InitializeRequest {
+  map<string, string> config = 1;
+}
+
+// InitializeResponse is empty as no data is needed
+message InitializeResponse {}
+
+// GetMetadataRequest contains the domain entry to get metadata for
+message GetMetadataRequest {
+  string domain = 1;
+  map<string, string> config = 2;
+}
+
+// GetMetadataResponse contains the metadata for the domain entry
+message GetMetadataResponse {
+  map<string, string> metadata = 1;
+}
+
+// CloseRequest is empty as no data is needed
+message CloseRequest {}
+
+// CloseResponse is empty as no data is needed
+message CloseResponse {} 
