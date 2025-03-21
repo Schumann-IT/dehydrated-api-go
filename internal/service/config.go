@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-// PluginConfig contains configuration for a single plugin
-type PluginConfig struct {
-	Enabled bool                   `yaml:"enabled"`
-	Path    string                 `yaml:"path"`
-	Config  map[string]interface{} `yaml:"config"`
-}
-
 // Config represents the dehydrated configuration
 type Config struct {
 	// User and group settings
@@ -71,15 +64,14 @@ type Config struct {
 	OCSPDays       int  // OCSP refresh interval
 
 	// Other settings
-	NoLock       bool                    // Don't use lockfile
-	KeepGoing    bool                    // Continue after errors
-	FullChain    bool                    // Print full chain
-	OCSP         bool                    // Enable OCSP stapling
-	AutoCleanup  bool                    // Automatic cleanup
-	ContactEmail string                  // E-mail to use during registration
-	CurlOpts     string                  // Extra options passed to curl
-	ConfigD      string                  // Directory containing additional config files
-	Plugins      map[string]PluginConfig `yaml:"plugins"`
+	NoLock       bool   // Don't use lockfile
+	KeepGoing    bool   // Continue after errors
+	FullChain    bool   // Print full chain
+	OCSP         bool   // Enable OCSP stapling
+	AutoCleanup  bool   // Automatic cleanup
+	ContactEmail string // E-mail to use during registration
+	CurlOpts     string // Extra options passed to curl
+	ConfigD      string // Directory containing additional config files
 }
 
 // NewConfig creates a new Config with default values
@@ -105,7 +97,6 @@ func NewConfig() *Config {
 		OCSPDays:        5,
 		ChainCache:      "chains",
 		API:             "auto",
-		Plugins:         make(map[string]PluginConfig),
 	}
 }
 
@@ -176,9 +167,7 @@ func (c *Config) load() {
 		}
 
 		// Look for export statements
-		if strings.HasPrefix(line, "export ") {
-			line = strings.TrimPrefix(line, "export ")
-		}
+		line = strings.TrimPrefix(line, "export ")
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
