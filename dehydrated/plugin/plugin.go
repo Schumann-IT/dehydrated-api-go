@@ -1,8 +1,8 @@
 package plugin
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated/model"
 )
 
 // Plugin defines the interface that all plugins must implement
@@ -11,7 +11,7 @@ type Plugin interface {
 	Name() string
 
 	// Initialize sets up the plugin with the given configuration
-	Initialize(cfg *internal.Config) error
+	Initialize(cfg *dehydrated.Config) error
 
 	// EnrichDomainEntry allows the plugin to add information to a domain entry
 	EnrichDomainEntry(entry *model.DomainEntry) error
@@ -23,11 +23,11 @@ type Plugin interface {
 // Registry manages the registered plugins
 type Registry struct {
 	plugins []Plugin
-	config  *internal.Config
+	config  *dehydrated.Config
 }
 
 // NewRegistry creates a new plugin registry
-func NewRegistry(cfg *internal.Config) *Registry {
+func NewRegistry(cfg *dehydrated.Config) *Registry {
 	return &Registry{
 		plugins: make([]Plugin, 0),
 		config:  cfg,

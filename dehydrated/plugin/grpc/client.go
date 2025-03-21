@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	pb "github.com/schumann-it/dehydrated-api-go/internal/plugin/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/dehydrated/plugin/proto/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

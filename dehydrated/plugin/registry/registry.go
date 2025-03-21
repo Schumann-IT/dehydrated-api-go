@@ -1,11 +1,11 @@
 package registry
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated/service"
 	"sync"
 
-	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/dehydrated/plugin/interface"
 )
 
 // Registry manages the registered plugins and provides thread-safe access to them.

@@ -2,8 +2,8 @@ package plugininterface
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/dehydrated/service"
 )
 
 // PluginError represents an error that occurred during plugin operations
