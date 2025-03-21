@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/dehydrated/handler"
-	"github.com/schumann-it/dehydrated-api-go/dehydrated/plugin"
 	"github.com/schumann-it/dehydrated-api-go/dehydrated/service"
 	"log"
 	"path/filepath"
@@ -23,14 +22,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize plugin registry
-	pluginRegistry := plugin.NewRegistry(cfg)
-
 	// Create domain service
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{
 		DehydratedBaseDir: cfg.DehydratedBaseDir,
 		EnableWatcher:     true,
-		PluginRegistry:    pluginRegistry,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create domain service: %v", err)
