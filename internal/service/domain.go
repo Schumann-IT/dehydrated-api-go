@@ -34,7 +34,7 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
 
 	// Create plugin registry
-	reg := registry.NewRegistry()
+	reg := registry.NewRegistry(cfg)
 	for name, pluginConfig := range config.PluginConfig {
 		// Convert config to map[string]any
 		anyConfig := make(map[string]any)

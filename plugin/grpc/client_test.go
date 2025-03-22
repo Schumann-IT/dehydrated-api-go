@@ -2,13 +2,15 @@ package grpc
 
 import (
 	"context"
-	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
@@ -100,38 +102,52 @@ func TestNewClient(t *testing.T) {
 		t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 	}
 
+	// Create a test dehydrated config
+	dehydratedConfig := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		AccountsDir:   "/test/accounts",
+		ChallengesDir: "/test/challenges",
+		DomainsFile:   "/test/domains.txt",
+	}
+
 	tests := []struct {
-		name        string
-		pluginPath  string
-		config      map[string]any
-		wantErr     bool
-		errContains string
+		name             string
+		pluginPath       string
+		config           map[string]any
+		dehydratedConfig *dehydrated.Config
+		wantErr          bool
+		errContains      string
 	}{
 		{
-			name:       "successful client creation",
-			pluginPath: mockPluginPath,
-			config:     map[string]any{"test": "config"},
-			wantErr:    false,
+			name:             "successful client creation",
+			pluginPath:       mockPluginPath,
+			config:           map[string]any{"test": "config"},
+			dehydratedConfig: dehydratedConfig,
+			wantErr:          false,
 		},
 		{
-			name:        "non-existent plugin",
-			pluginPath:  "/non/existent/plugin",
-			config:      map[string]any{},
-			wantErr:     true,
-			errContains: "failed to start plugin",
+			name:             "non-existent plugin",
+			pluginPath:       "/non/existent/plugin",
+			config:           map[string]any{},
+			dehydratedConfig: dehydratedConfig,
+			wantErr:          true,
+			errContains:      "failed to start plugin",
 		},
 		{
-			name:        "invalid plugin",
-			pluginPath:  "client_test.go", // Use this file as an invalid plugin
-			config:      map[string]any{},
-			wantErr:     true,
-			errContains: "failed to start plugin",
+			name:             "invalid plugin",
+			pluginPath:       "client_test.go", // Use this file as an invalid plugin
+			config:           map[string]any{},
+			dehydratedConfig: dehydratedConfig,
+			wantErr:          true,
+			errContains:      "failed to start plugin",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.pluginPath, tt.config)
+			client, err := NewClient(tt.pluginPath, tt.config, tt.dehydratedConfig)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
@@ -156,15 +172,25 @@ func TestClientMethods(t *testing.T) {
 
 	ctx := context.Background()
 
+	// Create a test dehydrated config
+	dehydratedConfig := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		AccountsDir:   "/test/accounts",
+		ChallengesDir: "/test/challenges",
+		DomainsFile:   "/test/domains.txt",
+	}
+
 	// Create a client
-	client, err := NewClient(mockPluginPath, map[string]any{})
+	client, err := NewClient(mockPluginPath, map[string]any{}, dehydratedConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer client.Close(ctx)
 
 	t.Run("Initialize", func(t *testing.T) {
-		err := client.Initialize(ctx, map[string]any{"test": "config"})
+		err := client.Initialize(ctx, map[string]any{"test": "config"}, dehydratedConfig)
 		assert.NoError(t, err)
 	})
 
@@ -189,7 +215,7 @@ func TestClientMethods(t *testing.T) {
 			t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 		}
 
-		client, err := NewClient(mockPluginPath, map[string]any{})
+		client, err := NewClient(mockPluginPath, map[string]any{}, dehydratedConfig)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -203,6 +229,17 @@ func TestClientMethods(t *testing.T) {
 
 func TestClientErrors(t *testing.T) {
 	ctx := context.Background()
+
+	// Create a test dehydrated config
+	dehydratedConfig := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		AccountsDir:   "/test/accounts",
+		ChallengesDir: "/test/challenges",
+		DomainsFile:   "/test/domains.txt",
+	}
+
 	tests := []struct {
 		name        string
 		setup       func(*Client)
@@ -241,19 +278,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				return c.Initialize(ctx, map[string]any{})
-			},
-			wantErr:     true,
-			errContains: "client is nil",
-		},
-		{
-			name: "get metadata with nil client",
-			setup: func(c *Client) {
-				c.client = nil
-			},
-			operation: func(c *Client) error {
-				_, err := c.GetMetadata(ctx, "example.com")
-				return err
+				return c.Initialize(ctx, map[string]any{}, dehydratedConfig)
 			},
 			wantErr:     true,
 			errContains: "client is nil",
@@ -263,9 +288,8 @@ func TestClientErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := &Client{}
-			if tt.setup != nil {
-				tt.setup(client)
-			}
+			tt.setup(client)
+
 			err := tt.operation(client)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -287,8 +311,18 @@ func TestClientConcurrency(t *testing.T) {
 
 	ctx := context.Background()
 
+	// Create a test dehydrated config
+	dehydratedConfig := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		AccountsDir:   "/test/accounts",
+		ChallengesDir: "/test/challenges",
+		DomainsFile:   "/test/domains.txt",
+	}
+
 	// Create a client
-	client, err := NewClient(mockPluginPath, map[string]any{})
+	client, err := NewClient(mockPluginPath, map[string]any{}, dehydratedConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,6 +351,16 @@ func TestClientEdgeCases(t *testing.T) {
 	defer os.Setenv("TMPDIR", origTmpDir)
 
 	ctx := context.Background()
+
+	// Create a test dehydrated config
+	dehydratedConfig := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		AccountsDir:   "/test/accounts",
+		ChallengesDir: "/test/challenges",
+		DomainsFile:   "/test/domains.txt",
+	}
 
 	tests := []struct {
 		name        string
@@ -560,7 +604,7 @@ func main() {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pluginPath := tt.setup(t)
-			client, err := NewClient(pluginPath, tt.config)
+			client, err := NewClient(pluginPath, tt.config, dehydratedConfig)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {

@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +30,7 @@ func buildTestPlugin(t *testing.T) string {
 
 func TestRegistry(t *testing.T) {
 	ctx := context.Background()
-	registry := NewRegistry()
+	registry := NewRegistry(&dehydrated.Config{})
 
 	// Build the test plugin
 	pluginPath := buildTestPlugin(t)
@@ -83,7 +84,7 @@ func TestRegistry(t *testing.T) {
 
 func TestRegistryConcurrency(t *testing.T) {
 	ctx := context.Background()
-	registry := NewRegistry()
+	registry := NewRegistry(&dehydrated.Config{})
 
 	// Build the test plugin
 	pluginPath := buildTestPlugin(t)

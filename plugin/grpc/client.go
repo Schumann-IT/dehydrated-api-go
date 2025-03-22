@@ -3,12 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
-	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
@@ -27,7 +29,7 @@ type Client struct {
 }
 
 // NewClient creates a new gRPC client for the given plugin
-func NewClient(pluginPath string, config map[string]any) (*Client, error) {
+func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehydrated.Config) (*Client, error) {
 	// Create a temporary directory for the socket file
 	tmpDir, err := os.MkdirTemp("", "grpc-plugin-*")
 	if err != nil {
@@ -79,9 +81,57 @@ func NewClient(pluginPath string, config map[string]any) (*Client, error) {
 		return nil, fmt.Errorf("failed to convert config: %w", err)
 	}
 
+	// Convert dehydrated config to proto format
+	dehydratedConfigProto := &pb.DehydratedConfig{
+		User:               dehydratedConfig.User,
+		Group:              dehydratedConfig.Group,
+		BaseDir:            dehydratedConfig.BaseDir,
+		CertDir:            dehydratedConfig.CertDir,
+		DomainsDir:         dehydratedConfig.DomainsDir,
+		AccountsDir:        dehydratedConfig.AccountsDir,
+		ChallengesDir:      dehydratedConfig.ChallengesDir,
+		ChainCache:         dehydratedConfig.ChainCache,
+		DomainsFile:        dehydratedConfig.DomainsFile,
+		ConfigFile:         dehydratedConfig.ConfigFile,
+		HookScript:         dehydratedConfig.HookScript,
+		LockFile:           dehydratedConfig.LockFile,
+		OpensslConfig:      dehydratedConfig.OpenSSLConfig,
+		Openssl:            dehydratedConfig.OpenSSL,
+		KeySize:            int32(dehydratedConfig.KeySize),
+		Ca:                 dehydratedConfig.CA,
+		OldCa:              dehydratedConfig.OldCA,
+		AcceptTerms:        dehydratedConfig.AcceptTerms,
+		Ipv4:               dehydratedConfig.IPV4,
+		Ipv6:               dehydratedConfig.IPV6,
+		PreferredChain:     dehydratedConfig.PreferredChain,
+		Api:                dehydratedConfig.API,
+		KeyAlgo:            dehydratedConfig.KeyAlgo,
+		RenewDays:          int32(dehydratedConfig.RenewDays),
+		ForceRenew:         dehydratedConfig.ForceRenew,
+		ForceValidation:    dehydratedConfig.ForceValidation,
+		PrivateKeyRenew:    dehydratedConfig.PrivateKeyRenew,
+		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
+		ChallengeType:      dehydratedConfig.ChallengeType,
+		WellKnownDir:       dehydratedConfig.WellKnownDir,
+		AlpnDir:            dehydratedConfig.ALPNDir,
+		HookChain:          dehydratedConfig.HookChain,
+		OcspMustStaple:     dehydratedConfig.OCSPMustStaple,
+		OcspFetch:          dehydratedConfig.OCSPFetch,
+		OcspDays:           int32(dehydratedConfig.OCSPDays),
+		NoLock:             dehydratedConfig.NoLock,
+		KeepGoing:          dehydratedConfig.KeepGoing,
+		FullChain:          dehydratedConfig.FullChain,
+		Ocsp:               dehydratedConfig.OCSP,
+		AutoCleanup:        dehydratedConfig.AutoCleanup,
+		ContactEmail:       dehydratedConfig.ContactEmail,
+		CurlOpts:           dehydratedConfig.CurlOpts,
+		ConfigD:            dehydratedConfig.ConfigD,
+	}
+
 	// Initialize the plugin
 	_, err = client.client.Initialize(context.Background(), &pb.InitializeRequest{
-		Config: configValues,
+		Config:           configValues,
+		DehydratedConfig: dehydratedConfigProto,
 	})
 	if err != nil {
 		client.Close(context.Background())
@@ -109,7 +159,7 @@ func convertToStructValue(config map[string]any) (map[string]*structpb.Value, er
 }
 
 // Initialize initializes the plugin with the given configuration
-func (c *Client) Initialize(ctx context.Context, config map[string]any) error {
+func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error {
 	c.mu.RLock()
 	if c.client == nil {
 		c.mu.RUnlock()
@@ -123,8 +173,56 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any) error {
 		return fmt.Errorf("failed to convert config: %w", err)
 	}
 
+	// Convert dehydrated config to proto format
+	dehydratedConfigProto := &pb.DehydratedConfig{
+		User:               dehydratedConfig.User,
+		Group:              dehydratedConfig.Group,
+		BaseDir:            dehydratedConfig.BaseDir,
+		CertDir:            dehydratedConfig.CertDir,
+		DomainsDir:         dehydratedConfig.DomainsDir,
+		AccountsDir:        dehydratedConfig.AccountsDir,
+		ChallengesDir:      dehydratedConfig.ChallengesDir,
+		ChainCache:         dehydratedConfig.ChainCache,
+		DomainsFile:        dehydratedConfig.DomainsFile,
+		ConfigFile:         dehydratedConfig.ConfigFile,
+		HookScript:         dehydratedConfig.HookScript,
+		LockFile:           dehydratedConfig.LockFile,
+		OpensslConfig:      dehydratedConfig.OpenSSLConfig,
+		Openssl:            dehydratedConfig.OpenSSL,
+		KeySize:            int32(dehydratedConfig.KeySize),
+		Ca:                 dehydratedConfig.CA,
+		OldCa:              dehydratedConfig.OldCA,
+		AcceptTerms:        dehydratedConfig.AcceptTerms,
+		Ipv4:               dehydratedConfig.IPV4,
+		Ipv6:               dehydratedConfig.IPV6,
+		PreferredChain:     dehydratedConfig.PreferredChain,
+		Api:                dehydratedConfig.API,
+		KeyAlgo:            dehydratedConfig.KeyAlgo,
+		RenewDays:          int32(dehydratedConfig.RenewDays),
+		ForceRenew:         dehydratedConfig.ForceRenew,
+		ForceValidation:    dehydratedConfig.ForceValidation,
+		PrivateKeyRenew:    dehydratedConfig.PrivateKeyRenew,
+		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
+		ChallengeType:      dehydratedConfig.ChallengeType,
+		WellKnownDir:       dehydratedConfig.WellKnownDir,
+		AlpnDir:            dehydratedConfig.ALPNDir,
+		HookChain:          dehydratedConfig.HookChain,
+		OcspMustStaple:     dehydratedConfig.OCSPMustStaple,
+		OcspFetch:          dehydratedConfig.OCSPFetch,
+		OcspDays:           int32(dehydratedConfig.OCSPDays),
+		NoLock:             dehydratedConfig.NoLock,
+		KeepGoing:          dehydratedConfig.KeepGoing,
+		FullChain:          dehydratedConfig.FullChain,
+		Ocsp:               dehydratedConfig.OCSP,
+		AutoCleanup:        dehydratedConfig.AutoCleanup,
+		ContactEmail:       dehydratedConfig.ContactEmail,
+		CurlOpts:           dehydratedConfig.CurlOpts,
+		ConfigD:            dehydratedConfig.ConfigD,
+	}
+
 	req := &pb.InitializeRequest{
-		Config: configValues,
+		Config:           configValues,
+		DehydratedConfig: dehydratedConfigProto,
 	}
 
 	_, err = c.client.Initialize(ctx, req)

@@ -3,21 +3,25 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/plugin/grpc"
-	"github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"sync"
+
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/plugin/grpc"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 )
 
 // Registry manages plugin instances
 type Registry struct {
 	plugins map[string]plugininterface.Plugin
+	config  *dehydrated.Config
 	mu      sync.RWMutex
 }
 
 // NewRegistry creates a new plugin registry
-func NewRegistry() *Registry {
+func NewRegistry(cfg *dehydrated.Config) *Registry {
 	return &Registry{
 		plugins: make(map[string]plugininterface.Plugin),
+		config:  cfg,
 	}
 }
 
@@ -40,7 +44,7 @@ func (r *Registry) LoadPlugin(name string, path string, config map[string]any) e
 	}
 
 	// Create new gRPC client
-	client, err := grpc.NewClient(path, configMap)
+	client, err := grpc.NewClient(path, configMap, r.config)
 	if err != nil {
 		return fmt.Errorf("failed to create plugin client: %w", err)
 	}

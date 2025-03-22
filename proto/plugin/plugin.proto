@@ -20,9 +20,74 @@ service Plugin {
   rpc Close(CloseRequest) returns (CloseResponse) {}
 }
 
+// DehydratedConfig contains the dehydrated configuration
+message DehydratedConfig {
+  // User and group settings
+  string user = 1;
+  string group = 2;
+
+  // Base directories
+  string base_dir = 3;
+  string cert_dir = 4;
+  string domains_dir = 5;
+  string accounts_dir = 6;
+  string challenges_dir = 7;
+  string chain_cache = 8;
+
+  // File paths
+  string domains_file = 9;
+  string config_file = 10;
+  string hook_script = 11;
+  string lock_file = 12;
+
+  // OpenSSL settings
+  string openssl_config = 13;
+  string openssl = 14;
+  int32 key_size = 15;
+
+  // ACME settings
+  string ca = 16;
+  string old_ca = 17;
+  bool accept_terms = 18;
+  bool ipv4 = 19;
+  bool ipv6 = 20;
+  string preferred_chain = 21;
+  string api = 22;
+
+  // Certificate settings
+  string key_algo = 23;
+  int32 renew_days = 24;
+  bool force_renew = 25;
+  bool force_validation = 26;
+  bool private_key_renew = 27;
+  bool private_key_rollover = 28;
+
+  // Challenge settings
+  string challenge_type = 29;
+  string well_known_dir = 30;
+  string alpn_dir = 31;
+  bool hook_chain = 32;
+
+  // OCSP settings
+  bool ocsp_must_staple = 33;
+  bool ocsp_fetch = 34;
+  int32 ocsp_days = 35;
+
+  // Other settings
+  bool no_lock = 36;
+  bool keep_going = 37;
+  bool full_chain = 38;
+  bool ocsp = 39;
+  bool auto_cleanup = 40;
+  string contact_email = 41;
+  string curl_opts = 42;
+  string config_d = 43;
+}
+
 // InitializeRequest contains the configuration for the plugin
 message InitializeRequest {
   map<string, google.protobuf.Value> config = 1;
+  DehydratedConfig dehydrated_config = 2;
 }
 
 // InitializeResponse is empty as no data is needed
