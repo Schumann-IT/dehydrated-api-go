@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type server struct {
@@ -21,11 +22,35 @@ func (s *server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb
 
 func (s *server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
 	log.Printf("GetMetadata called for domain: %s", req.Domain)
+
+	// Create metadata with different value types
+	metadata := make(map[string]*structpb.Value)
+
+	// String value
+	strValue, _ := structpb.NewValue("value")
+	metadata["test"] = strValue
+
+	// Number value
+	numValue, _ := structpb.NewValue(42)
+	metadata["count"] = numValue
+
+	// Boolean value
+	boolValue, _ := structpb.NewValue(true)
+	metadata["enabled"] = boolValue
+
+	// List value
+	listValue, _ := structpb.NewValue([]interface{}{"item1", "item2"})
+	metadata["items"] = listValue
+
+	// Struct value
+	structValue, _ := structpb.NewValue(map[string]interface{}{
+		"name": "test",
+		"age":  42,
+	})
+	metadata["user"] = structValue
+
 	return &pb.GetMetadataResponse{
-		Metadata: map[string]string{
-			"test": "value",
-			"type": "test-plugin",
-		},
+		Metadata: metadata,
 	}, nil
 }
 

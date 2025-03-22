@@ -6,28 +6,37 @@ import (
 	"net"
 	"os"
 
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type mockServer struct {
-	plugin.UnimplementedPluginServer
+	pb.UnimplementedPluginServer
 }
 
-func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
-	return &plugin.InitializeResponse{}, nil
+func (s *mockServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
+	return &pb.InitializeResponse{}, nil
 }
 
-func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
-	return &plugin.GetMetadataResponse{
-		Metadata: map[string]string{
-			"test": "value",
-		},
+func (s *mockServer) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
+	if req.Domain == "error.com" {
+		return nil, fmt.Errorf("metadata error")
+	}
+
+	metadata := make(map[string]*structpb.Value)
+
+	// String value
+	strValue, _ := structpb.NewValue("value")
+	metadata["test"] = strValue
+
+	return &pb.GetMetadataResponse{
+		Metadata: metadata,
 	}, nil
 }
 
-func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
-	return &plugin.CloseResponse{}, nil
+func (s *mockServer) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
+	return &pb.CloseResponse{}, nil
 }
 
 func main() {
@@ -46,7 +55,7 @@ func main() {
 
 	// Create a gRPC server
 	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &mockServer{})
+	pb.RegisterPluginServer(s, &mockServer{})
 
 	// Serve
 	if err := s.Serve(lis); err != nil {

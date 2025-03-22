@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type mockServer struct {
@@ -34,10 +35,11 @@ func (s *mockServer) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest
 	if s.getMetadataErr != nil {
 		return nil, s.getMetadataErr
 	}
+	metadata := make(map[string]*structpb.Value)
+	strValue, _ := structpb.NewValue("value")
+	metadata["test"] = strValue
 	return &pb.GetMetadataResponse{
-		Metadata: map[string]string{
-			"test": "value",
-		},
+		Metadata: metadata,
 	}, nil
 }
 
@@ -152,20 +154,22 @@ func TestClientMethods(t *testing.T) {
 		t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 	}
 
+	ctx := context.Background()
+
 	// Create a client
 	client, err := NewClient(mockPluginPath, map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer client.Close(context.Background())
+	defer client.Close(ctx)
 
 	t.Run("Initialize", func(t *testing.T) {
-		err := client.Initialize(map[string]string{"test": "config"})
+		err := client.Initialize(ctx, map[string]string{"test": "config"})
 		assert.NoError(t, err)
 	})
 
 	t.Run("GetMetadata", func(t *testing.T) {
-		metadata, err := client.GetMetadata("example.com")
+		metadata, err := client.GetMetadata(ctx, "example.com")
 		if err != nil {
 			t.Errorf("GetMetadata failed: %v", err)
 		}
@@ -175,89 +179,30 @@ func TestClientMethods(t *testing.T) {
 	})
 
 	t.Run("Close", func(t *testing.T) {
-		err := client.Close(context.Background())
+		err := client.Close(ctx)
 		assert.NoError(t, err)
 	})
 
 	t.Run("GetMetadata Error", func(t *testing.T) {
-		// Create a client with the error plugin
-		tmpDir := t.TempDir()
-		pluginPath := filepath.Join(tmpDir, "error-plugin")
-		pluginContent := `package main
-
-import (
-	"context"
-	"fmt"
-	"net"
-	"os"
-
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
-	"google.golang.org/grpc"
-)
-
-type mockServer struct {
-	plugin.UnimplementedPluginServer
-}
-
-func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
-	return &plugin.InitializeResponse{}, nil
-}
-
-func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
-	return nil, fmt.Errorf("metadata error")
-}
-
-func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
-	return &plugin.CloseResponse{}, nil
-}
-
-func main() {
-	sockFile := os.Getenv("PLUGIN_SOCKET")
-	if sockFile == "" {
-		fmt.Fprintln(os.Stderr, "PLUGIN_SOCKET environment variable not set")
-		os.Exit(1)
-	}
-
-	lis, err := net.Listen("unix", sockFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
-		os.Exit(1)
-	}
-
-	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &mockServer{})
-
-	if err := s.Serve(lis); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
-		os.Exit(1)
-	}
-}`
-		pluginFile := filepath.Join(tmpDir, "plugin.go")
-		if err := os.WriteFile(pluginFile, []byte(pluginContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		// Build the plugin
-		cmd := exec.Command("go", "build", "-o", pluginPath, pluginFile)
-		if err := cmd.Run(); err != nil {
-			t.Fatal(err)
+		mockPluginPath := "testdata/mock-plugin/mock-plugin"
+		if _, err := os.Stat(mockPluginPath); os.IsNotExist(err) {
+			t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 		}
 
-		client, err := NewClient(pluginPath, map[string]string{})
+		client, err := NewClient(mockPluginPath, map[string]string{})
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer client.Close(context.Background())
+		defer client.Close(ctx)
 
-		metadata, err := client.GetMetadata("example.com")
-		if err != plugin.ErrPluginError {
-			t.Errorf("Expected GetMetadata error, got %v", err)
-		} else if metadata != nil {
-			t.Error("Expected nil metadata on error")
-		}
+		_, err = client.GetMetadata(ctx, "error.com")
+		assert.Error(t, err)
+		assert.Equal(t, plugin.ErrPluginError, err)
 	})
 }
 
 func TestClientErrors(t *testing.T) {
+	ctx := context.Background()
 	tests := []struct {
 		name        string
 		setup       func(*Client)
@@ -272,7 +217,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = pb.NewPluginClient(nil)
 			},
 			operation: func(c *Client) error {
-				return c.Close(context.Background())
+				return c.Close(ctx)
 			},
 			wantErr:     true,
 			errContains: "connection is nil",
@@ -285,7 +230,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				return c.Close(context.Background())
+				return c.Close(ctx)
 			},
 			wantErr:     true,
 			errContains: "client is nil",
@@ -296,7 +241,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				return c.Initialize(map[string]string{})
+				return c.Initialize(ctx, map[string]string{})
 			},
 			wantErr:     true,
 			errContains: "client is nil",
@@ -307,7 +252,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				_, err := c.GetMetadata("example.com")
+				_, err := c.GetMetadata(ctx, "example.com")
 				return err
 			},
 			wantErr:     true,
@@ -340,18 +285,20 @@ func TestClientConcurrency(t *testing.T) {
 		t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 	}
 
+	ctx := context.Background()
+
 	// Create a client
 	client, err := NewClient(mockPluginPath, map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer client.Close(context.Background())
+	defer client.Close(ctx)
 
 	// Test concurrent access
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func() {
-			metadata, err := client.GetMetadata("example.com")
+			metadata, err := client.GetMetadata(ctx, "example.com")
 			assert.NoError(t, err)
 			assert.Equal(t, map[string]any{"test": "value"}, metadata)
 			done <- true
@@ -368,6 +315,8 @@ func TestClientEdgeCases(t *testing.T) {
 	// Save original TMPDIR
 	origTmpDir := os.Getenv("TMPDIR")
 	defer os.Setenv("TMPDIR", origTmpDir)
+
+	ctx := context.Background()
 
 	tests := []struct {
 		name        string
@@ -427,24 +376,24 @@ import (
 	"net"
 	"os"
 
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 )
 
 type mockServer struct {
-	plugin.UnimplementedPluginServer
+	pb.UnimplementedPluginServer
 }
 
-func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+func (s *mockServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
 	return nil, fmt.Errorf("initialization failed")
 }
 
-func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
-	return &plugin.GetMetadataResponse{}, nil
+func (s *mockServer) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
+	return &pb.GetMetadataResponse{}, nil
 }
 
-func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
-	return &plugin.CloseResponse{}, nil
+func (s *mockServer) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
+	return &pb.CloseResponse{}, nil
 }
 
 func main() {
@@ -461,7 +410,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &mockServer{})
+	pb.RegisterPluginServer(s, &mockServer{})
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
@@ -550,24 +499,24 @@ import (
 	"net"
 	"os"
 
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 )
 
 type mockServer struct {
-	plugin.UnimplementedPluginServer
+	pb.UnimplementedPluginServer
 }
 
-func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
-	return &plugin.InitializeResponse{}, nil
+func (s *mockServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
+	return &pb.InitializeResponse{}, nil
 }
 
-func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
+func (s *mockServer) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
 	return nil, fmt.Errorf("metadata error")
 }
 
-func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
-	return &plugin.CloseResponse{}, nil
+func (s *mockServer) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
+	return &pb.CloseResponse{}, nil
 }
 
 func main() {
@@ -584,7 +533,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &mockServer{})
+	pb.RegisterPluginServer(s, &mockServer{})
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to serve: %v\n", err)
@@ -623,14 +572,14 @@ func main() {
 			assert.NotNil(t, client)
 			if client != nil {
 				if tt.name == "get metadata error" {
-					metadata, err := client.GetMetadata("example.com")
+					metadata, err := client.GetMetadata(ctx, "example.com")
 					if err != plugin.ErrPluginError {
 						t.Errorf("Expected GetMetadata error, got %v", err)
 					} else if metadata != nil {
 						t.Error("Expected nil metadata on error")
 					}
 				}
-				client.Close(context.Background())
+				client.Close(ctx)
 			}
 		})
 	}

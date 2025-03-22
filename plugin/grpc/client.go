@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Client implements the plugin.Plugin interface using gRPC
@@ -54,6 +56,9 @@ func NewClient(pluginPath string, config map[string]string) (*Client, error) {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("unix://%s", sockFile),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+			return net.DialTimeout("unix", sockFile, timeout)
+		}),
 	)
 	if err != nil {
 		cmd.Process.Kill()
@@ -83,7 +88,7 @@ func NewClient(pluginPath string, config map[string]string) (*Client, error) {
 }
 
 // Initialize implements plugin.Plugin
-func (c *Client) Initialize(config map[string]string) error {
+func (c *Client) Initialize(ctx context.Context, config map[string]string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -91,14 +96,17 @@ func (c *Client) Initialize(config map[string]string) error {
 		return fmt.Errorf("client is nil")
 	}
 
-	_, err := c.client.Initialize(context.Background(), &pb.InitializeRequest{
+	_, err := c.client.Initialize(ctx, &pb.InitializeRequest{
 		Config: config,
 	})
-	return err
+	if err != nil {
+		return plugin.ErrPluginError
+	}
+	return nil
 }
 
 // GetMetadata implements plugin.Plugin
-func (c *Client) GetMetadata(domain string) (map[string]any, error) {
+func (c *Client) GetMetadata(ctx context.Context, domain string) (map[string]any, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -106,17 +114,43 @@ func (c *Client) GetMetadata(domain string) (map[string]any, error) {
 		return nil, fmt.Errorf("client is nil")
 	}
 
-	resp, err := c.client.GetMetadata(context.Background(), &pb.GetMetadataRequest{
+	resp, err := c.client.GetMetadata(ctx, &pb.GetMetadataRequest{
 		Domain: domain,
 	})
 	if err != nil {
 		return nil, plugin.ErrPluginError
 	}
 
-	// Convert map[string]string to map[string]any
-	result := make(map[string]any, len(resp.Metadata))
+	result := make(map[string]any)
 	for k, v := range resp.Metadata {
-		result[k] = v
+		switch v.Kind.(type) {
+		case *structpb.Value_StringValue:
+			result[k] = v.GetStringValue()
+		case *structpb.Value_NumberValue:
+			result[k] = v.GetNumberValue()
+		case *structpb.Value_BoolValue:
+			result[k] = v.GetBoolValue()
+		case *structpb.Value_ListValue:
+			list := v.GetListValue()
+			values := make([]any, len(list.Values))
+			for i, item := range list.Values {
+				switch item.Kind.(type) {
+				case *structpb.Value_StringValue:
+					values[i] = item.GetStringValue()
+				case *structpb.Value_NumberValue:
+					values[i] = item.GetNumberValue()
+				case *structpb.Value_BoolValue:
+					values[i] = item.GetBoolValue()
+				case *structpb.Value_ListValue:
+					values[i] = item.GetListValue()
+				case *structpb.Value_StructValue:
+					values[i] = item.GetStructValue()
+				}
+			}
+			result[k] = values
+		case *structpb.Value_StructValue:
+			result[k] = v.GetStructValue()
+		}
 	}
 
 	return result, nil

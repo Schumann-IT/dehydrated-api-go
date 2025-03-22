@@ -4,6 +4,8 @@ syntax = "proto3";
 
 package plugin;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/schumann-it/dehydrated-api-go/proto/plugin";
 
 // Plugin service definition
@@ -33,7 +35,7 @@ message GetMetadataRequest {
 
 // GetMetadataResponse contains the metadata for the domain entry
 message GetMetadataResponse {
-  map<string, string> metadata = 1;
+  map<string, google.protobuf.Value> metadata = 1;
 }
 
 // CloseRequest is empty as no data is needed
