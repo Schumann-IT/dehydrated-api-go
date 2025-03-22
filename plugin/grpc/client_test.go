@@ -9,42 +9,43 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"github.com/schumann-it/dehydrated-api-go/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type mockServer struct {
-	plugin.UnimplementedPluginServer
+	pb.UnimplementedPluginServer
 	initializeErr  error
 	getMetadataErr error
 	closeErr       error
 }
 
-func (s *mockServer) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+func (s *mockServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
 	if s.initializeErr != nil {
 		return nil, s.initializeErr
 	}
-	return &plugin.InitializeResponse{}, nil
+	return &pb.InitializeResponse{}, nil
 }
 
-func (s *mockServer) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
+func (s *mockServer) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
 	if s.getMetadataErr != nil {
 		return nil, s.getMetadataErr
 	}
-	return &plugin.GetMetadataResponse{
+	return &pb.GetMetadataResponse{
 		Metadata: map[string]string{
 			"test": "value",
 		},
 	}, nil
 }
 
-func (s *mockServer) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
+func (s *mockServer) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
 	if s.closeErr != nil {
 		return nil, s.closeErr
 	}
-	return &plugin.CloseResponse{}, nil
+	return &pb.CloseResponse{}, nil
 }
 
 func setupTestServer(t *testing.T) (*grpc.Server, string, func()) {
@@ -65,7 +66,7 @@ func setupTestServer(t *testing.T) (*grpc.Server, string, func()) {
 
 	// Create a gRPC server
 	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &mockServer{})
+	pb.RegisterPluginServer(s, &mockServer{})
 
 	// Start the server in a goroutine
 	go func() {
@@ -164,9 +165,13 @@ func TestClientMethods(t *testing.T) {
 	})
 
 	t.Run("GetMetadata", func(t *testing.T) {
-		metadata, err := client.GetMetadata("example.com", map[string]string{"test": "config"})
-		assert.NoError(t, err)
-		assert.Equal(t, map[string]string{"test": "value"}, metadata)
+		metadata, err := client.GetMetadata("example.com")
+		if err != nil {
+			t.Errorf("GetMetadata failed: %v", err)
+		}
+		if metadata["test"] != "value" {
+			t.Errorf("Expected metadata test=value, got %v", metadata)
+		}
 	})
 
 	t.Run("Close", func(t *testing.T) {
@@ -243,9 +248,12 @@ func main() {
 		}
 		defer client.Close(context.Background())
 
-		_, err = client.GetMetadata("example.com", map[string]string{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "metadata error")
+		metadata, err := client.GetMetadata("example.com")
+		if err != plugin.ErrPluginError {
+			t.Errorf("Expected GetMetadata error, got %v", err)
+		} else if metadata != nil {
+			t.Error("Expected nil metadata on error")
+		}
 	})
 }
 
@@ -261,7 +269,7 @@ func TestClientErrors(t *testing.T) {
 			name: "close with nil connection",
 			setup: func(c *Client) {
 				c.conn = nil
-				c.client = plugin.NewPluginClient(nil)
+				c.client = pb.NewPluginClient(nil)
 			},
 			operation: func(c *Client) error {
 				return c.Close(context.Background())
@@ -299,7 +307,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				_, err := c.GetMetadata("example.com", map[string]string{})
+				_, err := c.GetMetadata("example.com")
 				return err
 			},
 			wantErr:     true,
@@ -343,9 +351,9 @@ func TestClientConcurrency(t *testing.T) {
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func() {
-			metadata, err := client.GetMetadata("example.com", map[string]string{"test": "config"})
+			metadata, err := client.GetMetadata("example.com")
 			assert.NoError(t, err)
-			assert.Equal(t, map[string]string{"test": "value"}, metadata)
+			assert.Equal(t, map[string]any{"test": "value"}, metadata)
 			done <- true
 		}()
 	}
@@ -615,9 +623,12 @@ func main() {
 			assert.NotNil(t, client)
 			if client != nil {
 				if tt.name == "get metadata error" {
-					_, err := client.GetMetadata("example.com", map[string]string{})
-					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "metadata error")
+					metadata, err := client.GetMetadata("example.com")
+					if err != plugin.ErrPluginError {
+						t.Errorf("Expected GetMetadata error, got %v", err)
+					} else if metadata != nil {
+						t.Error("Expected nil metadata on error")
+					}
 				}
 				client.Close(context.Background())
 			}

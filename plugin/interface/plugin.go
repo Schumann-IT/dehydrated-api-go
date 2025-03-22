@@ -8,7 +8,7 @@ type Plugin interface {
 	Initialize(config map[string]string) error
 
 	// GetMetadata returns metadata for a domain entry
-	GetMetadata(domain string, config map[string]string) (map[string]string, error)
+	GetMetadata(domain string) (map[string]any, error)
 
 	// Close is called when the plugin is being unloaded
 	Close(ctx context.Context) error

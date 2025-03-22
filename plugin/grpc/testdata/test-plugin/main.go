@@ -6,31 +6,32 @@ import (
 	"net"
 	"os"
 
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 )
 
 type server struct {
-	plugin.UnimplementedPluginServer
+	pb.UnimplementedPluginServer
 }
 
-func (s *server) Initialize(ctx context.Context, req *plugin.InitializeRequest) (*plugin.InitializeResponse, error) {
+func (s *server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
 	log.Printf("Initialize called with config: %v", req.Config)
-	return &plugin.InitializeResponse{}, nil
+	return &pb.InitializeResponse{}, nil
 }
 
-func (s *server) GetMetadata(ctx context.Context, req *plugin.GetMetadataRequest) (*plugin.GetMetadataResponse, error) {
-	log.Printf("GetMetadata called for domain: %s with config: %v", req.Domain, req.Config)
-	return &plugin.GetMetadataResponse{
+func (s *server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
+	log.Printf("GetMetadata called for domain: %s", req.Domain)
+	return &pb.GetMetadataResponse{
 		Metadata: map[string]string{
 			"test": "value",
+			"type": "test-plugin",
 		},
 	}, nil
 }
 
-func (s *server) Close(ctx context.Context, req *plugin.CloseRequest) (*plugin.CloseResponse, error) {
+func (s *server) Close(ctx context.Context, req *pb.CloseRequest) (*pb.CloseResponse, error) {
 	log.Printf("Close called")
-	return &plugin.CloseResponse{}, nil
+	return &pb.CloseResponse{}, nil
 }
 
 func main() {
@@ -48,7 +49,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	plugin.RegisterPluginServer(s, &server{})
+	pb.RegisterPluginServer(s, &server{})
 
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {

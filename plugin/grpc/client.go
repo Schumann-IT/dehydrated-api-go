@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/schumann-it/dehydrated-api-go/plugin"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -97,7 +98,7 @@ func (c *Client) Initialize(config map[string]string) error {
 }
 
 // GetMetadata implements plugin.Plugin
-func (c *Client) GetMetadata(domain string, config map[string]string) (map[string]string, error) {
+func (c *Client) GetMetadata(domain string) (map[string]any, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -107,13 +108,18 @@ func (c *Client) GetMetadata(domain string, config map[string]string) (map[strin
 
 	resp, err := c.client.GetMetadata(context.Background(), &pb.GetMetadataRequest{
 		Domain: domain,
-		Config: config,
 	})
 	if err != nil {
-		return nil, err
+		return nil, plugin.ErrPluginError
 	}
 
-	return resp.Metadata, nil
+	// Convert map[string]string to map[string]any
+	result := make(map[string]any, len(resp.Metadata))
+	for k, v := range resp.Metadata {
+		result[k] = v
+	}
+
+	return result, nil
 }
 
 // Close implements plugin.Plugin

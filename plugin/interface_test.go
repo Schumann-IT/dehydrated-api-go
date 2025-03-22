@@ -7,14 +7,14 @@ import (
 
 // MockPlugin implements the Plugin interface for testing
 type MockPlugin struct {
-	name         string
-	initCalls    int
-	enrichCalls  int
-	closeCalls   int
-	shouldError  bool
-	initConfig   map[string]any
-	enrichDomain *Domain
-	enrichResult *Metadata
+	name           string
+	initCalls      int
+	metadataCalls  int
+	closeCalls     int
+	shouldError    bool
+	initConfig     map[string]string
+	metadataDomain string
+	metadataResult map[string]any
 }
 
 // NewMockPlugin creates a new mock plugin
@@ -35,9 +35,9 @@ func (p *MockPlugin) GetInitCalls() int {
 	return p.initCalls
 }
 
-// GetEnrichCalls returns the number of EnrichDomainEntry calls
-func (p *MockPlugin) GetEnrichCalls() int {
-	return p.enrichCalls
+// GetMetadataCalls returns the number of GetMetadata calls
+func (p *MockPlugin) GetMetadataCalls() int {
+	return p.metadataCalls
 }
 
 // GetCloseCalls returns the number of Close calls
@@ -46,21 +46,21 @@ func (p *MockPlugin) GetCloseCalls() int {
 }
 
 // GetInitConfig returns the last config passed to Initialize
-func (p *MockPlugin) GetInitConfig() map[string]any {
+func (p *MockPlugin) GetInitConfig() map[string]string {
 	return p.initConfig
 }
 
-// GetEnrichDomain returns the last domain passed to EnrichDomainEntry
-func (p *MockPlugin) GetEnrichDomain() *Domain {
-	return p.enrichDomain
+// GetMetadataDomain returns the last domain passed to GetMetadata
+func (p *MockPlugin) GetMetadataDomain() string {
+	return p.metadataDomain
 }
 
-// GetEnrichResult returns the last result from EnrichDomainEntry
-func (p *MockPlugin) GetEnrichResult() *Metadata {
-	return p.enrichResult
+// GetMetadataResult returns the last result from GetMetadata
+func (p *MockPlugin) GetMetadataResult() map[string]any {
+	return p.metadataResult
 }
 
-func (p *MockPlugin) Initialize(ctx context.Context, config map[string]any) error {
+func (p *MockPlugin) Initialize(config map[string]string) error {
 	p.initCalls++
 	p.initConfig = config
 	if p.shouldError {
@@ -69,15 +69,14 @@ func (p *MockPlugin) Initialize(ctx context.Context, config map[string]any) erro
 	return nil
 }
 
-func (p *MockPlugin) EnrichDomainEntry(ctx context.Context, domain *Domain) (*Metadata, error) {
-	p.enrichCalls++
-	p.enrichDomain = domain
+func (p *MockPlugin) GetMetadata(domain string) (map[string]any, error) {
+	p.metadataCalls++
+	p.metadataDomain = domain
 	if p.shouldError {
 		return nil, ErrPluginError
 	}
-	result := NewMetadata()
-	result.Values["test"] = "value"
-	p.enrichResult = result
+	result := map[string]any{"test": "value"}
+	p.metadataResult = result
 	return result, nil
 }
 
@@ -94,8 +93,8 @@ func TestMockPlugin(t *testing.T) {
 	plugin := NewMockPlugin("test")
 
 	// Test Initialize
-	config := map[string]any{"key": "value"}
-	err := plugin.Initialize(ctx, config)
+	config := map[string]string{"key": "value"}
+	err := plugin.Initialize(config)
 	if err != nil {
 		t.Errorf("Initialize failed: %v", err)
 	}
@@ -106,20 +105,20 @@ func TestMockPlugin(t *testing.T) {
 		t.Errorf("Expected config key=value, got %v", plugin.GetInitConfig())
 	}
 
-	// Test EnrichDomainEntry
-	domain := NewDomain("example.com")
-	metadata, err := plugin.EnrichDomainEntry(ctx, domain)
+	// Test GetMetadata
+	domain := "example.com"
+	metadata, err := plugin.GetMetadata(domain)
 	if err != nil {
-		t.Errorf("EnrichDomainEntry failed: %v", err)
+		t.Errorf("GetMetadata failed: %v", err)
 	}
-	if plugin.GetEnrichCalls() != 1 {
-		t.Errorf("Expected 1 enrich call, got %d", plugin.GetEnrichCalls())
+	if plugin.GetMetadataCalls() != 1 {
+		t.Errorf("Expected 1 metadata call, got %d", plugin.GetMetadataCalls())
 	}
-	if plugin.GetEnrichDomain().Name != "example.com" {
-		t.Errorf("Expected domain example.com, got %s", plugin.GetEnrichDomain().Name)
+	if plugin.GetMetadataDomain() != "example.com" {
+		t.Errorf("Expected domain example.com, got %s", plugin.GetMetadataDomain())
 	}
-	if metadata.Values["test"] != "value" {
-		t.Errorf("Expected metadata test=value, got %v", metadata.Values)
+	if metadata["test"] != "value" {
+		t.Errorf("Expected metadata test=value, got %v", metadata)
 	}
 
 	// Test Close
@@ -133,11 +132,11 @@ func TestMockPlugin(t *testing.T) {
 
 	// Test error handling
 	plugin.WithError()
-	if err := plugin.Initialize(ctx, config); err != ErrPluginError {
+	if err := plugin.Initialize(config); err != ErrPluginError {
 		t.Errorf("Expected Initialize error, got %v", err)
 	}
-	if metadata, err := plugin.EnrichDomainEntry(ctx, domain); err != ErrPluginError {
-		t.Errorf("Expected EnrichDomainEntry error, got %v", err)
+	if metadata, err := plugin.GetMetadata(domain); err != ErrPluginError {
+		t.Errorf("Expected GetMetadata error, got %v", err)
 	} else if metadata != nil {
 		t.Error("Expected nil metadata on error")
 	}

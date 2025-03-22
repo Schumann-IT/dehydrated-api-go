@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/plugin/registry"
@@ -153,31 +154,20 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	return &entry, nil
 }
 
-// enrichMetadata uses plugins to enrich domain metadata
+// enrichMetadata enriches the domain entry with metadata from plugins
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
-	if s.registry == nil {
-		return nil
-	}
-
-	// Get metadata from each plugin
-	plugins := s.registry.GetPlugins()
-	for _, p := range plugins {
-		metadata, err := p.GetMetadata(entry.Domain, make(map[string]string))
+	for _, p := range s.registry.GetPlugins() {
+		metadata, err := p.GetMetadata(entry.Domain)
 		if err != nil {
-			return fmt.Errorf("plugin error: %w", err)
+			return fmt.Errorf("failed to get metadata from plugin: %w", err)
 		}
-		if metadata != nil {
-			// Initialize metadata map if needed
-			if entry.Metadata == nil {
-				entry.Metadata = make(map[string]interface{})
-			}
-			// Add plugin metadata
-			for k, v := range metadata {
-				entry.Metadata[k] = v
-			}
+		if entry.Metadata == nil {
+			entry.Metadata = make(map[string]interface{})
+		}
+		for k, v := range metadata {
+			entry.Metadata[k] = v
 		}
 	}
-
 	return nil
 }
 

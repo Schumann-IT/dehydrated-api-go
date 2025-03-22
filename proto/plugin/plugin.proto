@@ -29,7 +29,6 @@ message InitializeResponse {}
 // GetMetadataRequest contains the domain entry to get metadata for
 message GetMetadataRequest {
   string domain = 1;
-  map<string, string> config = 2;
 }
 
 // GetMetadataResponse contains the metadata for the domain entry

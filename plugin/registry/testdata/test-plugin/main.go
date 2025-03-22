@@ -20,9 +20,12 @@ func (s *server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb
 }
 
 func (s *server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
-	log.Printf("GetMetadata called for domain: %s with config: %v", req.Domain, req.Config)
+	log.Printf("GetMetadata called for domain: %s", req.Domain)
 	return &pb.GetMetadataResponse{
-		Metadata: map[string]string{"test": "value"},
+		Metadata: map[string]string{
+			"test": "value",
+			"type": "registry-test-plugin",
+		},
 	}, nil
 }
 
