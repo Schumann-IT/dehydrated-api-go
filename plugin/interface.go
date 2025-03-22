@@ -13,8 +13,8 @@ type Plugin interface {
 	// Initialize is called when the plugin is loaded
 	Initialize(ctx context.Context, config map[string]any) error
 
-	// EnrichDomainEntry is called for each domain
-	EnrichDomainEntry(ctx context.Context, domain *Domain) (*Metadata, error)
+	// GetMetadata is called for each domain
+	GetMetadata(ctx context.Context, domain *Domain) (*Metadata, error)
 
 	// Close is called when shutting down
 	Close(ctx context.Context) error
