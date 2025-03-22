@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,16 +31,16 @@ func TestConfig(t *testing.T) {
 		configFile := filepath.Join(tmpDir, "config.yaml")
 
 		// Create test config file
-		configData := []byte(`
+		configData := []byte(fmt.Sprintf(`
 port: 9090
-dehydrated_base_dir: /tmp/dehydrated
+dehydratedBaseDir: %s
 plugins:
   test:
     enabled: true
     path: /usr/local/bin/test-plugin
     config:
       key: value
-`)
+`, tmpDir))
 		if err := os.WriteFile(configFile, configData, 0644); err != nil {
 			t.Fatalf("Failed to write config file: %v", err)
 		}
@@ -59,8 +60,8 @@ plugins:
 		if cfg.Port != 9090 {
 			t.Errorf("Expected port 9090, got %d", cfg.Port)
 		}
-		if cfg.DehydratedBaseDir != "/tmp/dehydrated" {
-			t.Errorf("Expected base dir /tmp/dehydrated, got %s", cfg.DehydratedBaseDir)
+		if cfg.DehydratedBaseDir != tmpDir {
+			t.Errorf("Expected base dir %s, got %s", tmpDir, cfg.DehydratedBaseDir)
 		}
 		if len(cfg.Plugins) != 1 {
 			t.Errorf("Expected 1 plugin, got %d", len(cfg.Plugins))

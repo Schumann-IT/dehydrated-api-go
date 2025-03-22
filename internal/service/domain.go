@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,7 +30,7 @@ type DomainService struct {
 
 // NewDomainService creates a new DomainService instance
 func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
-	cfg := NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
+	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
 
 	// Create plugin registry
 	reg := registry.NewRegistry()
