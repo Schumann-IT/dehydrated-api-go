@@ -1,10 +1,12 @@
 package service
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 func TestDomainService(t *testing.T) {
@@ -12,11 +14,24 @@ func TestDomainService(t *testing.T) {
 	tmpDir := t.TempDir()
 	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
+	// Build test plugin
+	pluginPath := buildTestPlugin(t)
+	defer os.Remove(pluginPath)
+
+	// Create plugin config
+	pluginConfig := map[string]map[string]string{
+		"test": {
+			"path": pluginPath,
+			"key":  "value",
+		},
+	}
+
 	// Test with watcher enabled
 	t.Run("WithWatcher", func(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
 			DehydratedBaseDir: tmpDir,
 			EnableWatcher:     true,
+			PluginConfig:      pluginConfig,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -31,6 +46,7 @@ func TestDomainService(t *testing.T) {
 		service, err := NewDomainService(DomainServiceConfig{
 			DehydratedBaseDir: tmpDir,
 			EnableWatcher:     false,
+			PluginConfig:      pluginConfig,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create domain service: %v", err)
@@ -234,4 +250,23 @@ func TestNewDomainService(t *testing.T) {
 			t.Error("Expected watcher to be nil")
 		}
 	})
+}
+
+// buildTestPlugin builds the test plugin
+func buildTestPlugin(t *testing.T) string {
+	// Get the current directory
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+
+	// Build the test plugin
+	pluginPath := filepath.Join(dir, "..", "..", "plugin", "grpc", "testdata", "test-plugin", "test-plugin")
+	cmd := exec.Command("go", "build", "-o", pluginPath, "main.go")
+	cmd.Dir = filepath.Join(dir, "..", "..", "plugin", "grpc", "testdata", "test-plugin")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to build test plugin: %v", err)
+	}
+
+	return pluginPath
 }

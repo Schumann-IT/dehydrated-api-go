@@ -1,17 +1,21 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/plugin/registry"
 )
 
 // DomainServiceConfig holds configuration options for the DomainService
 type DomainServiceConfig struct {
 	DehydratedBaseDir string
 	EnableWatcher     bool
+	PluginConfig      map[string]map[string]string
 }
 
 // DomainService handles domain-related business logic
@@ -20,11 +24,25 @@ type DomainService struct {
 	watcher     *FileWatcher
 	cache       []model.DomainEntry
 	mutex       sync.RWMutex
+	registry    *registry.Registry
 }
 
 // NewDomainService creates a new DomainService instance
 func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	cfg := NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
+
+	// Create plugin registry
+	reg := registry.NewRegistry()
+	for name, pluginConfig := range config.PluginConfig {
+		// Convert config to map[string]any
+		anyConfig := make(map[string]any)
+		for k, v := range pluginConfig {
+			anyConfig[k] = v
+		}
+		if err := reg.LoadPlugin(name, anyConfig["path"].(string), anyConfig); err != nil {
+			return nil, fmt.Errorf("failed to load plugin %s: %w", name, err)
+		}
+	}
 
 	// Ensure the domains file exists
 	if _, err := os.Stat(cfg.DomainsFile); os.IsNotExist(err) {
@@ -40,6 +58,7 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 
 	s := &DomainService{
 		domainsFile: cfg.DomainsFile,
+		registry:    reg,
 	}
 
 	// Initialize the cache
@@ -75,8 +94,22 @@ func (s *DomainService) reloadCache() error {
 
 // Close cleans up resources
 func (s *DomainService) Close() error {
+	var errs []error
+
 	if s.watcher != nil {
-		return s.watcher.Close()
+		if err := s.watcher.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to close watcher: %w", err))
+		}
+	}
+
+	if s.registry != nil {
+		if err := s.registry.Close(context.Background()); err != nil {
+			errs = append(errs, fmt.Errorf("failed to close plugin registry: %w", err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors closing domain service: %v", errs)
 	}
 	return nil
 }
@@ -119,6 +152,34 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	return &entry, nil
 }
 
+// enrichMetadata uses plugins to enrich domain metadata
+func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+	if s.registry == nil {
+		return nil
+	}
+
+	// Get metadata from each plugin
+	plugins := s.registry.GetPlugins()
+	for _, p := range plugins {
+		metadata, err := p.GetMetadata(entry.Domain, make(map[string]string))
+		if err != nil {
+			return fmt.Errorf("plugin error: %w", err)
+		}
+		if metadata != nil {
+			// Initialize metadata map if needed
+			if entry.Metadata == nil {
+				entry.Metadata = make(map[string]interface{})
+			}
+			// Add plugin metadata
+			for k, v := range metadata {
+				entry.Metadata[k] = v
+			}
+		}
+	}
+
+	return nil
+}
+
 // GetDomain retrieves a domain entry
 func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	s.mutex.RLock()
@@ -127,6 +188,9 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			entryCopy := entry
+			if err := s.enrichMetadata(&entryCopy); err != nil {
+				return nil, fmt.Errorf("failed to enrich metadata: %w", err)
+			}
 			return &entryCopy, nil
 		}
 	}
@@ -139,9 +203,14 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	// Return a copy of the cache
+	// Return a copy of the cache with enriched metadata
 	entries := make([]model.DomainEntry, len(s.cache))
-	copy(entries, s.cache)
+	for i, entry := range s.cache {
+		entries[i] = entry
+		if err := s.enrichMetadata(&entries[i]); err != nil {
+			return nil, fmt.Errorf("failed to enrich metadata: %w", err)
+		}
+	}
 
 	return entries, nil
 }

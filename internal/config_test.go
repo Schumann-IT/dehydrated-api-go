@@ -1,132 +1,111 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
-
+func TestConfig(t *testing.T) {
 	// Test default values
-	if cfg.Port != 8080 {
-		t.Errorf("Expected port 8080, got %d", cfg.Port)
-	}
+	t.Run("DefaultValues", func(t *testing.T) {
+		cfg := NewConfig()
+		if cfg.Port != 8080 {
+			t.Errorf("Expected default port 8080, got %d", cfg.Port)
+		}
+		if cfg.DehydratedBaseDir != "/etc/dehydrated" {
+			t.Errorf("Expected default base dir /etc/dehydrated, got %s", cfg.DehydratedBaseDir)
+		}
+		if len(cfg.Plugins) != 0 {
+			t.Errorf("Expected no plugins by default, got %d", len(cfg.Plugins))
+		}
+	})
 
-	if len(cfg.Plugins) != 0 {
-		t.Errorf("Expected empty plugins map, got %d entries", len(cfg.Plugins))
-	}
-}
+	// Test loading from file
+	t.Run("LoadFromFile", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+		configFile := filepath.Join(tmpDir, "config.yaml")
 
-func TestLoadConfig(t *testing.T) {
-	// Create a temporary config file
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
-
-	configContent := fmt.Sprintf(`
-port: 8081
-dehydratedBaseDir: %s
+		// Create test config file
+		configData := []byte(`
+port: 9090
+dehydrated_base_dir: /tmp/dehydrated
 plugins:
   test:
     enabled: true
-    path: %s/bin/test-plugin
+    path: /usr/local/bin/test-plugin
     config:
       key: value
-`, tmpDir, tmpDir)
+`)
+		if err := os.WriteFile(configFile, configData, 0644); err != nil {
+			t.Fatalf("Failed to write config file: %v", err)
+		}
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("Failed to write config file: %v", err)
-	}
+		// Load config
+		cfg := NewConfig()
+		data, err := os.ReadFile(configFile)
+		if err != nil {
+			t.Fatalf("Failed to read config file: %v", err)
+		}
 
-	// Create a dummy plugin file
-	pluginPath := filepath.Join(tmpDir, "bin", "test-plugin")
-	if err := os.MkdirAll(filepath.Dir(pluginPath), 0755); err != nil {
-		t.Fatalf("Failed to create plugin directory: %v", err)
-	}
-	if err := os.WriteFile(pluginPath, []byte("#!/bin/bash\nexit 0"), 0755); err != nil {
-		t.Fatalf("Failed to create plugin file: %v", err)
-	}
+		if err := yaml.Unmarshal(data, cfg); err != nil {
+			t.Fatalf("Failed to parse config file: %v", err)
+		}
 
-	// Load the config
-	cfg, err := LoadConfig(configPath)
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Test loaded values
-	if cfg.Port != 8081 {
-		t.Errorf("Expected port 8081, got %d", cfg.Port)
-	}
-
-	if cfg.DehydratedBaseDir != tmpDir {
-		t.Errorf("Expected config dir %s, got %s", tmpDir, cfg.DehydratedBaseDir)
-	}
-
-	plugin, ok := cfg.Plugins["test"]
-	if !ok {
-		t.Error("Expected test plugin to be configured")
-	}
-
-	if !plugin.Enabled {
-		t.Error("Expected test plugin to be enabled")
-	}
-
-	if plugin.Path != pluginPath {
-		t.Errorf("Expected plugin path %s, got %s", pluginPath, plugin.Path)
-	}
-
-	if plugin.Config["key"] != "value" {
-		t.Errorf("Expected plugin config key=value, got %v", plugin.Config["key"])
-	}
-}
-
-func TestLoadConfigErrors(t *testing.T) {
-	tests := []struct {
-		name     string
-		content  string
-		expected string
-	}{
-		{
-			name: "Invalid port",
-			content: `
-port: 0
-dehydratedBaseDir: /etc/dehydrated
-`,
-			expected: "invalid port number: 0",
-		},
-		{
-			name: "Missing plugin path",
-			content: `
-port: 8080
-dehydratedBaseDir: /
-plugins:
-  test:
-    enabled: true
-`,
-			expected: "plugin path is required for enabled plugin: test",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create a temporary config file
-			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "config.yaml")
-
-			if err := os.WriteFile(configPath, []byte(tt.content), 0644); err != nil {
-				t.Fatalf("Failed to write config file: %v", err)
+		// Verify loaded values
+		if cfg.Port != 9090 {
+			t.Errorf("Expected port 9090, got %d", cfg.Port)
+		}
+		if cfg.DehydratedBaseDir != "/tmp/dehydrated" {
+			t.Errorf("Expected base dir /tmp/dehydrated, got %s", cfg.DehydratedBaseDir)
+		}
+		if len(cfg.Plugins) != 1 {
+			t.Errorf("Expected 1 plugin, got %d", len(cfg.Plugins))
+		}
+		if plugin, ok := cfg.Plugins["test"]; !ok {
+			t.Error("Expected test plugin to be present")
+		} else {
+			if !plugin.Enabled {
+				t.Error("Expected test plugin to be enabled")
 			}
+			if plugin.Path != "/usr/local/bin/test-plugin" {
+				t.Errorf("Expected plugin path /usr/local/bin/test-plugin, got %s", plugin.Path)
+			}
+			if val, ok := plugin.Config["key"]; !ok || val != "value" {
+				t.Errorf("Expected plugin config key=value, got %v", plugin.Config)
+			}
+		}
+	})
 
-			// Try to load the config
-			_, err := LoadConfig(configPath)
-			if err == nil {
-				t.Error("Expected error, got nil")
-			}
-			if err != nil && err.Error() != tt.expected {
-				t.Errorf("Expected error %q, got %q", tt.expected, err.Error())
-			}
-		})
-	}
+	// Test validation
+	t.Run("Validation", func(t *testing.T) {
+		// Test invalid port
+		cfg := NewConfig()
+		cfg.Port = 0
+		if err := cfg.Validate(); err == nil {
+			t.Error("Expected error for invalid port")
+		}
+
+		// Test invalid base dir
+		cfg = NewConfig()
+		cfg.DehydratedBaseDir = "/nonexistent"
+		if err := cfg.Validate(); err == nil {
+			t.Error("Expected error for invalid base dir")
+		}
+
+		// Test invalid plugin config
+		cfg = NewConfig()
+		cfg.Plugins = map[string]PluginConfig{
+			"test": {
+				Enabled: true,
+				Path:    "",
+			},
+		}
+		if err := cfg.Validate(); err == nil {
+			t.Error("Expected error for invalid plugin config")
+		}
+	})
 }

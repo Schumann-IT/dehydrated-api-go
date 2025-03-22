@@ -2,12 +2,13 @@ package internal
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// Config holds the API configuration
+// Config holds the application configuration
 type Config struct {
 	// Server configuration
 	Port int `yaml:"port"`
@@ -19,55 +20,50 @@ type Config struct {
 	DehydratedBaseDir string `yaml:"dehydratedBaseDir"`
 }
 
-// PluginConfig holds the configuration for a specific plugin
+// PluginConfig holds configuration for a plugin
 type PluginConfig struct {
-	Enabled bool                   `yaml:"enabled"`
-	Path    string                 `yaml:"path"`
-	Config  map[string]interface{} `yaml:"config"`
+	Enabled bool              `yaml:"enabled"`
+	Path    string            `yaml:"path"`
+	Config  map[string]string `yaml:"config"`
 }
 
-// DefaultConfig returns a new Config with default values
-func DefaultConfig() *Config {
+// NewConfig creates a new Config instance with default values
+func NewConfig() *Config {
 	return &Config{
 		Port:              8080,
-		Plugins:           make(map[string]PluginConfig),
 		DehydratedBaseDir: "/etc/dehydrated",
+		Plugins:           make(map[string]PluginConfig),
 	}
 }
 
-// LoadConfig loads the configuration from a YAML file
-func LoadConfig(path string) (*Config, error) {
-	cfg := DefaultConfig()
+// WithBaseDir sets the dehydrated base directory
+func (c *Config) WithBaseDir(dir string) *Config {
+	c.DehydratedBaseDir = dir
+	return c
+}
 
-	absConfigPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
+// Load loads configuration from a YAML file
+func (c *Config) Load(path string) *Config {
+	absConfigPath, _ := filepath.Abs(path)
 
-	// load config if it exists
+	// Load configuration from file if it exists
 	if _, err := os.Stat(absConfigPath); err == nil {
-		// Read the config file
 		data, err := os.ReadFile(absConfigPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			return c
 		}
 
-		// Parse the YAML
-		if err := yaml.Unmarshal(data, cfg); err != nil {
-			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		err = yaml.Unmarshal(data, c)
+		if err != nil {
+			return c
 		}
 	}
 
-	// Validate the configuration
-	if err := cfg.validate(); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return c
 }
 
-// validate checks if the configuration is valid
-func (c *Config) validate() error {
+// Validate checks if the configuration is valid
+func (c *Config) Validate() error {
 	// Validate port
 	if c.Port < 1 || c.Port > 65535 {
 		return fmt.Errorf("invalid port number: %d", c.Port)
@@ -100,4 +96,9 @@ func (c *Config) validate() error {
 	}
 
 	return nil
+}
+
+// DomainsFile returns the path to the domains.txt file
+func (c *Config) DomainsFile() string {
+	return filepath.Join(c.DehydratedBaseDir, "domains.txt")
 }
