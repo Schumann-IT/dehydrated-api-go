@@ -17,7 +17,7 @@ import (
 type DomainServiceConfig struct {
 	DehydratedBaseDir string
 	EnableWatcher     bool
-	PluginConfig      map[string]map[string]string
+	PluginConfig      map[string]map[string]any
 }
 
 // DomainService handles domain-related business logic

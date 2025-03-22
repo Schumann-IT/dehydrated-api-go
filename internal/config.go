@@ -22,9 +22,9 @@ type Config struct {
 
 // PluginConfig holds configuration for a plugin
 type PluginConfig struct {
-	Enabled bool              `yaml:"enabled"`
-	Path    string            `yaml:"path"`
-	Config  map[string]string `yaml:"config"`
+	Enabled bool           `yaml:"enabled"`
+	Path    string         `yaml:"path"`
+	Config  map[string]any `yaml:"config"`
 }
 
 // NewConfig creates a new Config instance with default values

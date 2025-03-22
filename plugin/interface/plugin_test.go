@@ -1,4 +1,4 @@
-package plugin
+package plugininterface
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type MockPlugin struct {
 	metadataCalls  int
 	closeCalls     int
 	shouldError    bool
-	initConfig     map[string]string
+	initConfig     map[string]any
 	metadataDomain string
 	metadataResult map[string]any
 }
@@ -46,7 +46,7 @@ func (p *MockPlugin) GetCloseCalls() int {
 }
 
 // GetInitConfig returns the last config passed to Initialize
-func (p *MockPlugin) GetInitConfig() map[string]string {
+func (p *MockPlugin) GetInitConfig() map[string]any {
 	return p.initConfig
 }
 
@@ -60,7 +60,7 @@ func (p *MockPlugin) GetMetadataResult() map[string]any {
 	return p.metadataResult
 }
 
-func (p *MockPlugin) Initialize(config map[string]string) error {
+func (p *MockPlugin) Initialize(config map[string]any) error {
 	p.initCalls++
 	p.initConfig = config
 	if p.shouldError {
@@ -93,7 +93,7 @@ func TestMockPlugin(t *testing.T) {
 	plugin := NewMockPlugin("test")
 
 	// Test Initialize
-	config := map[string]string{"key": "value"}
+	config := map[string]any{"key": "value"}
 	err := plugin.Initialize(config)
 	if err != nil {
 		t.Errorf("Initialize failed: %v", err)

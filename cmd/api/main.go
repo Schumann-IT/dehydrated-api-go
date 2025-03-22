@@ -20,7 +20,7 @@ func main() {
 	cfg := internal.NewConfig().Load(*configPath)
 
 	// Create domain service
-	pluginConfig := make(map[string]map[string]string)
+	pluginConfig := make(map[string]map[string]any)
 	for name, plugin := range cfg.Plugins {
 		if !plugin.Enabled {
 			continue

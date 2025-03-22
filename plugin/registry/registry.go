@@ -32,7 +32,7 @@ func (r *Registry) LoadPlugin(name string, path string, config map[string]any) e
 	}
 
 	// Convert config to map[string]string
-	configMap := make(map[string]string)
+	configMap := make(map[string]any)
 	for k, v := range config {
 		if str, ok := v.(string); ok {
 			configMap[k] = str

@@ -75,7 +75,7 @@ plugins:
 			if plugin.Path != "/usr/local/bin/test-plugin" {
 				t.Errorf("Expected plugin path /usr/local/bin/test-plugin, got %s", plugin.Path)
 			}
-			if val, ok := plugin.Config["key"]; !ok || val != "value" {
+			if val, ok := plugin.Config["key"].(string); !ok || val != "value" {
 				t.Errorf("Expected plugin config key=value, got %v", plugin.Config)
 			}
 		}

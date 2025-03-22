@@ -3,14 +3,13 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"net"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/plugin"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,103 +23,136 @@ type Client struct {
 	cmd      *exec.Cmd
 	sockFile string
 	mu       sync.RWMutex
+	tmpDir   string
 }
 
-// NewClient creates a new gRPC plugin client
-func NewClient(pluginPath string, config map[string]string) (*Client, error) {
-	// Create a temporary directory for the socket
-	tmpDir, err := os.MkdirTemp("", "plugin-*")
+// NewClient creates a new gRPC client for the given plugin
+func NewClient(pluginPath string, config map[string]any) (*Client, error) {
+	// Create a temporary directory for the socket file
+	tmpDir, err := os.MkdirTemp("", "grpc-plugin-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			os.RemoveAll(tmpDir)
+		}
+	}()
 
-	sockFile := filepath.Join(tmpDir, "plugin.sock")
+	socketPath := filepath.Join(tmpDir, "plugin.sock")
 
 	// Start the plugin process
 	cmd := exec.Command(pluginPath)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", sockFile))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", socketPath))
 	if err := cmd.Start(); err != nil {
-		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to start plugin: %w", err)
 	}
 
 	// Wait for the socket file to be created
 	for i := 0; i < 10; i++ {
-		if _, err := os.Stat(sockFile); err == nil {
+		if _, err := os.Stat(socketPath); err == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Connect to the plugin
-	conn, err := grpc.Dial(
-		fmt.Sprintf("unix://%s", sockFile),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", sockFile, timeout)
-		}),
-	)
+	// Create gRPC connection
+	conn, err := grpc.Dial("unix://"+socketPath, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		cmd.Process.Kill()
-		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 	}
 
-	client := pb.NewPluginClient(conn)
+	client := &Client{
+		conn:   conn,
+		client: pb.NewPluginClient(conn),
+		tmpDir: tmpDir,
+		cmd:    cmd,
+	}
+
+	// Convert config to structpb.Value map
+	configValues, err := convertToStructValue(config)
+	if err != nil {
+		client.Close(context.Background())
+		return nil, fmt.Errorf("failed to convert config: %w", err)
+	}
 
 	// Initialize the plugin
-	_, err = client.Initialize(context.Background(), &pb.InitializeRequest{
-		Config: config,
+	_, err = client.client.Initialize(context.Background(), &pb.InitializeRequest{
+		Config: configValues,
 	})
 	if err != nil {
-		conn.Close()
-		cmd.Process.Kill()
-		os.RemoveAll(tmpDir)
+		client.Close(context.Background())
 		return nil, fmt.Errorf("failed to initialize plugin: %w", err)
 	}
 
-	return &Client{
-		conn:     conn,
-		client:   client,
-		cmd:      cmd,
-		sockFile: sockFile,
-	}, nil
+	return client, nil
 }
 
-// Initialize implements plugin.Plugin
-func (c *Client) Initialize(ctx context.Context, config map[string]string) error {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	if c.client == nil {
-		return fmt.Errorf("client is nil")
+// convertToStructValue converts a map[string]any to map[string]*structpb.Value
+func convertToStructValue(config map[string]any) (map[string]*structpb.Value, error) {
+	if config == nil {
+		return nil, nil
 	}
 
-	_, err := c.client.Initialize(ctx, &pb.InitializeRequest{
-		Config: config,
-	})
+	result := make(map[string]*structpb.Value)
+	for k, v := range config {
+		value, err := structpb.NewValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert value for key %s: %w", k, err)
+		}
+		result[k] = value
+	}
+	return result, nil
+}
+
+// Initialize initializes the plugin with the given configuration
+func (c *Client) Initialize(ctx context.Context, config map[string]any) error {
+	c.mu.RLock()
+	if c.client == nil {
+		c.mu.RUnlock()
+		return fmt.Errorf("client is nil")
+	}
+	c.mu.RUnlock()
+
+	// Convert config to structpb.Value map
+	configValues, err := convertToStructValue(config)
 	if err != nil {
-		return plugin.ErrPluginError
+		return fmt.Errorf("failed to convert config: %w", err)
+	}
+
+	req := &pb.InitializeRequest{
+		Config: configValues,
+	}
+
+	_, err = c.client.Initialize(ctx, req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
 	}
 	return nil
 }
 
-// GetMetadata implements plugin.Plugin
+// GetMetadata retrieves metadata for a domain
 func (c *Client) GetMetadata(ctx context.Context, domain string) (map[string]any, error) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	if c.client == nil {
+		c.mu.RUnlock()
 		return nil, fmt.Errorf("client is nil")
 	}
+	c.mu.RUnlock()
 
-	resp, err := c.client.GetMetadata(ctx, &pb.GetMetadataRequest{
+	req := &pb.GetMetadataRequest{
 		Domain: domain,
-	})
-	if err != nil {
-		return nil, plugin.ErrPluginError
 	}
 
+	resp, err := c.client.GetMetadata(ctx, req)
+	if err != nil {
+		return nil, plugininterface.ErrPluginError
+	}
+
+	// Convert the response metadata to map[string]any
 	result := make(map[string]any)
 	for k, v := range resp.Metadata {
 		switch v.Kind.(type) {
@@ -134,25 +166,15 @@ func (c *Client) GetMetadata(ctx context.Context, domain string) (map[string]any
 			list := v.GetListValue()
 			values := make([]any, len(list.Values))
 			for i, item := range list.Values {
-				switch item.Kind.(type) {
-				case *structpb.Value_StringValue:
-					values[i] = item.GetStringValue()
-				case *structpb.Value_NumberValue:
-					values[i] = item.GetNumberValue()
-				case *structpb.Value_BoolValue:
-					values[i] = item.GetBoolValue()
-				case *structpb.Value_ListValue:
-					values[i] = item.GetListValue()
-				case *structpb.Value_StructValue:
-					values[i] = item.GetStructValue()
-				}
+				values[i] = item.AsInterface()
 			}
 			result[k] = values
 		case *structpb.Value_StructValue:
-			result[k] = v.GetStructValue()
+			result[k] = v.GetStructValue().AsMap()
+		default:
+			result[k] = v.AsInterface()
 		}
 	}
-
 	return result, nil
 }
 

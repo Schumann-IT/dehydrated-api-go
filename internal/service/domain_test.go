@@ -19,7 +19,7 @@ func TestDomainService(t *testing.T) {
 	defer os.Remove(pluginPath)
 
 	// Create plugin config
-	pluginConfig := map[string]map[string]string{
+	pluginConfig := map[string]map[string]any{
 		"test": {
 			"path": pluginPath,
 			"key":  "value",

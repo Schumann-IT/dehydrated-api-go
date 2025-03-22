@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	"net"
 	"os"
 	"os/exec"
@@ -9,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/plugin"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -103,27 +103,27 @@ func TestNewClient(t *testing.T) {
 	tests := []struct {
 		name        string
 		pluginPath  string
-		config      map[string]string
+		config      map[string]any
 		wantErr     bool
 		errContains string
 	}{
 		{
 			name:       "successful client creation",
 			pluginPath: mockPluginPath,
-			config:     map[string]string{"test": "config"},
+			config:     map[string]any{"test": "config"},
 			wantErr:    false,
 		},
 		{
 			name:        "non-existent plugin",
 			pluginPath:  "/non/existent/plugin",
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to start plugin",
 		},
 		{
 			name:        "invalid plugin",
 			pluginPath:  "client_test.go", // Use this file as an invalid plugin
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to start plugin",
 		},
@@ -157,14 +157,14 @@ func TestClientMethods(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a client
-	client, err := NewClient(mockPluginPath, map[string]string{})
+	client, err := NewClient(mockPluginPath, map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer client.Close(ctx)
 
 	t.Run("Initialize", func(t *testing.T) {
-		err := client.Initialize(ctx, map[string]string{"test": "config"})
+		err := client.Initialize(ctx, map[string]any{"test": "config"})
 		assert.NoError(t, err)
 	})
 
@@ -189,7 +189,7 @@ func TestClientMethods(t *testing.T) {
 			t.Skip("mock plugin not built, run 'go build -o mock-plugin' in testdata/mock-plugin directory")
 		}
 
-		client, err := NewClient(mockPluginPath, map[string]string{})
+		client, err := NewClient(mockPluginPath, map[string]any{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,7 +197,7 @@ func TestClientMethods(t *testing.T) {
 
 		_, err = client.GetMetadata(ctx, "error.com")
 		assert.Error(t, err)
-		assert.Equal(t, plugin.ErrPluginError, err)
+		assert.Equal(t, plugininterface.ErrPluginError, err)
 	})
 }
 
@@ -241,7 +241,7 @@ func TestClientErrors(t *testing.T) {
 				c.client = nil
 			},
 			operation: func(c *Client) error {
-				return c.Initialize(ctx, map[string]string{})
+				return c.Initialize(ctx, map[string]any{})
 			},
 			wantErr:     true,
 			errContains: "client is nil",
@@ -288,7 +288,7 @@ func TestClientConcurrency(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a client
-	client, err := NewClient(mockPluginPath, map[string]string{})
+	client, err := NewClient(mockPluginPath, map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestClientEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T) string
-		config      map[string]string
+		config      map[string]any
 		wantErr     bool
 		errContains string
 	}{
@@ -335,7 +335,7 @@ func TestClientEdgeCases(t *testing.T) {
 				}
 				return filepath.Join(tmpDir, "plugin.sock")
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to start plugin: fork/exec",
 		},
@@ -354,7 +354,7 @@ func TestClientEdgeCases(t *testing.T) {
 				}
 				return sockFile
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to start plugin",
 		},
@@ -428,7 +428,7 @@ func main() {
 				}
 				return sockFile
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to initialize plugin",
 		},
@@ -447,7 +447,7 @@ exit 0
 				}
 				return pluginPath
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to initialize plugin: rpc error: code = Unavailable desc = connection error",
 		},
@@ -459,7 +459,7 @@ exit 0
 				os.Setenv("TMPDIR", nonExistentDir)
 				return "testdata/mock-plugin/mock-plugin"
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to create temp dir",
 		},
@@ -479,7 +479,7 @@ exit 0
 				}
 				return pluginPath
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     true,
 			errContains: "failed to initialize plugin: rpc error: code = Unavailable desc = connection error",
 		},
@@ -551,7 +551,7 @@ func main() {
 				}
 				return pluginPath
 			},
-			config:      map[string]string{},
+			config:      map[string]any{},
 			wantErr:     false,
 			errContains: "",
 		},
@@ -573,7 +573,7 @@ func main() {
 			if client != nil {
 				if tt.name == "get metadata error" {
 					metadata, err := client.GetMetadata(ctx, "example.com")
-					if err != plugin.ErrPluginError {
+					if err != plugininterface.ErrPluginError {
 						t.Errorf("Expected GetMetadata error, got %v", err)
 					} else if metadata != nil {
 						t.Error("Expected nil metadata on error")
