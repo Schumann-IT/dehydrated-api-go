@@ -157,17 +157,16 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // enrichMetadata enriches the domain entry with metadata from plugins
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	ctx := context.Background()
-	for _, p := range s.registry.GetPlugins() {
+	for name, p := range s.registry.GetPlugins() {
 		metadata, err := p.GetMetadata(ctx, entry.Domain)
 		if err != nil {
-			return fmt.Errorf("failed to get metadata from plugin: %w", err)
+			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
 		if entry.Metadata == nil {
 			entry.Metadata = make(map[string]interface{})
 		}
-		for k, v := range metadata {
-			entry.Metadata[k] = v
-		}
+		// Store plugin metadata under its own namespace
+		entry.Metadata[name] = metadata
 	}
 	return nil
 }

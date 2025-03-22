@@ -67,14 +67,15 @@ func (r *Registry) GetPlugin(name string) (plugininterface.Plugin, error) {
 	return plugin, nil
 }
 
-// GetPlugins returns all loaded plugins
-func (r *Registry) GetPlugins() []plugininterface.Plugin {
+// GetPlugins returns all loaded plugins as a map of name to plugin
+func (r *Registry) GetPlugins() map[string]plugininterface.Plugin {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	plugins := make([]plugininterface.Plugin, 0, len(r.plugins))
-	for _, plugin := range r.plugins {
-		plugins = append(plugins, plugin)
+	// Return a copy of the plugins map
+	plugins := make(map[string]plugininterface.Plugin, len(r.plugins))
+	for name, plugin := range r.plugins {
+		plugins[name] = plugin
 	}
 
 	return plugins
