@@ -22,7 +22,7 @@ service Plugin {
 
 // InitializeRequest contains the configuration for the plugin
 message InitializeRequest {
-  map<string, string> config = 1;
+  map<string, google.protobuf.Value> config = 1;
 }
 
 // InitializeResponse is empty as no data is needed
