@@ -1,7 +1,7 @@
-.PHONY: proto
-proto:
+.PHONY: gen
+gen:
 	go generate ./...
 
 .PHONY: test
 test:
-	go test ./... 
+	go test ./...
