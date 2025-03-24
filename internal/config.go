@@ -33,8 +33,8 @@ type PluginConfig struct {
 // NewConfig creates a new Config instance with default values
 func NewConfig() *Config {
 	return &Config{
-		Port:              8080,
-		DehydratedBaseDir: "/etc/dehydrated",
+		Port:              3000,
+		DehydratedBaseDir: ".",
 		Plugins:           make(map[string]PluginConfig),
 		EnableWatcher:     false,
 	}
@@ -46,9 +46,14 @@ func (c *Config) WithBaseDir(dir string) *Config {
 	return c
 }
 
-// Load loads configuration from a YAML file
+// Load loads configuration from a YAML file and merges it with defaults
 func (c *Config) Load(path string) *Config {
 	absConfigPath, _ := filepath.Abs(path)
+
+	// Create a temporary config to hold file contents
+	fileConfig := &Config{
+		Plugins: make(map[string]PluginConfig),
+	}
 
 	// Load configuration from file if it exists
 	if _, err := os.Stat(absConfigPath); err == nil {
@@ -57,9 +62,53 @@ func (c *Config) Load(path string) *Config {
 			return c
 		}
 
-		err = yaml.Unmarshal(data, c)
+		err = yaml.Unmarshal(data, fileConfig)
 		if err != nil {
 			return c
+		}
+
+		// Merge non-zero values from file config
+		if fileConfig.Port != 0 {
+			c.Port = fileConfig.Port
+		}
+		if fileConfig.DehydratedBaseDir != "" {
+			c.DehydratedBaseDir = fileConfig.DehydratedBaseDir
+		}
+		if fileConfig.EnableWatcher {
+			c.EnableWatcher = true
+		}
+
+		// Merge plugin configurations
+		for name, plugin := range fileConfig.Plugins {
+			// If plugin doesn't exist in defaults, create it
+			if _, exists := c.Plugins[name]; !exists {
+				c.Plugins[name] = PluginConfig{
+					Config: make(map[string]any),
+				}
+			}
+
+			// Get reference to existing plugin config
+			existingPlugin := c.Plugins[name]
+
+			// Merge plugin settings
+			if plugin.Enabled {
+				existingPlugin.Enabled = true
+			}
+			if plugin.Path != "" {
+				existingPlugin.Path = plugin.Path
+			}
+			if plugin.Config != nil {
+				// Merge plugin config maps
+				if existingPlugin.Config == nil {
+					existingPlugin.Config = make(map[string]any)
+				}
+				for k, v := range plugin.Config {
+					existingPlugin.Config[k] = v
+				}
+			}
+
+			// Update the plugin in the main config
+			c.Plugins[name] = existingPlugin
 		}
 	}
 

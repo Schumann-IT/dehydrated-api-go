@@ -13,11 +13,11 @@ func TestConfig(t *testing.T) {
 	// Test default values
 	t.Run("DefaultValues", func(t *testing.T) {
 		cfg := NewConfig()
-		if cfg.Port != 8080 {
-			t.Errorf("Expected default port 8080, got %d", cfg.Port)
+		if cfg.Port != 3000 {
+			t.Errorf("Expected default port 3000, got %d", cfg.Port)
 		}
-		if cfg.DehydratedBaseDir != "/etc/dehydrated" {
-			t.Errorf("Expected default base dir /etc/dehydrated, got %s", cfg.DehydratedBaseDir)
+		if cfg.DehydratedBaseDir != "." {
+			t.Errorf("Expected default base dir ., got %s", cfg.DehydratedBaseDir)
 		}
 		if len(cfg.Plugins) != 0 {
 			t.Errorf("Expected no plugins by default, got %d", len(cfg.Plugins))
