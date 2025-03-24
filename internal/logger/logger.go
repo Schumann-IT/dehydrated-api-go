@@ -21,8 +21,12 @@ type Config struct {
 
 // DefaultConfig returns default logging configuration
 func DefaultConfig() *Config {
+	l := os.Getenv("LOG_LEVEL")
+	if l == "" {
+		l = "error"
+	}
 	return &Config{
-		Level:    "info",
+		Level:    l,
 		Encoding: "console",
 	}
 }
