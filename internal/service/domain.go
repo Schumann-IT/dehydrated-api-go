@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 
 	"github.com/schumann-it/dehydrated-api-go/plugin/registry"
 )
@@ -25,7 +24,7 @@ type DomainServiceConfig struct {
 type DomainService struct {
 	domainsFile string
 	watcher     *FileWatcher
-	cache       []model.DomainEntry
+	cache       []model2.DomainEntry
 	mutex       sync.RWMutex
 	registry    *registry.Registry
 }
@@ -111,8 +110,8 @@ func (s *DomainService) Close() error {
 }
 
 // CreateDomain adds a new domain entry
-func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
-	entry := model.DomainEntry{
+func (s *DomainService) CreateDomain(req model2.CreateDomainRequest) (*model2.DomainEntry, error) {
+	entry := model2.DomainEntry{
 		Domain:           req.Domain,
 		AlternativeNames: req.AlternativeNames,
 		Alias:            req.Alias,
@@ -121,7 +120,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	}
 
 	// Validate the domain entry
-	if !model.IsValidDomainEntry(entry) {
+	if !model2.IsValidDomainEntry(entry) {
 		return nil, fmt.Errorf("invalid domain entry: %v", entry)
 	}
 
@@ -149,7 +148,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 }
 
 // enrichMetadata enriches the domain entry with metadata from plugins
-func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+func (s *DomainService) enrichMetadata(entry *model2.DomainEntry) error {
 	ctx := context.Background()
 	for name, p := range s.registry.GetPlugins() {
 		metadata, err := p.GetMetadata(ctx, *entry)
@@ -166,7 +165,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 }
 
 // GetDomain retrieves a domain entry
-func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
+func (s *DomainService) GetDomain(domain string) (*model2.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -184,12 +183,12 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 }
 
 // ListDomains returns all domain entries
-func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
+func (s *DomainService) ListDomains() ([]model2.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	// Return a copy of the cache with enriched metadata
-	entries := make([]model.DomainEntry, len(s.cache))
+	entries := make([]model2.DomainEntry, len(s.cache))
 	for i, entry := range s.cache {
 		entries[i] = entry
 		if err := s.enrichMetadata(&entries[i]); err != nil {
@@ -201,19 +200,19 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 }
 
 // UpdateDomain updates an existing domain entry
-func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
+func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainRequest) (*model2.DomainEntry, error) {
 	s.mutex.RLock()
 	// Make a copy of the current entries
-	currentEntries := make([]model.DomainEntry, len(s.cache))
+	currentEntries := make([]model2.DomainEntry, len(s.cache))
 	copy(currentEntries, s.cache)
 	s.mutex.RUnlock()
 
 	// Find and update the domain
 	found := false
-	var updatedEntry model.DomainEntry
+	var updatedEntry model2.DomainEntry
 	for i, existing := range currentEntries {
 		if existing.Domain == domain {
-			updatedEntry = model.DomainEntry{
+			updatedEntry = model2.DomainEntry{
 				Domain:           domain,
 				AlternativeNames: req.AlternativeNames,
 				Alias:            req.Alias,
@@ -222,7 +221,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 			}
 
 			// Validate the updated entry
-			if !model.IsValidDomainEntry(updatedEntry) {
+			if !model2.IsValidDomainEntry(updatedEntry) {
 				return nil, fmt.Errorf("invalid domain entry: %v", updatedEntry)
 			}
 
@@ -250,7 +249,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	defer s.mutex.Unlock()
 
 	found := false
-	newEntries := make([]model.DomainEntry, 0, len(s.cache))
+	newEntries := make([]model2.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			found = true

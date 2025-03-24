@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/schumann-it/dehydrated-api-go/internal"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"os/exec"
 	"path/filepath"

@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/plugin/builtin/openssl"
 	"github.com/schumann-it/dehydrated-api-go/plugin/builtin/timestamp"
 	"sync"
 
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/plugin/grpc"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"

@@ -3,7 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"net/http/httptest"
 	"testing"
 

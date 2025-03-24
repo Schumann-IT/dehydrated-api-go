@@ -2,8 +2,8 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 )
 
 // DomainHandler handles HTTP requests for domain operations

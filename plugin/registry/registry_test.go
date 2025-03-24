@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,7 +106,7 @@ func TestRegistryConcurrency(t *testing.T) {
 	}
 	registry, err := NewRegistry(map[string]internal.PluginConfig{}, &dehydrated.Config{})
 	require.NoError(t, err)
-	
+
 	// Test concurrent plugin loading
 	t.Run("ConcurrentLoad", func(t *testing.T) {
 		done := make(chan bool)

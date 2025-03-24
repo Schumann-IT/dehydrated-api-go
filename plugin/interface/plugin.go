@@ -3,9 +3,8 @@ package plugininterface
 import (
 	"context"
 	"errors"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 // ErrPluginError is returned when a plugin encounters an error

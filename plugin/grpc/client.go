@@ -3,15 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
-
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
