@@ -2,19 +2,20 @@ package plugininterface
 
 import (
 	"context"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"testing"
 )
 
 // MockPlugin implements the Plugin interface for testing
 type MockPlugin struct {
-	name           string
-	initCalls      int
-	metadataCalls  int
-	closeCalls     int
-	shouldError    bool
-	initConfig     map[string]any
-	metadataDomain string
-	metadataResult map[string]any
+	name                string
+	initCalls           int
+	metadataCalls       int
+	closeCalls          int
+	shouldError         bool
+	initConfig          map[string]any
+	metadataDomainEntry string
+	metadataResult      map[string]any
 }
 
 // NewMockPlugin creates a new mock plugin
@@ -52,7 +53,7 @@ func (p *MockPlugin) GetInitConfig() map[string]any {
 
 // GetMetadataDomain returns the last domain passed to GetMetadata
 func (p *MockPlugin) GetMetadataDomain() string {
-	return p.metadataDomain
+	return p.metadataDomainEntry
 }
 
 // GetMetadataResult returns the last result from GetMetadata
@@ -69,9 +70,9 @@ func (p *MockPlugin) Initialize(config map[string]any) error {
 	return nil
 }
 
-func (p *MockPlugin) GetMetadata(domain string) (map[string]any, error) {
+func (p *MockPlugin) GetMetadata(entry model.DomainEntry) (map[string]any, error) {
 	p.metadataCalls++
-	p.metadataDomain = domain
+	p.metadataDomainEntry = entry.Domain
 	if p.shouldError {
 		return nil, ErrPluginError
 	}
@@ -106,7 +107,9 @@ func TestMockPlugin(t *testing.T) {
 	}
 
 	// Test GetMetadata
-	domain := "example.com"
+	domain := model.DomainEntry{
+		Domain: "example.com",
+	}
 	metadata, err := plugin.GetMetadata(domain)
 	if err != nil {
 		t.Errorf("GetMetadata failed: %v", err)

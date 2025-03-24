@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/plugin/registry"
 )
 
@@ -158,7 +158,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	ctx := context.Background()
 	for name, p := range s.registry.GetPlugins() {
-		metadata, err := p.GetMetadata(ctx, entry.Domain)
+		metadata, err := p.GetMetadata(ctx, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}

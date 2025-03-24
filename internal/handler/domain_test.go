@@ -3,10 +3,10 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 
 	"github.com/gofiber/fiber/v2"

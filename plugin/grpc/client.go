@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
@@ -233,7 +235,7 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 }
 
 // GetMetadata retrieves metadata for a domain
-func (c *Client) GetMetadata(ctx context.Context, domain string) (map[string]any, error) {
+func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
 	c.mu.RLock()
 	if c.client == nil {
 		c.mu.RUnlock()
@@ -241,8 +243,19 @@ func (c *Client) GetMetadata(ctx context.Context, domain string) (map[string]any
 	}
 	c.mu.RUnlock()
 
+	// Convert metadata to structpb.Value map
+	metadataValues, err := plugininterface.ConvertToStructValue(entry.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert metadata: %w", err)
+	}
+
 	req := &pb.GetMetadataRequest{
-		Domain: domain,
+		Domain:           entry.Domain,
+		AlternativeNames: entry.AlternativeNames,
+		Alias:            entry.Alias,
+		Enabled:          entry.Enabled,
+		Comment:          entry.Comment,
+		Metadata:         metadataValues,
 	}
 
 	resp, err := c.client.GetMetadata(ctx, req)

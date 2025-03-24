@@ -96,6 +96,11 @@ message InitializeResponse {}
 // GetMetadataRequest contains the domain entry to get metadata for
 message GetMetadataRequest {
   string domain = 1;
+  repeated string alternative_names = 2;
+  string alias = 3;
+  bool enabled = 4;
+  string comment = 5;
+  map<string, google.protobuf.Value> metadata = 6;
 }
 
 // GetMetadataResponse contains the metadata for the domain entry

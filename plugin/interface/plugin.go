@@ -3,6 +3,7 @@ package plugininterface
 import (
 	"context"
 	"errors"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 )
@@ -18,7 +19,7 @@ type Plugin interface {
 	Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error
 
 	// GetMetadata returns metadata for a domain entry
-	GetMetadata(ctx context.Context, domain string) (map[string]any, error)
+	GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error)
 
 	// Close is called when the plugin is being unloaded
 	Close(ctx context.Context) error

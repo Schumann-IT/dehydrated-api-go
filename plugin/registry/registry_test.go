@@ -3,11 +3,16 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func buildTestPlugin(t *testing.T) string {
@@ -163,4 +168,148 @@ func TestRegistryConcurrency(t *testing.T) {
 			t.Errorf("Expected 0 plugins, got %d", len(plugins))
 		}
 	})
+}
+
+func TestLoadBuiltinPlugin(t *testing.T) {
+	// Create test config
+	cfg := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		ChallengeType: "dns-01",
+		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+	}
+
+	tests := []struct {
+		name        string
+		pluginName  string
+		config      map[string]any
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:       "load timestamp plugin successfully",
+			pluginName: "timestamp",
+			config: map[string]any{
+				"time_format": "2006-01-02 15:04:05",
+			},
+			wantErr: false,
+		},
+		{
+			name:        "load non-existent built-in plugin",
+			pluginName:  "non-existent",
+			config:      map[string]any{},
+			wantErr:     true,
+			errContains: "built-in plugin non-existent not found",
+		},
+		{
+			name:       "load timestamp plugin with default config",
+			pluginName: "timestamp",
+			config:     map[string]any{},
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create new registry
+			reg := NewRegistry(cfg)
+
+			// Try to load the plugin
+			err := reg.LoadPlugin(tt.pluginName, "", tt.config)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			require.NoError(t, err)
+
+			// Verify plugin is loaded
+			plugin, err := reg.GetPlugin(tt.pluginName)
+			require.NoError(t, err)
+			assert.NotNil(t, plugin)
+
+			// Test plugin functionality
+			ctx := context.Background()
+			err = plugin.Initialize(ctx, tt.config, cfg)
+			require.NoError(t, err)
+
+			// Test GetMetadata
+			metadata, err := plugin.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"})
+			require.NoError(t, err)
+			assert.NotNil(t, metadata)
+			assert.Contains(t, metadata, "timestamp")
+			assert.Contains(t, metadata, "domain")
+
+			// Test Close
+			err = plugin.Close(ctx)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestLoadPluginTwice(t *testing.T) {
+	cfg := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		ChallengeType: "dns-01",
+		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+	}
+
+	reg := NewRegistry(cfg)
+
+	// Load plugin first time
+	err := reg.LoadPlugin("timestamp", "", map[string]any{})
+	require.NoError(t, err)
+
+	// Try to load same plugin again
+	err = reg.LoadPlugin("timestamp", "", map[string]any{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "plugin timestamp is already loaded")
+}
+
+func TestGetNonExistentPlugin(t *testing.T) {
+	cfg := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		ChallengeType: "dns-01",
+		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+	}
+
+	reg := NewRegistry(cfg)
+
+	// Try to get non-existent plugin
+	plugin, err := reg.GetPlugin("non-existent")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "plugin non-existent not found")
+	assert.Nil(t, plugin)
+}
+
+func TestCloseRegistry(t *testing.T) {
+	cfg := &dehydrated.Config{
+		BaseDir:       "/test/base",
+		CertDir:       "/test/certs",
+		DomainsDir:    "/test/domains",
+		ChallengeType: "dns-01",
+		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+	}
+
+	reg := NewRegistry(cfg)
+
+	// Load a plugin
+	err := reg.LoadPlugin("timestamp", "", map[string]any{})
+	require.NoError(t, err)
+
+	// Close registry
+	ctx := context.Background()
+	err = reg.Close(ctx)
+	require.NoError(t, err)
+
+	// Verify plugin is removed
+	plugin, err := reg.GetPlugin("timestamp")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "plugin timestamp not found")
+	assert.Nil(t, plugin)
 }

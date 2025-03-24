@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
+
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
@@ -134,7 +137,7 @@ func TestConvertToStructValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := convertToStructValue(tt.input)
+			result, err := plugininterface.ConvertToStructValue(tt.input)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -237,52 +240,42 @@ func TestInitialize(t *testing.T) {
 func TestGetMetadata(t *testing.T) {
 	tests := []struct {
 		name         string
-		domain       string
+		domain       model.DomainEntry
 		mockResponse *pb.GetMetadataResponse
 		mockError    error
 		wantErr      bool
 		wantMetadata map[string]any
 	}{
 		{
-			name:   "successful metadata retrieval",
-			domain: "example.com",
-			mockResponse: &pb.GetMetadataResponse{
-				Metadata: map[string]*structpb.Value{
-					"test": structpb.NewStringValue("value"),
+			name: "successful metadata retrieval",
+			domain: model.DomainEntry{
+				Domain:           "example.com",
+				AlternativeNames: []string{"www.example.com"},
+				Alias:            "alias.example.com",
+				Enabled:          true,
+				Comment:          "Test domain",
+				Metadata: map[string]interface{}{
+					"string": "value",
+					"number": 42,
+					"bool":   true,
+					"list":   []interface{}{"item1", "item2"},
+					"map":    map[string]interface{}{"key": "value"},
 				},
 			},
-			mockError:    nil,
-			wantErr:      false,
-			wantMetadata: map[string]any{"test": "value"},
-		},
-		{
-			name:         "client nil error",
-			domain:       "example.com",
-			mockResponse: nil,
-			mockError:    nil,
-			wantErr:      true,
-			wantMetadata: nil,
-		},
-		{
-			name:         "plugin error",
-			domain:       "error.com",
-			mockResponse: nil,
-			mockError:    fmt.Errorf("plugin error"),
-			wantErr:      true,
-			wantMetadata: nil,
-		},
-		{
-			name:   "complex metadata types",
-			domain: "example.com",
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: map[string]*structpb.Value{
 					"string": structpb.NewStringValue("value"),
 					"number": structpb.NewNumberValue(42),
 					"bool":   structpb.NewBoolValue(true),
-					"struct": structpb.NewStructValue(&structpb.Struct{
+					"list": structpb.NewListValue(&structpb.ListValue{
+						Values: []*structpb.Value{
+							structpb.NewStringValue("item1"),
+							structpb.NewStringValue("item2"),
+						},
+					}),
+					"map": structpb.NewStructValue(&structpb.Struct{
 						Fields: map[string]*structpb.Value{
-							"name": structpb.NewStringValue("test"),
-							"age":  structpb.NewNumberValue(42),
+							"key": structpb.NewStringValue("value"),
 						},
 					}),
 				},
@@ -293,11 +286,29 @@ func TestGetMetadata(t *testing.T) {
 				"string": "value",
 				"number": 42.0,
 				"bool":   true,
-				"struct": map[string]interface{}{
-					"name": "test",
-					"age":  42.0,
-				},
+				"list":   []interface{}{"item1", "item2"},
+				"map":    map[string]interface{}{"key": "value"},
 			},
+		},
+		{
+			name: "client nil error",
+			domain: model.DomainEntry{
+				Domain: "example.com",
+			},
+			mockResponse: nil,
+			mockError:    nil,
+			wantErr:      true,
+			wantMetadata: nil,
+		},
+		{
+			name: "plugin error",
+			domain: model.DomainEntry{
+				Domain: "example.com",
+			},
+			mockResponse: nil,
+			mockError:    fmt.Errorf("plugin error"),
+			wantErr:      true,
+			wantMetadata: nil,
 		},
 	}
 

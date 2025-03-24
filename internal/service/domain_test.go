@@ -1,12 +1,11 @@
 package service
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 func TestDomainService(t *testing.T) {
