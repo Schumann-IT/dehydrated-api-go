@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
-
-	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
@@ -228,7 +227,7 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 
 	_, err = c.client.Initialize(ctx, req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
+		return fmt.Errorf("%w: %v", plugininterface2.ErrPluginError, err)
 	}
 	return nil
 }
@@ -243,7 +242,7 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	c.mu.RUnlock()
 
 	// Convert metadata to structpb.Value map
-	metadataValues, err := plugininterface.ConvertToStructValue(entry.Metadata)
+	metadataValues, err := plugininterface2.ConvertToStructValue(entry.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert metadata: %w", err)
 	}
@@ -259,7 +258,7 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 
 	resp, err := c.client.GetMetadata(ctx, req)
 	if err != nil {
-		return nil, plugininterface.ErrPluginError
+		return nil, plugininterface2.ErrPluginError
 	}
 
 	// Convert the response metadata to map[string]any

@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"

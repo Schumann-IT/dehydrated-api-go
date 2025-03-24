@@ -262,9 +262,9 @@ func buildTestPlugin(t *testing.T) string {
 	}
 
 	// Build the test plugin
-	pluginPath := filepath.Join(dir, "..", "..", "plugin", "grpc", "testdata", "test-plugin", "test-plugin")
+	pluginPath := filepath.Join(dir, "..", "..", "internal", "plugin", "grpc", "testdata", "test-plugin", "test-plugin")
 	cmd := exec.Command("go", "build", "-o", pluginPath, "main.go")
-	cmd.Dir = filepath.Join(dir, "..", "..", "plugin", "grpc", "testdata", "test-plugin")
+	cmd.Dir = filepath.Join(dir, "..", "..", "internal", "plugin", "grpc", "testdata", "test-plugin")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to build test plugin: %v", err)
 	}

@@ -6,11 +6,10 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/schumann-it/dehydrated-api-go/plugin/registry"
 )
 
 // DomainServiceConfig holds configuration options for the DomainService
