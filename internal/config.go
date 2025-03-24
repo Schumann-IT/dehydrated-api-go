@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,6 +22,9 @@ type Config struct {
 
 	// Weather to enable file watcher
 	EnableWatcher bool `yaml:"enableWatcher"`
+
+	// Logging configuration
+	Logging *logger.Config `yaml:"logging"`
 }
 
 // PluginConfig holds configuration for a plugin
@@ -37,6 +41,7 @@ func NewConfig() *Config {
 		DehydratedBaseDir: ".",
 		Plugins:           make(map[string]PluginConfig),
 		EnableWatcher:     false,
+		Logging:           logger.DefaultConfig(),
 	}
 }
 
@@ -76,6 +81,22 @@ func (c *Config) Load(path string) *Config {
 		}
 		if fileConfig.EnableWatcher {
 			c.EnableWatcher = true
+		}
+
+		// Merge logging configuration
+		if fileConfig.Logging != nil {
+			if c.Logging == nil {
+				c.Logging = logger.DefaultConfig()
+			}
+			if fileConfig.Logging.Level != "" {
+				c.Logging.Level = fileConfig.Logging.Level
+			}
+			if fileConfig.Logging.Encoding != "" {
+				c.Logging.Encoding = fileConfig.Logging.Encoding
+			}
+			if fileConfig.Logging.OutputPath != "" {
+				c.Logging.OutputPath = fileConfig.Logging.OutputPath
+			}
 		}
 
 		// Merge plugin configurations
