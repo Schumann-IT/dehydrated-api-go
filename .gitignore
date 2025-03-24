@@ -54,3 +54,4 @@ debug/
 
 # Local development files
 config.yaml
+domains.txt
