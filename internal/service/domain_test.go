@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"os/exec"
@@ -18,10 +19,11 @@ func TestDomainService(t *testing.T) {
 	defer os.Remove(pluginPath)
 
 	// Create plugin config
-	pluginConfig := map[string]map[string]any{
+	pluginConfig := map[string]internal.PluginConfig{
 		"test": {
-			"path": pluginPath,
-			"key":  "value",
+			Enabled: true,
+			Path:    pluginPath,
+			Config:  map[string]any{"key": "value"},
 		},
 	}
 

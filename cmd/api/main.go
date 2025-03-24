@@ -19,20 +19,10 @@ func main() {
 
 	cfg := internal.NewConfig().Load(*configPath)
 
-	// Create domain service
-	pluginConfig := make(map[string]map[string]any)
-	for name, plugin := range cfg.Plugins {
-		if !plugin.Enabled {
-			continue
-		}
-		pluginConfig[name] = plugin.Config
-		pluginConfig[name]["path"] = plugin.Path
-	}
-
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{
 		DehydratedBaseDir: cfg.DehydratedBaseDir,
-		EnableWatcher:     true,
-		PluginConfig:      pluginConfig,
+		EnableWatcher:     cfg.EnableWatcher,
+		PluginConfig:      cfg.Plugins,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create domain service: %v", err)

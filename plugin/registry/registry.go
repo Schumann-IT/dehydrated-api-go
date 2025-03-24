@@ -3,12 +3,14 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal"
+	"github.com/schumann-it/dehydrated-api-go/plugin/builtin/openssl"
+	"github.com/schumann-it/dehydrated-api-go/plugin/builtin/timestamp"
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated"
-	"github.com/schumann-it/dehydrated-api-go/plugin/builtin/timestamp"
 	"github.com/schumann-it/dehydrated-api-go/plugin/grpc"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/plugin/interface"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
@@ -23,15 +25,23 @@ type Registry struct {
 }
 
 // NewRegistry creates a new plugin registry
-func NewRegistry(cfg *dehydrated.Config) *Registry {
-	return &Registry{
+func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
+	r := &Registry{
 		plugins: make(map[string]plugininterface.Plugin),
 		config:  cfg,
 	}
+
+	for name, pc := range pluginConfig {
+		if err := r.LoadPlugin(name, pc); err != nil {
+			return nil, fmt.Errorf("failed to load plugin %s: %w", name, err)
+		}
+	}
+
+	return r, nil
 }
 
 // LoadPlugin loads a plugin from the given path with the provided configuration
-func (r *Registry) LoadPlugin(name string, path string, config map[string]any) error {
+func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -41,7 +51,7 @@ func (r *Registry) LoadPlugin(name string, path string, config map[string]any) e
 	}
 
 	// If no path is provided, try to load as built-in plugin
-	if path == "" {
+	if cfg.Path == "" {
 		plugin, err := r.loadBuiltinPlugin(name)
 		if err != nil {
 			return fmt.Errorf("failed to load built-in plugin %s: %w", name, err)
@@ -52,14 +62,14 @@ func (r *Registry) LoadPlugin(name string, path string, config map[string]any) e
 
 	// Convert config to map[string]string
 	configMap := make(map[string]any)
-	for k, v := range config {
+	for k, v := range cfg.Config {
 		if str, ok := v.(string); ok {
 			configMap[k] = str
 		}
 	}
 
 	// Create new gRPC client
-	client, err := grpc.NewClient(path, configMap, r.config)
+	client, err := grpc.NewClient(cfg.Path, configMap, r.config)
 	if err != nil {
 		return fmt.Errorf("failed to create plugin client: %w", err)
 	}
@@ -76,6 +86,8 @@ func (r *Registry) loadBuiltinPlugin(name string) (plugininterface.Plugin, error
 	switch name {
 	case "timestamp":
 		server = timestamp.New()
+	case "openssl":
+		server = openssl.New()
 	default:
 		return nil, fmt.Errorf("built-in plugin %s not found", name)
 	}

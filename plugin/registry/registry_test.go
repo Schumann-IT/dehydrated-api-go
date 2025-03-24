@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"os/exec"
@@ -35,14 +36,19 @@ func buildTestPlugin(t *testing.T) string {
 
 func TestRegistry(t *testing.T) {
 	ctx := context.Background()
-	registry := NewRegistry(&dehydrated.Config{})
 
 	// Build the test plugin
 	pluginPath := buildTestPlugin(t)
 	defer os.Remove(pluginPath)
 
-	// Test loading a plugin
-	err := registry.LoadPlugin("test", pluginPath, map[string]any{"key": "value"})
+	pc := internal.PluginConfig{
+		Enabled: true,
+		Path:    pluginPath,
+		Config:  map[string]any{"key": "value"},
+	}
+	registry, err := NewRegistry(map[string]internal.PluginConfig{
+		"test": pc,
+	}, &dehydrated.Config{})
 	if err != nil {
 		t.Errorf("LoadPlugin failed: %v", err)
 	}
@@ -63,7 +69,7 @@ func TestRegistry(t *testing.T) {
 	}
 
 	// Test loading duplicate plugin
-	err = registry.LoadPlugin("test", pluginPath, map[string]any{"key": "value"})
+	err = registry.LoadPlugin("test", pc)
 	if err == nil {
 		t.Error("Expected error loading duplicate plugin")
 	}
@@ -89,12 +95,19 @@ func TestRegistry(t *testing.T) {
 
 func TestRegistryConcurrency(t *testing.T) {
 	ctx := context.Background()
-	registry := NewRegistry(&dehydrated.Config{})
 
 	// Build the test plugin
 	pluginPath := buildTestPlugin(t)
 	defer os.Remove(pluginPath)
 
+	pc := internal.PluginConfig{
+		Enabled: true,
+		Path:    pluginPath,
+		Config:  map[string]any{"key": "value"},
+	}
+	registry, err := NewRegistry(map[string]internal.PluginConfig{}, &dehydrated.Config{})
+	require.NoError(t, err)
+	
 	// Test concurrent plugin loading
 	t.Run("ConcurrentLoad", func(t *testing.T) {
 		done := make(chan bool)
@@ -102,8 +115,7 @@ func TestRegistryConcurrency(t *testing.T) {
 			go func(i int) {
 				err := registry.LoadPlugin(
 					fmt.Sprintf("plugin%d", i),
-					pluginPath,
-					map[string]any{"key": "value"},
+					pc,
 				)
 				if err != nil {
 					t.Errorf("Failed to load plugin %d: %v", i, err)
@@ -181,47 +193,54 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		pluginName  string
-		config      map[string]any
-		wantErr     bool
-		errContains string
+		name         string
+		pluginName   string
+		pluginConfig internal.PluginConfig
+		wantErr      bool
+		errContains  string
 	}{
 		{
 			name:       "load timestamp plugin successfully",
 			pluginName: "timestamp",
-			config: map[string]any{
-				"time_format": "2006-01-02 15:04:05",
+			pluginConfig: internal.PluginConfig{
+				Enabled: true,
+				Config:  map[string]any{"key": "value"},
 			},
 			wantErr: false,
 		},
 		{
-			name:        "load non-existent built-in plugin",
-			pluginName:  "non-existent",
-			config:      map[string]any{},
+			name:       "load non-existent built-in plugin",
+			pluginName: "non-existent",
+			pluginConfig: internal.PluginConfig{
+				Enabled: true,
+				Config:  map[string]any{},
+			},
 			wantErr:     true,
 			errContains: "built-in plugin non-existent not found",
 		},
 		{
 			name:       "load timestamp plugin with default config",
 			pluginName: "timestamp",
-			config:     map[string]any{},
-			wantErr:    false,
+			pluginConfig: internal.PluginConfig{
+				Enabled: true,
+				Config:  map[string]any{},
+			},
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create new registry
-			reg := NewRegistry(cfg)
-
-			// Try to load the plugin
-			err := reg.LoadPlugin(tt.pluginName, "", tt.config)
+			reg, err := NewRegistry(map[string]internal.PluginConfig{
+				tt.pluginName: tt.pluginConfig,
+			}, cfg)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
 				return
 			}
+
 			require.NoError(t, err)
 
 			// Verify plugin is loaded
@@ -231,7 +250,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 
 			// Test plugin functionality
 			ctx := context.Background()
-			err = plugin.Initialize(ctx, tt.config, cfg)
+			err = plugin.Initialize(ctx, tt.pluginConfig.Config, cfg)
 			require.NoError(t, err)
 
 			// Test GetMetadata
@@ -257,14 +276,16 @@ func TestLoadPluginTwice(t *testing.T) {
 		CA:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg := NewRegistry(cfg)
-
-	// Load plugin first time
-	err := reg.LoadPlugin("timestamp", "", map[string]any{})
+	reg, err := NewRegistry(map[string]internal.PluginConfig{
+		"timestamp": {
+			Enabled: true,
+			Config:  map[string]any{},
+		},
+	}, cfg)
 	require.NoError(t, err)
 
 	// Try to load same plugin again
-	err = reg.LoadPlugin("timestamp", "", map[string]any{})
+	err = reg.LoadPlugin("timestamp", internal.PluginConfig{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "plugin timestamp is already loaded")
 }
@@ -278,7 +299,8 @@ func TestGetNonExistentPlugin(t *testing.T) {
 		CA:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg := NewRegistry(cfg)
+	reg, err := NewRegistry(map[string]internal.PluginConfig{}, cfg)
+	require.NoError(t, err)
 
 	// Try to get non-existent plugin
 	plugin, err := reg.GetPlugin("non-existent")
@@ -296,10 +318,12 @@ func TestCloseRegistry(t *testing.T) {
 		CA:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg := NewRegistry(cfg)
-
-	// Load a plugin
-	err := reg.LoadPlugin("timestamp", "", map[string]any{})
+	reg, err := NewRegistry(map[string]internal.PluginConfig{
+		"timestamp": {
+			Enabled: true,
+			Config:  map[string]any{},
+		},
+	}, cfg)
 	require.NoError(t, err)
 
 	// Close registry

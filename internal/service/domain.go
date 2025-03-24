@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/pkg/dehydrated/model"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 type DomainServiceConfig struct {
 	DehydratedBaseDir string
 	EnableWatcher     bool
-	PluginConfig      map[string]map[string]any
+	PluginConfig      map[string]internal.PluginConfig
 }
 
 // DomainService handles domain-related business logic
@@ -34,16 +35,9 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
 
 	// Create plugin registry
-	reg := registry.NewRegistry(cfg)
-	for name, pluginConfig := range config.PluginConfig {
-		// Convert config to map[string]any
-		anyConfig := make(map[string]any)
-		for k, v := range pluginConfig {
-			anyConfig[k] = v
-		}
-		if err := reg.LoadPlugin(name, anyConfig["path"].(string), anyConfig); err != nil {
-			return nil, fmt.Errorf("failed to load plugin %s: %w", name, err)
-		}
+	reg, err := registry.NewRegistry(config.PluginConfig, cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	// Ensure the domains file exists

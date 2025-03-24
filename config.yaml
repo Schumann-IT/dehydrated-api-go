@@ -1,12 +1,5 @@
 port: 3000
 dehydratedBaseDir: "/Users/jan.schumann/Development/Projects/hansemerkur/letsencrypt-netscaler-fw"
 plugins:
-  timestampext:
+  openssl:
     enabled: true
-    path: "/Users/jan.schumann/Development/Projects/schumann-it/dehydrated-api-metadata-plugin-timestamp/dehydrated-api-metadata-plugin-timestamp"
-    config:
-      time_format: "2006-01-02 15:04:05"
-  timestamp:
-    enabled: true
-    config:
-      time_format: "2006-01-02 15:04:05"

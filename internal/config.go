@@ -18,6 +18,9 @@ type Config struct {
 
 	// Dehydrated configuration
 	DehydratedBaseDir string `yaml:"dehydratedBaseDir"`
+
+	// Weather to enable file watcher
+	EnableWatcher bool `yaml:"enableWatcher"`
 }
 
 // PluginConfig holds configuration for a plugin
@@ -33,6 +36,7 @@ func NewConfig() *Config {
 		Port:              8080,
 		DehydratedBaseDir: "/etc/dehydrated",
 		Plugins:           make(map[string]PluginConfig),
+		EnableWatcher:     false,
 	}
 }
 
