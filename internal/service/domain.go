@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
-	"os"
-	"path/filepath"
-	"sync"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // DomainServiceConfig holds configuration options for the DomainService
@@ -155,10 +157,14 @@ func (s *DomainService) enrichMetadata(entry *model2.DomainEntry) error {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
 		if entry.Metadata == nil {
-			entry.Metadata = make(map[string]interface{})
+			entry.Metadata = make(map[string]*structpb.Value)
 		}
-		// Store plugin metadata under its own namespace
-		entry.Metadata[name] = metadata
+		// Convert metadata to structpb.Value and store under plugin namespace
+		value, err := structpb.NewValue(metadata)
+		if err != nil {
+			return fmt.Errorf("failed to convert metadata from plugin %s: %w", name, err)
+		}
+		entry.Metadata[name] = value
 	}
 	return nil
 }

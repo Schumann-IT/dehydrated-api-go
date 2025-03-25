@@ -10,68 +10,68 @@ import (
 // Config represents the dehydrated configuration
 type Config struct {
 	// User and group settings
-	User  string // Which user should dehydrated run as
-	Group string // Which group should dehydrated run as
+	User  string `json:"user,omitempty" protobuf:"bytes,1,opt,name=user,proto3"`   // Which user should dehydrated run as
+	Group string `json:"group,omitempty" protobuf:"bytes,2,opt,name=group,proto3"` // Which group should dehydrated run as
 
 	// IP version settings
 	IPVersion string // Resolve names to addresses of IP version only (4, 6)
 
 	// Base directories
-	BaseDir       string // Base directory for dehydrated
-	CertDir       string // Directory for certificates
-	DomainsDir    string // Directory for domain configurations
-	AccountsDir   string // Directory for account keys
-	ChallengesDir string // Directory for challenge files
-	ChainCache    string // Issuer chain cache directory
+	BaseDir       string `json:"base_dir,omitempty" protobuf:"bytes,3,opt,name=base_dir,json=baseDir,proto3"`                   // Base directory for dehydrated
+	CertDir       string `json:"cert_dir,omitempty" protobuf:"bytes,4,opt,name=cert_dir,json=certDir,proto3"`                   // Directory for certificates
+	DomainsDir    string `json:"domains_dir,omitempty" protobuf:"bytes,5,opt,name=domains_dir,json=domainsDir,proto3"`          // Directory for domain configurations
+	AccountsDir   string `json:"accounts_dir,omitempty" protobuf:"bytes,6,opt,name=accounts_dir,json=accountsDir,proto3"`       // Directory for account keys
+	ChallengesDir string `json:"challenges_dir,omitempty" protobuf:"bytes,7,opt,name=challenges_dir,json=challengesDir,proto3"` // Directory for challenge files
+	ChainCache    string `json:"chain_cache,omitempty" protobuf:"bytes,8,opt,name=chain_cache,json=chainCache,proto3"`          // Issuer chain cache directory
 
 	// File paths
-	DomainsFile string // Path to domains.txt
-	ConfigFile  string // Path to config file
-	HookScript  string // Path to hook script
-	LockFile    string // Path to lock file
+	DomainsFile string `json:"domains_file,omitempty" protobuf:"bytes,9,opt,name=domains_file,json=domainsFile,proto3"` // Path to domains.txt
+	ConfigFile  string `json:"config_file,omitempty" protobuf:"bytes,10,opt,name=config_file,json=configFile,proto3"`   // Path to config file
+	HookScript  string `json:"hook_script,omitempty" protobuf:"bytes,11,opt,name=hook_script,json=hookScript,proto3"`   // Path to hook script
+	LockFile    string `json:"lock_file,omitempty" protobuf:"bytes,12,opt,name=lock_file,json=lockFile,proto3"`         // Path to lock file
 
 	// OpenSSL settings
-	OpenSSLConfig string // Path to openssl config file
-	OpenSSL       string // Path to OpenSSL binary
-	KeySize       int    // Default keysize for private keys
+	OpensslConfig string `json:"openssl_config,omitempty" protobuf:"bytes,13,opt,name=openssl_config,json=opensslConfig,proto3"` // Path to openssl config file
+	Openssl       string `json:"openssl,omitempty" protobuf:"bytes,14,opt,name=openssl,proto3"`                                  // Path to OpenSSL binary
+	KeySize       int32  `json:"key_size,omitempty" protobuf:"varint,15,opt,name=key_size,json=keySize,proto3"`                  // Default keysize for private keys
 
 	// ACME settings
-	CA             string // CA URL or preset
-	OldCA          string // Path to old certificate authority
-	AcceptTerms    bool   // Whether to accept CA terms
-	IPV4           bool   // Resolve names to IPv4 only
-	IPV6           bool   // Resolve names to IPv6 only
-	PreferredChain string // Alternative certificate chain
-	API            string // ACME API version
+	Ca             string `json:"ca,omitempty" protobuf:"bytes,16,opt,name=ca,proto3"`                                               // CA URL or preset
+	OldCa          string `json:"old_ca,omitempty" protobuf:"bytes,17,opt,name=old_ca,json=oldCa,proto3"`                            // Path to old certificate authority
+	AcceptTerms    bool   `json:"accept_terms,omitempty" protobuf:"varint,18,opt,name=accept_terms,json=acceptTerms,proto3"`         // Whether to accept CA terms
+	Ipv4           bool   `json:"ipv4,omitempty" protobuf:"varint,19,opt,name=ipv4,proto3"`                                          // Resolve names to IPv4 only
+	Ipv6           bool   `json:"ipv6,omitempty" protobuf:"varint,20,opt,name=ipv6,proto3"`                                          // Resolve names to IPv6 only
+	PreferredChain string `json:"preferred_chain,omitempty" protobuf:"bytes,21,opt,name=preferred_chain,json=preferredChain,proto3"` // Alternative certificate chain
+	Api            string `json:"api,omitempty" protobuf:"bytes,22,opt,name=api,proto3"`                                             // ACME API version
 
 	// Certificate settings
-	KeyAlgo            string // Public key algorithm (rsa, prime256v1, secp384r1)
-	RenewDays          int    // Days before renewal
-	ForceRenew         bool   // Force certificate renewal
-	ForceValidation    bool   // Force domain validation
-	PrivateKeyRenew    bool   // Regenerate private keys on renewal
-	PrivateKeyRollover bool   // Create extra private key for rollover
+	KeyAlgo            string `json:"key_algo,omitempty" protobuf:"bytes,23,opt,name=key_algo,json=keyAlgo,proto3"`                                     // Public key algorithm (rsa, prime256v1, secp384r1)
+	RenewDays          int32  `json:"renew_days,omitempty" protobuf:"varint,24,opt,name=renew_days,json=renewDays,proto3"`                              // Days before renewal
+	ForceRenew         bool   `json:"force_renew,omitempty" protobuf:"varint,25,opt,name=force_renew,json=forceRenew,proto3"`                           // Force certificate renewal
+	ForceValidation    bool   `json:"force_validation,omitempty" protobuf:"varint,26,opt,name=force_validation,json=forceValidation,proto3"`            // Force domain validation
+	PrivateKeyRenew    bool   `json:"private_key_renew,omitempty" protobuf:"varint,27,opt,name=private_key_renew,json=privateKeyRenew,proto3"`          // Regenerate private keys on renewal
+	PrivateKeyRollover bool   `json:"private_key_rollover,omitempty" protobuf:"varint,28,opt,name=private_key_rollover,json=privateKeyRollover,proto3"` // Create extra private key for rollover
 
 	// Challenge settings
-	ChallengeType string // Challenge type (http-01, dns-01, tls-alpn-01)
-	WellKnownDir  string // Directory for http-01 challenge
-	ALPNDir       string // Directory for tls-alpn-01 challenge
-	HookChain     bool   // Chain challenge arguments together
+	ChallengeType string `json:"challenge_type,omitempty" protobuf:"bytes,29,opt,name=challenge_type,json=challengeType,proto3"` // Challenge type (http-01, dns-01, tls-alpn-01)
+	WellKnownDir  string `json:"well_known_dir,omitempty" protobuf:"bytes,30,opt,name=well_known_dir,json=wellKnownDir,proto3"`  // Directory for http-01 challenge
+	AlpnDir       string `json:"alpn_dir,omitempty" protobuf:"bytes,31,opt,name=alpn_dir,json=alpnDir,proto3"`                   // Directory for tls-alpn-01 challenge
+	HookChain     bool   `json:"hook_chain,omitempty" protobuf:"varint,32,opt,name=hook_chain,json=hookChain,proto3"`            // Chain challenge arguments together
 
 	// OCSP settings
-	OCSPMustStaple bool // Add CSR-flag indicating OCSP stapling mandatory
-	OCSPFetch      bool // Fetch OCSP responses
-	OCSPDays       int  // OCSP refresh interval
+	OcspMustStaple bool  `json:"ocsp_must_staple,omitempty" protobuf:"varint,33,opt,name=ocsp_must_staple,json=ocspMustStaple,proto3"` // Add CSR-flag indicating OCSP stapling mandatory
+	OcspFetch      bool  `json:"ocsp_fetch,omitempty" protobuf:"varint,34,opt,name=ocsp_fetch,json=ocspFetch,proto3"`                  // Fetch OCSP responses
+	OcspDays       int32 `json:"ocsp_days,omitempty" protobuf:"varint,35,opt,name=ocsp_days,json=ocspDays,proto3"`                     // OCSP refresh interval
 
 	// Other settings
-	NoLock       bool   // Don't use lockfile
-	KeepGoing    bool   // Continue after errors
-	FullChain    bool   // Print full chain
-	OCSP         bool   // Enable OCSP stapling
-	AutoCleanup  bool   // Automatic cleanup
-	ContactEmail string // E-mail to use during registration
-	CurlOpts     string // Extra options passed to curl
-	ConfigD      string // Directory containing additional config files
+	NoLock       bool   `json:"no_lock,omitempty" protobuf:"varint,36,opt,name=no_lock,json=noLock,proto3"`                  // Don't use lockfile
+	KeepGoing    bool   `json:"keep_going,omitempty" protobuf:"varint,37,opt,name=keep_going,json=keepGoing,proto3"`         // Continue after errors
+	FullChain    bool   `json:"full_chain,omitempty" protobuf:"varint,38,opt,name=full_chain,json=fullChain,proto3"`         // Print full chain
+	Ocsp         bool   `json:"ocsp,omitempty" protobuf:"varint,39,opt,name=ocsp,proto3"`                                    // Enable OCSP stapling
+	AutoCleanup  bool   `json:"auto_cleanup,omitempty" protobuf:"varint,40,opt,name=auto_cleanup,json=autoCleanup,proto3"`   // Automatic cleanup
+	ContactEmail string `json:"contact_email,omitempty" protobuf:"bytes,41,opt,name=contact_email,json=contactEmail,proto3"` // E-mail to use during registration
+	CurlOpts     string `json:"curl_opts,omitempty" protobuf:"bytes,42,opt,name=curl_opts,json=curlOpts,proto3"`             // Extra options passed to curl
+	ConfigD      string `json:"config_d,omitempty" protobuf:"bytes,43,opt,name=config_d,json=configD,proto3"`                // Directory containing additional config files
 }
 
 // NewConfig creates a new Config with default values
@@ -83,20 +83,31 @@ func NewConfig() *Config {
 		AccountsDir:     "accounts",
 		ChallengesDir:   "acme-challenges",
 		DomainsFile:     "domains.txt",
-		CA:              "letsencrypt",
-		OldCA:           "https://acme-v01.api.letsencrypt.org/directory",
+		Ca:              "letsencrypt",
+		OldCa:           "https://acme-v01.api.letsencrypt.org/directory",
 		RenewDays:       30,
 		KeySize:         4096,
 		KeyAlgo:         "rsa",
 		ChallengeType:   "http-01",
 		WellKnownDir:    "/var/www/dehydrated",
 		LockFile:        "dehydrated.lock",
-		OpenSSL:         "openssl",
+		Openssl:         "openssl",
 		PrivateKeyRenew: true,
 		HookChain:       false,
-		OCSPDays:        5,
+		OcspDays:        5,
 		ChainCache:      "chains",
-		API:             "auto",
+		Api:             "auto",
+	}
+}
+
+// DefaultConfig returns a new Config with default values
+func DefaultConfig() *Config {
+	return &Config{
+		Group:    "www-data",
+		Ca:       "https://acme-v02.api.letsencrypt.org/directory",
+		Openssl:  "openssl",
+		OcspDays: 5,
+		Api:      "v2",
 	}
 }
 
@@ -196,28 +207,28 @@ func (c *Config) load() {
 		case "HOOK":
 			c.HookScript = value
 		case "CA":
-			c.CA = value
+			c.Ca = value
 		case "OLDCA":
-			c.OldCA = value
+			c.OldCa = value
 		case "ACCEPT_TERMS":
 			c.AcceptTerms = value == "yes"
 		case "IPV4":
-			c.IPV4 = value == "yes"
+			c.Ipv4 = value == "yes"
 		case "IPV6":
-			c.IPV6 = value == "yes"
+			c.Ipv6 = value == "yes"
 		case "PREFERRED_CHAINS":
 			c.PreferredChain = value
 		case "API":
-			c.API = value
+			c.Api = value
 		case "KEY_ALGO":
 			c.KeyAlgo = value
 		case "KEY_SIZE":
 			if size, err := strconv.Atoi(value); err == nil {
-				c.KeySize = size
+				c.KeySize = int32(size)
 			}
 		case "RENEW_DAYS":
 			if days, err := strconv.Atoi(value); err == nil {
-				c.RenewDays = days
+				c.RenewDays = int32(days)
 			}
 		case "FORCE_RENEW":
 			c.ForceRenew = value == "yes"
@@ -228,7 +239,7 @@ func (c *Config) load() {
 		case "WELLKNOWN":
 			c.WellKnownDir = value
 		case "ALPNCERTDIR":
-			c.ALPNDir = value
+			c.AlpnDir = value
 		case "LOCKFILE":
 			c.LockFile = value
 		case "NO_LOCK":
@@ -238,14 +249,14 @@ func (c *Config) load() {
 		case "FULL_CHAIN":
 			c.FullChain = value == "yes"
 		case "OCSP":
-			c.OCSP = value == "yes"
+			c.Ocsp = value == "yes"
 		case "OCSP_MUST_STAPLE":
-			c.OCSPMustStaple = value == "yes"
+			c.OcspMustStaple = value == "yes"
 		case "OCSP_FETCH":
-			c.OCSPFetch = value == "yes"
+			c.OcspFetch = value == "yes"
 		case "OCSP_DAYS":
 			if days, err := strconv.Atoi(value); err == nil {
-				c.OCSPDays = days
+				c.OcspDays = int32(days)
 			}
 		case "AUTO_CLEANUP":
 			c.AutoCleanup = value == "yes"
@@ -256,9 +267,11 @@ func (c *Config) load() {
 		case "CONFIG_D":
 			c.ConfigD = value
 		case "OPENSSL_CONFIG":
-			c.OpenSSLConfig = value
+			c.OpensslConfig = value
 		case "OPENSSL":
-			c.OpenSSL = value
+			c.Openssl = value
+		case "GROUP":
+			c.Group = value
 		case "PRIVATE_KEY_RENEW":
 			c.PrivateKeyRenew = value == "yes"
 		case "PRIVATE_KEY_ROLLOVER":
@@ -297,7 +310,7 @@ func (c *Config) resolvePaths() {
 	if c.LockFile != "" {
 		c.LockFile = c.ensureAbs(c.LockFile)
 	}
-	if c.OpenSSLConfig != "" {
-		c.OpenSSLConfig = c.ensureAbs(c.OpenSSLConfig)
+	if c.OpensslConfig != "" {
+		c.OpensslConfig = c.ensureAbs(c.OpensslConfig)
 	}
 }

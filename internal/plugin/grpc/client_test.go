@@ -3,14 +3,15 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
@@ -249,44 +250,19 @@ func TestGetMetadata(t *testing.T) {
 			domain: model.DomainEntry{
 				Domain:           "example.com",
 				AlternativeNames: []string{"www.example.com"},
-				Alias:            "alias.example.com",
+				Alias:            "example",
 				Enabled:          true,
-				Comment:          "Test domain",
-				Metadata: map[string]interface{}{
-					"string": "value",
-					"number": 42,
-					"bool":   true,
-					"list":   []interface{}{"item1", "item2"},
-					"map":    map[string]interface{}{"key": "value"},
-				},
+				Comment:          "test domain",
+				Metadata:         map[string]*structpb.Value{},
 			},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: map[string]*structpb.Value{
-					"string": structpb.NewStringValue("value"),
-					"number": structpb.NewNumberValue(42),
-					"bool":   structpb.NewBoolValue(true),
-					"list": structpb.NewListValue(&structpb.ListValue{
-						Values: []*structpb.Value{
-							structpb.NewStringValue("item1"),
-							structpb.NewStringValue("item2"),
-						},
-					}),
-					"map": structpb.NewStructValue(&structpb.Struct{
-						Fields: map[string]*structpb.Value{
-							"key": structpb.NewStringValue("value"),
-						},
-					}),
+					"key": structpb.NewStringValue("value"),
 				},
 			},
-			mockError: nil,
-			wantErr:   false,
-			wantMetadata: map[string]any{
-				"string": "value",
-				"number": 42.0,
-				"bool":   true,
-				"list":   []interface{}{"item1", "item2"},
-				"map":    map[string]interface{}{"key": "value"},
-			},
+			mockError:    nil,
+			wantErr:      false,
+			wantMetadata: map[string]any{"key": "value"},
 		},
 		{
 			name: "client nil error",

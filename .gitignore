@@ -55,3 +55,4 @@ debug/
 # Local development files
 config.yaml
 domains.txt
+coverage.html

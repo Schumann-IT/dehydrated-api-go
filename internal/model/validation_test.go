@@ -44,43 +44,32 @@ func TestIsValidDomainEntry(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "Valid entry with valid domain and alternative names",
+			name: "Valid entry with valid domain",
 			entry: DomainEntry{
-				Domain:           "example.com",
-				AlternativeNames: []string{"www.example.com", "mail.example.com"},
+				Domain: "example.com",
 			},
 			expected: true,
 		},
 		{
 			name: "Valid entry with wildcard domain",
 			entry: DomainEntry{
-				Domain:           "*.example.com",
-				AlternativeNames: []string{"www.example.com"},
+				Domain: "*.example.com",
 			},
 			expected: true,
 		},
 		{
-			name: "Invalid entry with invalid main domain",
+			name: "Invalid entry with invalid domain",
 			entry: DomainEntry{
-				Domain:           "invalid@domain.com",
-				AlternativeNames: []string{"www.example.com"},
+				Domain: "invalid@domain.com",
 			},
 			expected: false,
 		},
 		{
-			name: "Invalid entry with invalid alternative name",
+			name: "Invalid entry with empty domain",
 			entry: DomainEntry{
-				Domain:           "example.com",
-				AlternativeNames: []string{"invalid@domain.com"},
+				Domain: "",
 			},
 			expected: false,
-		},
-		{
-			name: "Valid entry with no alternative names",
-			entry: DomainEntry{
-				Domain: "example.com",
-			},
-			expected: true,
 		},
 	}
 

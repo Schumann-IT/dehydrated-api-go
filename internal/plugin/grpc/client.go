@@ -3,14 +3,15 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
@@ -31,48 +32,53 @@ type Client struct {
 // NewClient creates a new gRPC client for the given plugin
 func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehydrated.Config) (*Client, error) {
 	// Create a temporary directory for the socket file
-	tmpDir, err := os.MkdirTemp("", "grpc-plugin-*")
+	tmpDir, err := os.MkdirTemp("", "plugin-*")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
+		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			os.RemoveAll(tmpDir)
-		}
-	}()
 
-	socketPath := filepath.Join(tmpDir, "plugin.sock")
+	// Create socket file path
+	sockFile := filepath.Join(tmpDir, "plugin.sock")
 
 	// Start the plugin process
 	cmd := exec.Command(pluginPath)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", sockFile))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", socketPath))
+
 	if err := cmd.Start(); err != nil {
+		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to start plugin: %w", err)
+	}
+
+	// Create a client instance
+	client := &Client{
+		cmd:      cmd,
+		sockFile: sockFile,
+		tmpDir:   tmpDir,
 	}
 
 	// Wait for the socket file to be created
 	for i := 0; i < 10; i++ {
-		if _, err := os.Stat(socketPath); err == nil {
+		if _, err := os.Stat(sockFile); err == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Create gRPC connection
-	conn, err := grpc.Dial("unix://"+socketPath, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Connect to the plugin
+	conn, err := grpc.Dial(
+		"unix://"+sockFile,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 	if err != nil {
-		cmd.Process.Kill()
+		client.Close(context.Background())
 		return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 	}
 
-	client := &Client{
-		conn:   conn,
-		client: pb.NewPluginClient(conn),
-		tmpDir: tmpDir,
-		cmd:    cmd,
-	}
+	client.conn = conn
+	client.client = pb.NewPluginClient(conn)
 
 	// Convert config to structpb.Value map
 	configValues, err := convertToStructValue(config)
@@ -95,16 +101,16 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 		ConfigFile:         dehydratedConfig.ConfigFile,
 		HookScript:         dehydratedConfig.HookScript,
 		LockFile:           dehydratedConfig.LockFile,
-		OpensslConfig:      dehydratedConfig.OpenSSLConfig,
-		Openssl:            dehydratedConfig.OpenSSL,
+		OpensslConfig:      dehydratedConfig.OpensslConfig,
+		Openssl:            dehydratedConfig.Openssl,
 		KeySize:            int32(dehydratedConfig.KeySize),
-		Ca:                 dehydratedConfig.CA,
-		OldCa:              dehydratedConfig.OldCA,
+		Ca:                 dehydratedConfig.Ca,
+		OldCa:              dehydratedConfig.OldCa,
 		AcceptTerms:        dehydratedConfig.AcceptTerms,
-		Ipv4:               dehydratedConfig.IPV4,
-		Ipv6:               dehydratedConfig.IPV6,
+		Ipv4:               dehydratedConfig.Ipv4,
+		Ipv6:               dehydratedConfig.Ipv6,
 		PreferredChain:     dehydratedConfig.PreferredChain,
-		Api:                dehydratedConfig.API,
+		Api:                dehydratedConfig.Api,
 		KeyAlgo:            dehydratedConfig.KeyAlgo,
 		RenewDays:          int32(dehydratedConfig.RenewDays),
 		ForceRenew:         dehydratedConfig.ForceRenew,
@@ -113,15 +119,15 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
 		ChallengeType:      dehydratedConfig.ChallengeType,
 		WellKnownDir:       dehydratedConfig.WellKnownDir,
-		AlpnDir:            dehydratedConfig.ALPNDir,
+		AlpnDir:            dehydratedConfig.AlpnDir,
 		HookChain:          dehydratedConfig.HookChain,
-		OcspMustStaple:     dehydratedConfig.OCSPMustStaple,
-		OcspFetch:          dehydratedConfig.OCSPFetch,
-		OcspDays:           int32(dehydratedConfig.OCSPDays),
+		OcspMustStaple:     dehydratedConfig.OcspMustStaple,
+		OcspFetch:          dehydratedConfig.OcspFetch,
+		OcspDays:           int32(dehydratedConfig.OcspDays),
 		NoLock:             dehydratedConfig.NoLock,
 		KeepGoing:          dehydratedConfig.KeepGoing,
 		FullChain:          dehydratedConfig.FullChain,
-		Ocsp:               dehydratedConfig.OCSP,
+		Ocsp:               dehydratedConfig.Ocsp,
 		AutoCleanup:        dehydratedConfig.AutoCleanup,
 		ContactEmail:       dehydratedConfig.ContactEmail,
 		CurlOpts:           dehydratedConfig.CurlOpts,
@@ -187,16 +193,16 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 		ConfigFile:         dehydratedConfig.ConfigFile,
 		HookScript:         dehydratedConfig.HookScript,
 		LockFile:           dehydratedConfig.LockFile,
-		OpensslConfig:      dehydratedConfig.OpenSSLConfig,
-		Openssl:            dehydratedConfig.OpenSSL,
+		OpensslConfig:      dehydratedConfig.OpensslConfig,
+		Openssl:            dehydratedConfig.Openssl,
 		KeySize:            int32(dehydratedConfig.KeySize),
-		Ca:                 dehydratedConfig.CA,
-		OldCa:              dehydratedConfig.OldCA,
+		Ca:                 dehydratedConfig.Ca,
+		OldCa:              dehydratedConfig.OldCa,
 		AcceptTerms:        dehydratedConfig.AcceptTerms,
-		Ipv4:               dehydratedConfig.IPV4,
-		Ipv6:               dehydratedConfig.IPV6,
+		Ipv4:               dehydratedConfig.Ipv4,
+		Ipv6:               dehydratedConfig.Ipv6,
 		PreferredChain:     dehydratedConfig.PreferredChain,
-		Api:                dehydratedConfig.API,
+		Api:                dehydratedConfig.Api,
 		KeyAlgo:            dehydratedConfig.KeyAlgo,
 		RenewDays:          int32(dehydratedConfig.RenewDays),
 		ForceRenew:         dehydratedConfig.ForceRenew,
@@ -205,15 +211,15 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
 		ChallengeType:      dehydratedConfig.ChallengeType,
 		WellKnownDir:       dehydratedConfig.WellKnownDir,
-		AlpnDir:            dehydratedConfig.ALPNDir,
+		AlpnDir:            dehydratedConfig.AlpnDir,
 		HookChain:          dehydratedConfig.HookChain,
-		OcspMustStaple:     dehydratedConfig.OCSPMustStaple,
-		OcspFetch:          dehydratedConfig.OCSPFetch,
-		OcspDays:           int32(dehydratedConfig.OCSPDays),
+		OcspMustStaple:     dehydratedConfig.OcspMustStaple,
+		OcspFetch:          dehydratedConfig.OcspFetch,
+		OcspDays:           int32(dehydratedConfig.OcspDays),
 		NoLock:             dehydratedConfig.NoLock,
 		KeepGoing:          dehydratedConfig.KeepGoing,
 		FullChain:          dehydratedConfig.FullChain,
-		Ocsp:               dehydratedConfig.OCSP,
+		Ocsp:               dehydratedConfig.Ocsp,
 		AutoCleanup:        dehydratedConfig.AutoCleanup,
 		ContactEmail:       dehydratedConfig.ContactEmail,
 		CurlOpts:           dehydratedConfig.CurlOpts,
@@ -241,49 +247,26 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	}
 	c.mu.RUnlock()
 
-	// Convert metadata to structpb.Value map
-	metadataValues, err := plugininterface2.ConvertToStructValue(entry.Metadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert metadata: %w", err)
-	}
-
 	req := &pb.GetMetadataRequest{
 		Domain:           entry.Domain,
 		AlternativeNames: entry.AlternativeNames,
 		Alias:            entry.Alias,
 		Enabled:          entry.Enabled,
 		Comment:          entry.Comment,
-		Metadata:         metadataValues,
+		Metadata:         entry.Metadata,
 	}
 
 	resp, err := c.client.GetMetadata(ctx, req)
 	if err != nil {
-		return nil, plugininterface2.ErrPluginError
+		return nil, fmt.Errorf("%w: %v", plugininterface2.ErrPluginError, err)
 	}
 
-	// Convert the response metadata to map[string]any
+	// Convert response metadata to map[string]any
 	result := make(map[string]any)
 	for k, v := range resp.Metadata {
-		switch v.Kind.(type) {
-		case *structpb.Value_StringValue:
-			result[k] = v.GetStringValue()
-		case *structpb.Value_NumberValue:
-			result[k] = v.GetNumberValue()
-		case *structpb.Value_BoolValue:
-			result[k] = v.GetBoolValue()
-		case *structpb.Value_ListValue:
-			list := v.GetListValue()
-			values := make([]any, len(list.Values))
-			for i, item := range list.Values {
-				values[i] = item.AsInterface()
-			}
-			result[k] = values
-		case *structpb.Value_StructValue:
-			result[k] = v.GetStructValue().AsMap()
-		default:
-			result[k] = v.AsInterface()
-		}
+		result[k] = v.AsInterface()
 	}
+
 	return result, nil
 }
 

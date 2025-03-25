@@ -3,13 +3,14 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -188,7 +189,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 		CertDir:       "/test/certs",
 		DomainsDir:    "/test/domains",
 		ChallengeType: "dns-01",
-		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
 	tests := []struct {
@@ -272,7 +273,7 @@ func TestLoadPluginTwice(t *testing.T) {
 		CertDir:       "/test/certs",
 		DomainsDir:    "/test/domains",
 		ChallengeType: "dns-01",
-		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
 	reg, err := NewRegistry(map[string]internal.PluginConfig{
@@ -295,7 +296,7 @@ func TestGetNonExistentPlugin(t *testing.T) {
 		CertDir:       "/test/certs",
 		DomainsDir:    "/test/domains",
 		ChallengeType: "dns-01",
-		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
 	reg, err := NewRegistry(map[string]internal.PluginConfig{}, cfg)
@@ -314,7 +315,7 @@ func TestCloseRegistry(t *testing.T) {
 		CertDir:       "/test/certs",
 		DomainsDir:    "/test/domains",
 		ChallengeType: "dns-01",
-		CA:            "https://acme-v02.api.letsencrypt.org/directory",
+		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
 	reg, err := NewRegistry(map[string]internal.PluginConfig{

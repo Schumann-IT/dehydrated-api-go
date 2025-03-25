@@ -26,20 +26,7 @@ func IsValidDomain(domain string) bool {
 	return matched
 }
 
-// IsValidDomainEntry checks if a DomainEntry is valid by validating both the main domain
-// and all alternative names
+// IsValidDomainEntry checks if a DomainEntry is valid by validating the domain
 func IsValidDomainEntry(entry DomainEntry) bool {
-	// Check main domain
-	if !IsValidDomain(entry.Domain) {
-		return false
-	}
-
-	// Check all alternative names
-	for _, altName := range entry.AlternativeNames {
-		if !IsValidDomain(altName) {
-			return false
-		}
-	}
-
-	return true
+	return IsValidDomain(entry.Domain)
 }

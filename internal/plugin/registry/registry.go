@@ -3,6 +3,8 @@ package registry
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
@@ -10,7 +12,6 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/timestamp"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/grpc"
 	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
-	"sync"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -165,7 +166,7 @@ func (w *builtinWrapper) Initialize(ctx context.Context, config map[string]any, 
 		CertDir:       dehydratedConfig.CertDir,
 		DomainsDir:    dehydratedConfig.DomainsDir,
 		ChallengeType: dehydratedConfig.ChallengeType,
-		Ca:            dehydratedConfig.CA,
+		Ca:            dehydratedConfig.Ca,
 	}
 
 	req := &pb.InitializeRequest{
@@ -177,19 +178,13 @@ func (w *builtinWrapper) Initialize(ctx context.Context, config map[string]any, 
 }
 
 func (w *builtinWrapper) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
-	// Convert metadata to structpb.Value map
-	metadataValues, err := plugininterface2.ConvertToStructValue(entry.Metadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert metadata: %w", err)
-	}
-
 	req := &pb.GetMetadataRequest{
 		Domain:           entry.Domain,
 		AlternativeNames: entry.AlternativeNames,
 		Alias:            entry.Alias,
 		Enabled:          entry.Enabled,
 		Comment:          entry.Comment,
-		Metadata:         metadataValues,
+		Metadata:         entry.Metadata,
 	}
 	resp, err := w.server.GetMetadata(ctx, req)
 	if err != nil {
@@ -199,16 +194,7 @@ func (w *builtinWrapper) GetMetadata(ctx context.Context, entry model.DomainEntr
 	// Convert metadata to map[string]any
 	metadata := make(map[string]any)
 	for k, v := range resp.Metadata {
-		switch v.GetKind().(type) {
-		case *structpb.Value_StringValue:
-			metadata[k] = v.GetStringValue()
-		case *structpb.Value_NumberValue:
-			metadata[k] = v.GetNumberValue()
-		case *structpb.Value_BoolValue:
-			metadata[k] = v.GetBoolValue()
-		case *structpb.Value_StructValue:
-			metadata[k] = v.GetStructValue()
-		}
+		metadata[k] = v.AsInterface()
 	}
 	return metadata, nil
 }
