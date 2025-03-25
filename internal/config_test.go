@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/logger"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -109,4 +111,321 @@ plugins:
 			t.Error("Expected error for invalid plugin config")
 		}
 	})
+}
+
+func TestConfigValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupConfig func() *Config
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "valid configuration",
+			setupConfig: func() *Config {
+				tmpDir := t.TempDir()
+				pluginPath := filepath.Join(tmpDir, "test-plugin")
+				err := os.WriteFile(pluginPath, []byte("test"), 0755)
+				if err != nil {
+					t.Fatalf("Failed to create test plugin: %v", err)
+				}
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: tmpDir,
+					Plugins: map[string]PluginConfig{
+						"test": {
+							Enabled: true,
+							Path:    pluginPath,
+						},
+					},
+				}
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid port - below range",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              0,
+					DehydratedBaseDir: ".",
+				}
+			},
+			wantErr:     true,
+			errContains: "invalid port number",
+		},
+		{
+			name: "invalid port - above range",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              65536,
+					DehydratedBaseDir: ".",
+				}
+			},
+			wantErr:     true,
+			errContains: "invalid port number",
+		},
+		{
+			name: "non-existent dehydrated base dir",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: "/non/existent/path",
+				}
+			},
+			wantErr:     true,
+			errContains: "dehydrated base dir does not exist",
+		},
+		{
+			name: "enabled plugin without path",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: ".",
+					Plugins: map[string]PluginConfig{
+						"test": {
+							Enabled: true,
+							Path:    "",
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "plugin path is required for enabled plugin",
+		},
+		{
+			name: "non-existent plugin path",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: ".",
+					Plugins: map[string]PluginConfig{
+						"test": {
+							Enabled: true,
+							Path:    "/non/existent/plugin",
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "plugin path does not exist",
+		},
+		{
+			name: "relative plugin path",
+			setupConfig: func() *Config {
+				tmpDir := t.TempDir()
+				pluginPath := filepath.Join(tmpDir, "test-plugin")
+				err := os.WriteFile(pluginPath, []byte("test"), 0755)
+				if err != nil {
+					t.Fatalf("Failed to create test plugin: %v", err)
+				}
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: tmpDir,
+					Plugins: map[string]PluginConfig{
+						"test": {
+							Enabled: true,
+							Path:    "test-plugin", // Relative path
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "plugin path does not exist",
+		},
+		{
+			name: "disabled plugin with invalid path",
+			setupConfig: func() *Config {
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: ".",
+					Plugins: map[string]PluginConfig{
+						"test": {
+							Enabled: false,
+							Path:    "/non/existent/plugin",
+						},
+					},
+				}
+			},
+			wantErr: false, // Should not validate disabled plugins
+		},
+		{
+			name: "multiple plugins - mixed validity",
+			setupConfig: func() *Config {
+				tmpDir := t.TempDir()
+				validPluginPath := filepath.Join(tmpDir, "valid-plugin")
+				err := os.WriteFile(validPluginPath, []byte("test"), 0755)
+				if err != nil {
+					t.Fatalf("Failed to create test plugin: %v", err)
+				}
+				return &Config{
+					Port:              3000,
+					DehydratedBaseDir: tmpDir,
+					Plugins: map[string]PluginConfig{
+						"valid": {
+							Enabled: true,
+							Path:    validPluginPath,
+						},
+						"disabled": {
+							Enabled: false,
+							Path:    "/non/existent/plugin",
+						},
+						"invalid": {
+							Enabled: true,
+							Path:    "/non/existent/plugin",
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "plugin path does not exist",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			err := cfg.Validate()
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConfigLoad(t *testing.T) {
+	tests := []struct {
+		name           string
+		configContent  string
+		expectedConfig *Config
+		setupFiles     func(dir string) error
+	}{
+		{
+			name: "load complete configuration",
+			configContent: `
+port: 8080
+dehydratedBaseDir: /test/dir
+enableWatcher: true
+plugins:
+  test:
+    enabled: true
+    path: /test/plugin
+    config:
+      key: value
+logging:
+  level: debug
+  encoding: json
+  outputPath: /test/log
+`,
+			expectedConfig: &Config{
+				Port:              8080,
+				DehydratedBaseDir: "/test/dir",
+				EnableWatcher:     true,
+				Plugins: map[string]PluginConfig{
+					"test": {
+						Enabled: true,
+						Path:    "/test/plugin",
+						Config: map[string]any{
+							"key": "value",
+						},
+					},
+				},
+				Logging: &logger.Config{
+					Level:      "debug",
+					Encoding:   "json",
+					OutputPath: "/test/log",
+				},
+			},
+		},
+		{
+			name: "load partial configuration",
+			configContent: `
+port: 8080
+plugins:
+  test:
+    enabled: true
+`,
+			expectedConfig: &Config{
+				Port:              8080,
+				DehydratedBaseDir: ".",
+				EnableWatcher:     false,
+				Plugins: map[string]PluginConfig{
+					"test": {
+						Enabled: true,
+						Config:  make(map[string]any),
+					},
+				},
+			},
+		},
+		{
+			name:          "load non-existent file",
+			configContent: "",
+			expectedConfig: &Config{
+				Port:              3000,
+				DehydratedBaseDir: ".",
+				EnableWatcher:     false,
+				Plugins:           make(map[string]PluginConfig),
+			},
+		},
+		{
+			name: "load invalid yaml",
+			configContent: `
+port: not-a-number
+`,
+			expectedConfig: &Config{
+				Port:              3000,
+				DehydratedBaseDir: ".",
+				EnableWatcher:     false,
+				Plugins:           make(map[string]PluginConfig),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.yaml")
+
+			if tt.configContent != "" {
+				err := os.WriteFile(configPath, []byte(tt.configContent), 0644)
+				assert.NoError(t, err)
+			}
+
+			if tt.setupFiles != nil {
+				err := tt.setupFiles(tmpDir)
+				assert.NoError(t, err)
+			}
+
+			cfg := NewConfig()
+			cfg.Load(configPath)
+
+			// Compare configurations
+			if tt.expectedConfig != nil {
+				assert.Equal(t, tt.expectedConfig.Port, cfg.Port)
+				assert.Equal(t, tt.expectedConfig.DehydratedBaseDir, cfg.DehydratedBaseDir)
+				assert.Equal(t, tt.expectedConfig.EnableWatcher, cfg.EnableWatcher)
+				assert.Equal(t, len(tt.expectedConfig.Plugins), len(cfg.Plugins))
+
+				for name, expectedPlugin := range tt.expectedConfig.Plugins {
+					actualPlugin, exists := cfg.Plugins[name]
+					assert.True(t, exists)
+					assert.Equal(t, expectedPlugin.Enabled, actualPlugin.Enabled)
+					assert.Equal(t, expectedPlugin.Path, actualPlugin.Path)
+					assert.Equal(t, expectedPlugin.Config, actualPlugin.Config)
+				}
+
+				if tt.expectedConfig.Logging != nil {
+					assert.NotNil(t, cfg.Logging)
+					assert.Equal(t, tt.expectedConfig.Logging.Level, cfg.Logging.Level)
+					assert.Equal(t, tt.expectedConfig.Logging.Encoding, cfg.Logging.Encoding)
+					assert.Equal(t, tt.expectedConfig.Logging.OutputPath, cfg.Logging.OutputPath)
+				}
+			}
+		})
+	}
 }
