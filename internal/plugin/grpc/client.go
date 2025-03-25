@@ -15,133 +15,89 @@ import (
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Client implements the plugin.Plugin interface using gRPC
+// Client represents a gRPC plugin client
 type Client struct {
-	conn     *grpc.ClientConn
-	client   pb.PluginClient
-	cmd      *exec.Cmd
-	sockFile string
-	mu       sync.RWMutex
-	tmpDir   string
+	client    pb.PluginClient
+	conn      *grpc.ClientConn
+	tmpDir    string
+	sockFile  string
+	lastError error
+	mu        sync.RWMutex
+	cmd       *exec.Cmd
 }
 
-// NewClient creates a new gRPC client for the given plugin
+// NewClient creates a new gRPC plugin client
 func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehydrated.Config) (*Client, error) {
+	if dehydratedConfig == nil {
+		return nil, fmt.Errorf("dehydrated config is nil")
+	}
+
+	// Convert config to structpb.Value to validate it
+	_, err := plugininterface2.ConvertToStructValue(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert config: %w", err)
+	}
+
 	// Create a temporary directory for the socket file
 	tmpDir, err := os.MkdirTemp("", "plugin-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	// Create socket file path
 	sockFile := filepath.Join(tmpDir, "plugin.sock")
 
 	// Start the plugin process
 	cmd := exec.Command(pluginPath)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", sockFile))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
 		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to start plugin: %w", err)
 	}
 
-	// Create a client instance
-	client := &Client{
-		cmd:      cmd,
-		sockFile: sockFile,
-		tmpDir:   tmpDir,
-	}
-
 	// Wait for the socket file to be created
-	for i := 0; i < 10; i++ {
-		if _, err := os.Stat(sockFile); err == nil {
-			break
+	timeout := time.After(5 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			cmd.Process.Kill()
+			os.RemoveAll(tmpDir)
+			return nil, fmt.Errorf("timeout waiting for plugin socket")
+		default:
+			if _, err := os.Stat(sockFile); err == nil {
+				goto connected
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
+connected:
 	// Connect to the plugin
 	conn, err := grpc.Dial(
 		"unix://"+sockFile,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		client.Close(context.Background())
+		cmd.Process.Kill()
+		os.RemoveAll(tmpDir)
 		return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 	}
 
-	client.conn = conn
-	client.client = pb.NewPluginClient(conn)
-
-	// Convert config to structpb.Value map
-	configValues, err := convertToStructValue(config)
-	if err != nil {
-		client.Close(context.Background())
-		return nil, fmt.Errorf("failed to convert config: %w", err)
-	}
-
-	// Convert dehydrated config to proto format
-	dehydratedConfigProto := &pb.DehydratedConfig{
-		User:               dehydratedConfig.User,
-		Group:              dehydratedConfig.Group,
-		BaseDir:            dehydratedConfig.BaseDir,
-		CertDir:            dehydratedConfig.CertDir,
-		DomainsDir:         dehydratedConfig.DomainsDir,
-		AccountsDir:        dehydratedConfig.AccountsDir,
-		ChallengesDir:      dehydratedConfig.ChallengesDir,
-		ChainCache:         dehydratedConfig.ChainCache,
-		DomainsFile:        dehydratedConfig.DomainsFile,
-		ConfigFile:         dehydratedConfig.ConfigFile,
-		HookScript:         dehydratedConfig.HookScript,
-		LockFile:           dehydratedConfig.LockFile,
-		OpensslConfig:      dehydratedConfig.OpensslConfig,
-		Openssl:            dehydratedConfig.Openssl,
-		KeySize:            int32(dehydratedConfig.KeySize),
-		Ca:                 dehydratedConfig.Ca,
-		OldCa:              dehydratedConfig.OldCa,
-		AcceptTerms:        dehydratedConfig.AcceptTerms,
-		Ipv4:               dehydratedConfig.Ipv4,
-		Ipv6:               dehydratedConfig.Ipv6,
-		PreferredChain:     dehydratedConfig.PreferredChain,
-		Api:                dehydratedConfig.Api,
-		KeyAlgo:            dehydratedConfig.KeyAlgo,
-		RenewDays:          int32(dehydratedConfig.RenewDays),
-		ForceRenew:         dehydratedConfig.ForceRenew,
-		ForceValidation:    dehydratedConfig.ForceValidation,
-		PrivateKeyRenew:    dehydratedConfig.PrivateKeyRenew,
-		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
-		ChallengeType:      dehydratedConfig.ChallengeType,
-		WellKnownDir:       dehydratedConfig.WellKnownDir,
-		AlpnDir:            dehydratedConfig.AlpnDir,
-		HookChain:          dehydratedConfig.HookChain,
-		OcspMustStaple:     dehydratedConfig.OcspMustStaple,
-		OcspFetch:          dehydratedConfig.OcspFetch,
-		OcspDays:           int32(dehydratedConfig.OcspDays),
-		NoLock:             dehydratedConfig.NoLock,
-		KeepGoing:          dehydratedConfig.KeepGoing,
-		FullChain:          dehydratedConfig.FullChain,
-		Ocsp:               dehydratedConfig.Ocsp,
-		AutoCleanup:        dehydratedConfig.AutoCleanup,
-		ContactEmail:       dehydratedConfig.ContactEmail,
-		CurlOpts:           dehydratedConfig.CurlOpts,
-		ConfigD:            dehydratedConfig.ConfigD,
+	client := &Client{
+		client:   pb.NewPluginClient(conn),
+		conn:     conn,
+		tmpDir:   tmpDir,
+		sockFile: sockFile,
 	}
 
 	// Initialize the plugin
-	_, err = client.client.Initialize(context.Background(), &pb.InitializeRequest{
-		Config:           configValues,
-		DehydratedConfig: dehydratedConfigProto,
-	})
-	if err != nil {
+	if err := client.Initialize(context.Background(), config, dehydratedConfig); err != nil {
 		client.Close(context.Background())
-		return nil, fmt.Errorf("failed to initialize plugin: %w", err)
+		return nil, err
 	}
 
 	return client, nil
@@ -270,32 +226,38 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	return result, nil
 }
 
-// Close implements plugin.Plugin
+// Close cleans up resources
 func (c *Client) Close(ctx context.Context) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	var errs []error
 
-	if c.conn == nil {
-		return fmt.Errorf("connection is nil")
+	if c.client != nil {
+		if _, err := c.client.Close(ctx, &pb.CloseRequest{}); err != nil {
+			errs = append(errs, fmt.Errorf("failed to close plugin: %w", err))
+		}
 	}
 
-	if c.client == nil {
-		return fmt.Errorf("client is nil")
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to close connection: %w", err))
+		}
 	}
-
-	_, err := c.client.Close(ctx, &pb.CloseRequest{})
-	if err != nil {
-		return fmt.Errorf("failed to close plugin: %w", err)
-	}
-	c.conn.Close()
 
 	if c.cmd != nil && c.cmd.Process != nil {
-		c.cmd.Process.Kill()
+		if err := c.cmd.Process.Kill(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to kill plugin process: %w", err))
+		}
 	}
 
-	if c.sockFile != "" {
-		os.RemoveAll(filepath.Dir(c.sockFile))
+	if c.tmpDir != "" {
+		if err := os.RemoveAll(c.tmpDir); err != nil {
+			errs = append(errs, fmt.Errorf("failed to remove temporary directory: %w", err))
+		}
 	}
 
-	return nil
+	if len(errs) > 0 {
+		return fmt.Errorf("errors during cleanup: %v", errs)
+	}
+
+	// Return the last error if one exists
+	return c.lastError
 }

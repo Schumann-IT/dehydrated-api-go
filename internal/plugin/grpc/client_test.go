@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -395,5 +396,667 @@ func TestNewClient(t *testing.T) {
 				client.Close(context.Background())
 			}
 		})
+	}
+}
+
+func TestClientLifecycle(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func(*testing.T) (*Client, func())
+		actions func(*testing.T, *Client)
+		wantErr bool
+	}{
+		{
+			name: "normal lifecycle",
+			setup: func(t *testing.T) (*Client, func()) {
+				_, sockPath, cleanup := setupMockServer(t)
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				if err != nil {
+					t.Fatalf("failed to connect to mock server: %v", err)
+				}
+
+				client := &Client{
+					client: pb.NewPluginClient(conn),
+					conn:   conn,
+				}
+
+				return client, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			actions: func(t *testing.T, c *Client) {
+				ctx := context.Background()
+				err := c.Initialize(ctx, map[string]any{"test": "value"}, &dehydrated.Config{})
+				assert.NoError(t, err)
+
+				_, err = c.GetMetadata(ctx, model.DomainEntry{Domain: "test.com"})
+				assert.NoError(t, err)
+
+				err = c.Close(ctx)
+				assert.NoError(t, err)
+			},
+			wantErr: false,
+		},
+		{
+			name: "concurrent operations",
+			setup: func(t *testing.T) (*Client, func()) {
+				_, sockPath, cleanup := setupMockServer(t)
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				if err != nil {
+					t.Fatalf("failed to connect to mock server: %v", err)
+				}
+
+				client := &Client{
+					client: pb.NewPluginClient(conn),
+					conn:   conn,
+				}
+
+				return client, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			actions: func(t *testing.T, c *Client) {
+				var wg sync.WaitGroup
+				ctx := context.Background()
+				numGoroutines := 10
+
+				// Initialize once before concurrent operations
+				err := c.Initialize(ctx, map[string]any{"test": "value"}, &dehydrated.Config{})
+				assert.NoError(t, err)
+
+				for i := 0; i < numGoroutines; i++ {
+					wg.Add(1)
+					go func(id int) {
+						defer wg.Done()
+						_, err := c.GetMetadata(ctx, model.DomainEntry{Domain: fmt.Sprintf("test%d.com", id)})
+						assert.NoError(t, err)
+					}(i)
+				}
+
+				wg.Wait()
+			},
+			wantErr: false,
+		},
+		{
+			name: "cleanup on error",
+			setup: func(t *testing.T) (*Client, func()) {
+				mock, sockPath, cleanup := setupMockServer(t)
+				mock.initializeErr = fmt.Errorf("initialization error")
+
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				if err != nil {
+					t.Fatalf("failed to connect to mock server: %v", err)
+				}
+
+				client := &Client{
+					client: pb.NewPluginClient(conn),
+					conn:   conn,
+				}
+
+				return client, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			actions: func(t *testing.T, c *Client) {
+				ctx := context.Background()
+				err := c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+				assert.Error(t, err)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, cleanup := tt.setup(t)
+			defer cleanup()
+
+			tt.actions(t, client)
+		})
+	}
+}
+
+func TestMetadataEdgeCases(t *testing.T) {
+	tests := []struct {
+		name         string
+		domain       model.DomainEntry
+		mockResponse *pb.GetMetadataResponse
+		mockError    error
+		wantErr      bool
+	}{
+		{
+			name:   "very large metadata",
+			domain: model.DomainEntry{Domain: "test.com"},
+			mockResponse: &pb.GetMetadataResponse{
+				Metadata: generateLargeMetadata(t),
+			},
+			wantErr: false,
+		},
+		{
+			name:   "nested metadata",
+			domain: model.DomainEntry{Domain: "test.com"},
+			mockResponse: &pb.GetMetadataResponse{
+				Metadata: generateNestedMetadata(t),
+			},
+			wantErr: false,
+		},
+		{
+			name:   "empty metadata",
+			domain: model.DomainEntry{Domain: "test.com"},
+			mockResponse: &pb.GetMetadataResponse{
+				Metadata: map[string]*structpb.Value{},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "nil metadata",
+			domain: model.DomainEntry{Domain: "test.com"},
+			mockResponse: &pb.GetMetadataResponse{
+				Metadata: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "domain with alternative names",
+			domain: model.DomainEntry{
+				Domain:           "test.com",
+				AlternativeNames: []string{"www.test.com", "api.test.com"},
+			},
+			mockResponse: &pb.GetMetadataResponse{
+				Metadata: map[string]*structpb.Value{
+					"domain": structpb.NewStringValue("test.com"),
+					"alternatives": func() *structpb.Value {
+						v, _ := structpb.NewValue([]interface{}{"www.test.com", "api.test.com"})
+						return v
+					}(),
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock, sockPath, cleanup := setupMockServer(t)
+			defer cleanup()
+
+			mock.getMetadataErr = tt.mockError
+			mock.getMetadataResp = tt.mockResponse
+
+			conn, err := grpc.Dial(
+				"unix://"+sockPath,
+				grpc.WithInsecure(),
+				grpc.WithBlock(),
+			)
+			if err != nil {
+				t.Fatalf("failed to connect to mock server: %v", err)
+			}
+			defer conn.Close()
+
+			client := &Client{
+				client: pb.NewPluginClient(conn),
+			}
+
+			metadata, err := client.GetMetadata(context.Background(), tt.domain)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, metadata)
+		})
+	}
+}
+
+func TestContextHandling(t *testing.T) {
+	tests := []struct {
+		name        string
+		ctxTimeout  time.Duration
+		operation   func(context.Context, *Client) error
+		wantTimeout bool
+	}{
+		{
+			name:       "short timeout",
+			ctxTimeout: 1 * time.Millisecond,
+			operation: func(ctx context.Context, c *Client) error {
+				time.Sleep(10 * time.Millisecond) // Force timeout
+				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+			},
+			wantTimeout: true,
+		},
+		{
+			name:       "cancel during operation",
+			ctxTimeout: 100 * time.Millisecond,
+			operation: func(ctx context.Context, c *Client) error {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				// Cancel context after a short delay
+				go func() {
+					time.Sleep(1 * time.Millisecond)
+					cancel()
+				}()
+
+				// Add a delay to ensure the operation is cancelled
+				time.Sleep(10 * time.Millisecond)
+				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+			},
+			wantTimeout: true,
+		},
+		{
+			name:       "normal completion",
+			ctxTimeout: 1 * time.Second,
+			operation: func(ctx context.Context, c *Client) error {
+				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+			},
+			wantTimeout: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, sockPath, cleanup := setupMockServer(t)
+			defer cleanup()
+
+			conn, err := grpc.Dial(
+				"unix://"+sockPath,
+				grpc.WithInsecure(),
+				grpc.WithBlock(),
+			)
+			if err != nil {
+				t.Fatalf("failed to connect to mock server: %v", err)
+			}
+			defer conn.Close()
+
+			client := &Client{
+				client: pb.NewPluginClient(conn),
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), tt.ctxTimeout)
+			ctx = context.WithValue(ctx, "cancel", cancel)
+			defer cancel()
+
+			err = tt.operation(ctx, client)
+			if tt.wantTimeout {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "context")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// Helper functions for generating test data
+func generateLargeMetadata(t *testing.T) map[string]*structpb.Value {
+	metadata := make(map[string]*structpb.Value)
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value, err := structpb.NewValue(fmt.Sprintf("value%d", i))
+		assert.NoError(t, err)
+		metadata[key] = value
+	}
+	return metadata
+}
+
+func generateNestedMetadata(t *testing.T) map[string]*structpb.Value {
+	nestedMap := map[string]interface{}{
+		"level1": map[string]interface{}{
+			"level2": map[string]interface{}{
+				"level3": map[string]interface{}{
+					"string": "value",
+					"number": 42,
+					"bool":   true,
+					"array":  []interface{}{"item1", "item2"},
+				},
+			},
+		},
+	}
+
+	metadata := make(map[string]*structpb.Value)
+	value, err := structpb.NewValue(nestedMap)
+	assert.NoError(t, err)
+	metadata["nested"] = value
+	return metadata
+}
+
+func TestNewClientErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		pluginPath       string
+		config           map[string]any
+		dehydratedConfig *dehydrated.Config
+		wantErr          bool
+		errorContains    string
+	}{
+		{
+			name:             "invalid plugin path",
+			pluginPath:       "/nonexistent/plugin",
+			config:           map[string]any{},
+			dehydratedConfig: &dehydrated.Config{},
+			wantErr:          true,
+			errorContains:    "failed to start plugin",
+		},
+		{
+			name:             "invalid config",
+			pluginPath:       "/nonexistent/plugin",
+			config:           map[string]any{"invalid": make(chan int)},
+			dehydratedConfig: &dehydrated.Config{},
+			wantErr:          true,
+			errorContains:    "failed to convert config",
+		},
+		{
+			name:             "nil dehydrated config",
+			pluginPath:       "/nonexistent/plugin",
+			config:           map[string]any{},
+			dehydratedConfig: nil,
+			wantErr:          true,
+			errorContains:    "dehydrated config is nil",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := NewClient(tt.pluginPath, tt.config, tt.dehydratedConfig)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errorContains != "" {
+					assert.Contains(t, err.Error(), tt.errorContains)
+				}
+				assert.Nil(t, client)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
+		})
+	}
+}
+
+func TestClientErrorHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(*testing.T) (*Client, *mockServer, func())
+		operation func(*Client) error
+		wantErr   bool
+	}{
+		{
+			name: "connection lost during operation",
+			setup: func(t *testing.T) (*Client, *mockServer, func()) {
+				mock, sockPath, cleanup := setupMockServer(t)
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				if err != nil {
+					t.Fatalf("failed to connect to mock server: %v", err)
+				}
+
+				client := &Client{
+					client: pb.NewPluginClient(conn),
+					conn:   conn,
+				}
+
+				return client, mock, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			operation: func(c *Client) error {
+				// Close the connection to simulate connection loss
+				c.conn.Close()
+				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+			},
+			wantErr: true,
+		},
+		{
+			name: "plugin returns error",
+			setup: func(t *testing.T) (*Client, *mockServer, func()) {
+				mock, sockPath, cleanup := setupMockServer(t)
+				mock.initializeErr = fmt.Errorf("plugin error")
+
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				if err != nil {
+					t.Fatalf("failed to connect to mock server: %v", err)
+				}
+
+				client := &Client{
+					client: pb.NewPluginClient(conn),
+					conn:   conn,
+				}
+
+				return client, mock, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			operation: func(c *Client) error {
+				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil client",
+			setup: func(t *testing.T) (*Client, *mockServer, func()) {
+				mock, _, cleanup := setupMockServer(t)
+				return &Client{}, mock, cleanup
+			},
+			operation: func(c *Client) error {
+				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, _, cleanup := tt.setup(t)
+			defer cleanup()
+
+			err := tt.operation(client)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestResourceCleanup(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func(*testing.T) (*Client, string, func())
+		verify  func(*testing.T, string)
+		wantErr bool
+	}{
+		{
+			name: "cleanup temporary directory",
+			setup: func(t *testing.T) (*Client, string, func()) {
+				tmpDir, err := os.MkdirTemp("", "plugin-test-*")
+				assert.NoError(t, err)
+
+				_, sockPath, cleanup := setupMockServer(t)
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				assert.NoError(t, err)
+
+				client := &Client{
+					client:   pb.NewPluginClient(conn),
+					conn:     conn,
+					tmpDir:   tmpDir,
+					sockFile: filepath.Join(tmpDir, "plugin.sock"),
+				}
+
+				return client, tmpDir, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				// Verify directory is removed after cleanup
+				_, err := os.Stat(tmpDir)
+				assert.True(t, os.IsNotExist(err))
+			},
+			wantErr: false,
+		},
+		{
+			name: "cleanup on initialization error",
+			setup: func(t *testing.T) (*Client, string, func()) {
+				tmpDir, err := os.MkdirTemp("", "plugin-test-*")
+				assert.NoError(t, err)
+
+				mock, sockPath, cleanup := setupMockServer(t)
+				mock.initializeErr = fmt.Errorf("initialization error")
+
+				conn, err := grpc.Dial(
+					"unix://"+sockPath,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+				)
+				assert.NoError(t, err)
+
+				client := &Client{
+					client:    pb.NewPluginClient(conn),
+					conn:      conn,
+					tmpDir:    tmpDir,
+					sockFile:  filepath.Join(tmpDir, "plugin.sock"),
+					lastError: fmt.Errorf("initialization error"),
+				}
+
+				return client, tmpDir, func() {
+					conn.Close()
+					cleanup()
+				}
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				// Verify directory is removed after cleanup
+				_, err := os.Stat(tmpDir)
+				assert.True(t, os.IsNotExist(err))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, tmpDir, cleanup := tt.setup(t)
+			defer cleanup()
+
+			ctx := context.Background()
+			err := client.Close(ctx)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			tt.verify(t, tmpDir)
+		})
+	}
+}
+
+func TestConcurrentAccess(t *testing.T) {
+	mock, sockPath, cleanup := setupMockServer(t)
+	defer cleanup()
+
+	// Configure mock server responses
+	mock.initializeResp = &pb.InitializeResponse{}
+	mock.getMetadataResp = &pb.GetMetadataResponse{
+		Metadata: map[string]*structpb.Value{
+			"test": structpb.NewStringValue("value"),
+		},
+	}
+
+	conn, err := grpc.Dial(
+		"unix://"+sockPath,
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		t.Fatalf("failed to connect to mock server at %s: %v", sockPath, err)
+	}
+	defer conn.Close()
+
+	client := &Client{
+		client: pb.NewPluginClient(conn),
+		conn:   conn,
+	}
+
+	// Test concurrent initialization
+	var wg sync.WaitGroup
+	numGoroutines := 10
+	errors := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			ctx := context.Background()
+			config := map[string]any{
+				"id": id,
+			}
+			if err := client.Initialize(ctx, config, &dehydrated.Config{}); err != nil {
+				errors <- err
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errors)
+
+	// Check for any errors
+	for err := range errors {
+		t.Errorf("concurrent access error: %v", err)
+	}
+
+	// Test concurrent metadata retrieval
+	wg = sync.WaitGroup{}
+	metadataErrors := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			ctx := context.Background()
+			domain := model.DomainEntry{
+				Domain: fmt.Sprintf("test%d.com", id),
+			}
+			if _, err := client.GetMetadata(ctx, domain); err != nil {
+				metadataErrors <- err
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(metadataErrors)
+
+	// Check for any errors
+	for err := range metadataErrors {
+		t.Errorf("concurrent metadata error: %v", err)
 	}
 }
