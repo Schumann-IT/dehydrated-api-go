@@ -50,22 +50,26 @@ func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 		return fmt.Errorf("plugin %s is already loaded", name)
 	}
 
-	// If no path is provided, try to load as built-in plugin
-	if cfg.Path == "" {
-		plugin, err := r.loadBuiltinPlugin(name)
-		if err != nil {
-			return fmt.Errorf("failed to load built-in plugin %s: %w", name, err)
-		}
-		r.plugins[name] = plugin
-		return nil
-	}
-
 	// Convert config to map[string]string
 	configMap := make(map[string]any)
 	for k, v := range cfg.Config {
 		if str, ok := v.(string); ok {
 			configMap[k] = str
 		}
+	}
+
+	// If no path is provided, try to load as built-in plugin
+	if cfg.Path == "" {
+		plugin, err := r.loadBuiltinPlugin(name)
+		if err != nil {
+			return fmt.Errorf("failed to load built-in plugin %s: %w", name, err)
+		}
+		err = plugin.Initialize(context.Background(), configMap, r.config)
+		if err != nil {
+			return fmt.Errorf("failed to initialize built-in plugin %s: %w", name, err)
+		}
+		r.plugins[name] = plugin
+		return nil
 	}
 
 	// Create new gRPC client
