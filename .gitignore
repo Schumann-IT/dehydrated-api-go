@@ -56,3 +56,5 @@ debug/
 config.yaml
 domains.txt
 coverage.html
+
+cmd/api/domains.txt
