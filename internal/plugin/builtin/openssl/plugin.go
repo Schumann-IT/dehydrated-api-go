@@ -101,11 +101,11 @@ func (p *Plugin) analyzeCertificate(certFile string) (CertificateInfo, error) {
 	}
 
 	// Decode the PEM block
-	pb, _ := pem.Decode(b)
-	if pb == nil {
+	bp, _ := pem.Decode(b)
+	if bp == nil {
 		return CertificateInfo{}, fmt.Errorf("failed to decode PEM block")
 	}
-	cert, err := x509.ParseCertificate(pb.Bytes)
+	cert, err := x509.ParseCertificate(bp.Bytes)
 	if err != nil {
 		return CertificateInfo{}, err
 	}
