@@ -104,7 +104,7 @@ case ${PHASE} in
         respAddRec=$(az network dns record-set txt add-record --subscription ${SUBSCRIPTION} -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -n ${CHALLENGE_KEY} -v ${TOKEN_VALUE} --output json)
         log "      AddRec: '$respAddRec'" 4
 
-		sleep 5
+		sleep 10
         ;;
 
     "clean_challenge")

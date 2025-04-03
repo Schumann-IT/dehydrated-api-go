@@ -3,14 +3,12 @@ package registry
 import (
 	"context"
 	"fmt"
-	"sync"
-
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/openssl"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/grpc"
-	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,15 +16,14 @@ import (
 
 // Registry manages plugin instances
 type Registry struct {
-	plugins map[string]plugininterface2.Plugin
+	plugins map[string]plugininterface.Plugin
 	config  *dehydrated.Config
-	mu      sync.RWMutex
 }
 
 // NewRegistry creates a new plugin registry
 func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
 	r := &Registry{
-		plugins: make(map[string]plugininterface2.Plugin),
+		plugins: make(map[string]plugininterface.Plugin),
 		config:  cfg,
 	}
 
@@ -41,9 +38,6 @@ func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.
 
 // LoadPlugin loads a plugin from the given path with the provided configuration
 func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	// Check if plugin is already loaded
 	if _, exists := r.plugins[name]; exists {
 		return fmt.Errorf("plugin %s is already loaded", name)
@@ -83,7 +77,7 @@ func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 }
 
 // loadBuiltinPlugin loads a built-in plugin by name
-func (r *Registry) loadBuiltinPlugin(name string) (plugininterface2.Plugin, error) {
+func (r *Registry) loadBuiltinPlugin(name string) (plugininterface.Plugin, error) {
 	var server pb.PluginServer
 
 	switch name {
@@ -103,10 +97,7 @@ func (r *Registry) loadBuiltinPlugin(name string) (plugininterface2.Plugin, erro
 }
 
 // GetPlugin returns a plugin by name
-func (r *Registry) GetPlugin(name string) (plugininterface2.Plugin, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
+func (r *Registry) GetPlugin(name string) (plugininterface.Plugin, error) {
 	plugin, exists := r.plugins[name]
 	if !exists {
 		return nil, fmt.Errorf("plugin %s not found", name)
@@ -116,12 +107,9 @@ func (r *Registry) GetPlugin(name string) (plugininterface2.Plugin, error) {
 }
 
 // GetPlugins returns all loaded plugins as a map of name to plugin
-func (r *Registry) GetPlugins() map[string]plugininterface2.Plugin {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
+func (r *Registry) GetPlugins() map[string]plugininterface.Plugin {
 	// Return a copy of the plugins map
-	plugins := make(map[string]plugininterface2.Plugin, len(r.plugins))
+	plugins := make(map[string]plugininterface.Plugin, len(r.plugins))
 	for name, plugin := range r.plugins {
 		plugins[name] = plugin
 	}
@@ -131,16 +119,13 @@ func (r *Registry) GetPlugins() map[string]plugininterface2.Plugin {
 
 // Close closes all plugins
 func (r *Registry) Close(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	for name, plugin := range r.plugins {
 		if err := plugin.Close(ctx); err != nil {
 			return fmt.Errorf("failed to close plugin %s: %w", name, err)
 		}
 	}
 
-	r.plugins = make(map[string]plugininterface2.Plugin)
+	//r.plugins = make(map[string]plugininterface.Plugin)
 	return nil
 }
 

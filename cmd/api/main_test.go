@@ -141,7 +141,7 @@ foo01.hq.schumann-it.com
 	configContent := fmt.Sprintf(`
 port: 0
 dehydratedBaseDir: %s
-enableWatcher: false
+enableWatcher: true
 plugins:
   openssl:
     enabled: true
@@ -179,7 +179,6 @@ plugins:
 	require.NoError(t, err, "Failed to run dehydrated: %s", output)
 
 	// check openssl plugin metadata
-	// Verify previously setup domains are accessible
 	resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", serverPort))
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -188,6 +187,7 @@ plugins:
 	require.NoError(t, err)
 	assert.True(t, domainsResp.Success)
 	assert.Equal(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Domain)
+	assert.NotNil(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Metadata["openssl"])
 
 	// Delete the domain
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("http://localhost:%d/api/v1/domains/foo01.hq.schumann-it.com", serverPort), nil)
@@ -200,4 +200,24 @@ plugins:
 	resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains/foo01.hq.schumann-it.com", serverPort))
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// run dehydrated
+	cmd = exec.Command(dehydratedPath, "--cron", "--accept-terms")
+	cmd.Dir = dehydratedDir
+	output, err = cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to run dehydrated: %s", output)
+
+	// Give the server time to start and log the error
+	time.Sleep(5000 * time.Millisecond)
+
+	// check domains again
+	resp, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", serverPort))
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	err = json.NewDecoder(resp.Body).Decode(&domainsResp)
+	require.NoError(t, err)
+	assert.True(t, domainsResp.Success)
+	assert.Equal(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Domain)
+	assert.NotNil(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Metadata["openssl"])
 }
