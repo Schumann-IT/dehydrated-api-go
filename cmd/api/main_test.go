@@ -36,9 +36,9 @@ plugins:
 	assert.NotNil(t, cfg.Plugins["openssl"])
 }
 
-func TestMainIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+func TestMainAccIntegration(t *testing.T) {
+	if os.Getenv("ACC_TEST") == "" {
+		t.Skip("Skipping integration test; ACC_TEST not set")
 	}
 
 	// Create a temporary config file
@@ -73,9 +73,9 @@ plugins:
 	time.Sleep(100 * time.Millisecond)
 }
 
-func TestMainWithInvalidPort(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+func TestMainAccWithInvalidPort(t *testing.T) {
+	if os.Getenv("ACC_TEST") == "" {
+		t.Skip("Skipping integration test; ACC_TEST not set")
 	}
 
 	// Create a temporary config file with invalid port
@@ -100,4 +100,42 @@ enableWatcher: false
 		}
 	}()
 	main()
+}
+
+func TestMainAccDehydratedWithRSA(t *testing.T) {
+	if os.Getenv("ACC_TEST") == "" {
+		t.Skip("Skipping integration test; ACC_TEST not set")
+	}
+
+	// Create a temporary config file with invalid port
+	tmpDir := t.TempDir()
+
+	hookScript := setupAzureDnsHook(tmpDir, t)
+	setupDehydratedConfig(tmpDir, hookScript, "rsa", t)
+	setupDomains(tmpDir, t)
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	configContent := fmt.Sprintf(`
+port: 0
+dehydratedBaseDir: %s
+enableWatcher: false
+`, tmpDir)
+
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Set up test environment
+	os.Args = []string{"cmd", "-config", configPath}
+
+	// Run main in a goroutine
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Main panicked: %v", r)
+			}
+		}()
+		main()
+	}()
+
+	// Give the server time to start
+	time.Sleep(100 * time.Millisecond)
 }

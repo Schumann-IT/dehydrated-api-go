@@ -200,11 +200,11 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 		errContains  string
 	}{
 		{
-			name:       "load timestamp plugin successfully",
-			pluginName: "timestamp",
+			name:       "load openssl plugin successfully",
+			pluginName: "openssl",
 			pluginConfig: internal.PluginConfig{
 				Enabled: true,
-				Config:  map[string]any{"key": "value"},
+				Config:  map[string]any{},
 			},
 			wantErr: false,
 		},
@@ -217,15 +217,6 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 			},
 			wantErr:     true,
 			errContains: "built-in plugin non-existent not found",
-		},
-		{
-			name:       "load timestamp plugin with default config",
-			pluginName: "timestamp",
-			pluginConfig: internal.PluginConfig{
-				Enabled: true,
-				Config:  map[string]any{},
-			},
-			wantErr: false,
 		},
 	}
 
@@ -277,7 +268,7 @@ func TestLoadPluginTwice(t *testing.T) {
 	}
 
 	reg, err := NewRegistry(map[string]internal.PluginConfig{
-		"timestamp": {
+		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
 		},
@@ -285,9 +276,9 @@ func TestLoadPluginTwice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to load same plugin again
-	err = reg.LoadPlugin("timestamp", internal.PluginConfig{})
+	err = reg.LoadPlugin("openssl", internal.PluginConfig{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "plugin timestamp is already loaded")
+	assert.Contains(t, err.Error(), "plugin openssl is already loaded")
 }
 
 func TestGetNonExistentPlugin(t *testing.T) {
@@ -319,7 +310,7 @@ func TestCloseRegistry(t *testing.T) {
 	}
 
 	reg, err := NewRegistry(map[string]internal.PluginConfig{
-		"timestamp": {
+		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
 		},
@@ -332,8 +323,8 @@ func TestCloseRegistry(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify plugin is removed
-	plugin, err := reg.GetPlugin("timestamp")
+	plugin, err := reg.GetPlugin("openssl")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "plugin timestamp not found")
+	assert.Contains(t, err.Error(), "plugin openssl not found")
 	assert.Nil(t, plugin)
 }

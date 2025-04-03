@@ -31,12 +31,7 @@ func TestDomainService(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create plugin config with a built-in timestamp plugin
-			pluginConfig := map[string]internal.PluginConfig{
-				"timestamp": {
-					Enabled: true,
-					Config:  map[string]any{"time_format": "2006-01-02"},
-				},
-			}
+			pluginConfig := map[string]internal.PluginConfig{}
 
 			// Create domain service config
 			config := DomainServiceConfig{

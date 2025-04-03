@@ -9,7 +9,6 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/openssl"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/timestamp"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/grpc"
 	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 
@@ -88,8 +87,6 @@ func (r *Registry) loadBuiltinPlugin(name string) (plugininterface2.Plugin, erro
 	var server pb.PluginServer
 
 	switch name {
-	case "timestamp":
-		server = timestamp.New()
 	case "openssl":
 		server = openssl.New()
 	default:
