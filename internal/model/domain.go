@@ -22,8 +22,11 @@ type DomainEntry struct {
 	// Comment
 	Comment string `json:"comment,omitempty" protobuf:"bytes,5,opt,name=comment,proto3"`
 
-	// Metadata
-	Metadata map[string]any `json:"metadata,omitempty" protobuf:"-"`
+	// Metadata contains additional information about the domain entry.
+	// During runtime, this is stored as map[string]any for flexibility.
+	// During serialization (protobuf), this is converted to map[string]*structpb.Value.
+	// The conversion is handled by ToProto() and FromProto() methods.
+	Metadata map[string]any `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata,proto3"`
 }
 
 // ToProto converts the DomainEntry to a protobuf GetMetadataRequest

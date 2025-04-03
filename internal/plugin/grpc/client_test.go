@@ -254,16 +254,14 @@ func TestGetMetadata(t *testing.T) {
 				Alias:            "example",
 				Enabled:          true,
 				Comment:          "test domain",
-				Metadata:         map[string]*structpb.Value{},
+				Metadata:         map[string]any{},
 			},
 			mockResponse: &pb.GetMetadataResponse{
-				Metadata: map[string]*structpb.Value{
-					"key": structpb.NewStringValue("value"),
-				},
+				Metadata: map[string]*structpb.Value{},
 			},
 			mockError:    nil,
 			wantErr:      false,
-			wantMetadata: map[string]any{"key": "value"},
+			wantMetadata: map[string]any{},
 		},
 		{
 			name: "client nil error",

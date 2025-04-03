@@ -2,12 +2,14 @@ package openssl
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
@@ -22,16 +24,13 @@ type Plugin struct {
 
 // CertificateInfo represents the information about a certificate
 type CertificateInfo struct {
-	File        string    `json:"file"`
-	Subject     string    `json:"subject"`
-	Issuer      string    `json:"issuer"`
-	NotBefore   time.Time `json:"not_before"`
-	NotAfter    time.Time `json:"not_after"`
-	KeyType     string    `json:"key_type"`
-	KeySize     int       `json:"key_size"`
-	Serial      string    `json:"serial"`
-	Extensions  []string  `json:"extensions"`
-	OCSPEnabled bool      `json:"ocsp_enabled"`
+	File      string    `json:"file"`
+	Subject   string    `json:"subject"`
+	Issuer    string    `json:"issuer"`
+	NotBefore time.Time `json:"not_before"`
+	NotAfter  time.Time `json:"not_after"`
+	KeyType   string    `json:"key_type"`
+	KeySize   int       `json:"key_size"`
 }
 
 // New creates a new openssl plugin instance
@@ -95,72 +94,45 @@ func (p *Plugin) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*
 	}, nil
 }
 
-// analyzeCertificate analyzes a certificate file using OpenSSL
 func (p *Plugin) analyzeCertificate(certFile string) (CertificateInfo, error) {
-	info := CertificateInfo{}
-
-	info.File = certFile
-
-	// Read certificate information using OpenSSL
-	cmd := exec.Command("openssl", "x509", "-in", certFile, "-noout", "-text")
-	output, err := cmd.Output()
+	b, err := os.ReadFile(certFile)
 	if err != nil {
-		return info, fmt.Errorf("failed to read certificate: %w", err)
+		return CertificateInfo{}, fmt.Errorf("failed to read certificate: %w", err)
 	}
 
-	// Parse the output
-	lines := strings.Split(string(output), "\n")
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Subject:") {
-			info.Subject = strings.TrimSpace(strings.TrimPrefix(line, "Subject:"))
-		} else if strings.HasPrefix(line, "Issuer:") {
-			info.Issuer = strings.TrimSpace(strings.TrimPrefix(line, "Issuer:"))
-		} else if strings.HasPrefix(line, "Not Before:") {
-			info.NotBefore, err = time.Parse("Jan 2 15:04:05 2006 GMT", strings.TrimSpace(strings.TrimPrefix(line, "Not Before:")))
-			if err != nil {
-				return info, fmt.Errorf("failed to parse Not Before date: %w", err)
-			}
-		} else if strings.HasPrefix(line, "Not After :") {
-			info.NotAfter, err = time.Parse("Jan 2 15:04:05 2006 GMT", strings.TrimSpace(strings.TrimPrefix(line, "Not After :")))
-			if err != nil {
-				return info, fmt.Errorf("failed to parse Not After date: %w", err)
-			}
-		} else if strings.HasPrefix(line, "Public Key Algorithm:") {
-			parts := strings.Split(strings.TrimSpace(strings.TrimPrefix(line, "Public Key Algorithm:")), " ")
-			if len(parts) >= 2 {
-				info.KeyType = parts[0]
-				if len(parts) > 2 {
-					info.KeySize = parseKeySize(parts[2])
-				}
-			}
-		} else if strings.HasPrefix(line, "Serial Number:") {
-			info.Serial = strings.TrimSpace(strings.TrimPrefix(line, "Serial Number:"))
-		} else if strings.HasPrefix(line, "X509v3 extensions:") {
-			// Collect extensions
-			for j := i + 1; j < len(lines); j++ {
-				extLine := strings.TrimSpace(lines[j])
-				if strings.HasPrefix(extLine, "---") {
-					break
-				}
-				if strings.HasPrefix(extLine, "X509v3") {
-					info.Extensions = append(info.Extensions, extLine)
-					if strings.Contains(extLine, "OCSP Must Staple") {
-						info.OCSPEnabled = true
-					}
-				}
-			}
-		}
+	// Decode the PEM block
+	pb, _ := pem.Decode(b)
+	if pb == nil {
+		return CertificateInfo{}, fmt.Errorf("failed to decode PEM block")
+	}
+	cert, err := x509.ParseCertificate(pb.Bytes)
+	if err != nil {
+		return CertificateInfo{}, err
 	}
 
-	return info, nil
+	keySize, keyType := getKeySize(cert.PublicKey)
+
+	return CertificateInfo{
+		File:      certFile,
+		Subject:   cert.Subject.String(),
+		Issuer:    cert.Issuer.String(),
+		NotBefore: cert.NotBefore,
+		NotAfter:  cert.NotAfter,
+		KeyType:   keyType,
+		KeySize:   keySize,
+	}, nil
 }
 
-// parseKeySize extracts the key size from a string like "RSA Public-Key: (2048 bit)"
-func parseKeySize(s string) int {
-	var size int
-	fmt.Sscanf(s, "(%d bit)", &size)
-	return size
+func getKeySize(pub interface{}) (int, string) {
+	switch k := pub.(type) {
+	case *rsa.PublicKey:
+		return k.N.BitLen(), "rsaEncryption"
+	case *ecdsa.PublicKey:
+		// For ECDSA, we return the curve size
+		return k.Curve.Params().BitSize, "ecPublicKey"
+	default:
+		return 0, "unknown"
+	}
 }
 
 // Close cleans up any resources

@@ -7,7 +7,6 @@ import (
 
 	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestDomainEntryProtoConsistency ensures that DomainEntry struct matches the GetMetadataRequest proto definition
@@ -79,7 +78,7 @@ func TestDomainEntryTypeConsistency(t *testing.T) {
 		{
 			name:     "Metadata",
 			field:    "Metadata",
-			expected: reflect.TypeOf(map[string]*structpb.Value{}),
+			expected: reflect.TypeOf(map[string]any{}),
 		},
 	}
 

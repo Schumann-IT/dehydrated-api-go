@@ -117,7 +117,7 @@ func TestMainAccDehydratedWithRSA(t *testing.T) {
 	hookScript := setupAzureDnsHook(tmpDir, t)
 	setupDehydratedConfig(tmpDir, hookScript, "rsa", t)
 	setupDomains(tmpDir, []byte(`
-foobar.hq.schumann-it.com
+foo01.hq.schumann-it.com
 `), t)
 	configPath := filepath.Join(tmpDir, "config.yaml")
 	configContent := fmt.Sprintf(`
@@ -161,7 +161,7 @@ plugins:
 		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
 		require.NoError(t, err)
 		assert.True(t, domainsResp.Success)
-		assert.Equal(t, "foobar.hq.schumann-it.com", domainsResp.Data[0].Domain)
+		assert.Equal(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Domain)
 
 		// run dehydrated
 		//dehydratedPath := filepath.Join(tmpDir, "dehydrated")
@@ -179,17 +179,17 @@ plugins:
 		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
 		require.NoError(t, err)
 		assert.True(t, domainsResp.Success)
-		assert.Equal(t, "foobar.hq.schumann-it.com", domainsResp.Data[0].Domain)
+		assert.Equal(t, "foo01.hq.schumann-it.com", domainsResp.Data[0].Domain)
 
 		// Delete the domain
-		req, err := http.NewRequest(http.MethodDelete, "http://localhost:3000/api/v1/domains/foobar.hq.schumann-it.com", nil)
+		req, err := http.NewRequest(http.MethodDelete, "http://localhost:3000/api/v1/domains/foo01.hq.schumann-it.com", nil)
 		require.NoError(t, err)
 		resp, err = http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 		// Verify domain was deleted
-		resp, err = http.Get("http://localhost:3000/api/v1/domains/foobar.hq.schumann-it.com")
+		resp, err = http.Get("http://localhost:3000/api/v1/domains/foo01.hq.schumann-it.com")
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})

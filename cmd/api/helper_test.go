@@ -36,7 +36,7 @@ DNS_ZONE="%s"
 # Supporting functions
 function log {
     if [ $DEBUG -ge $2 ]; then
-        echo "$1" 
+        echo "$1" > /dev/tty
     fi
 }
 function login_azure {
@@ -103,6 +103,8 @@ case ${PHASE} in
 
         respAddRec=$(az network dns record-set txt add-record --subscription ${SUBSCRIPTION} -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -n ${CHALLENGE_KEY} -v ${TOKEN_VALUE} --output json)
         log "      AddRec: '$respAddRec'" 4
+
+		sleep 5
         ;;
 
     "clean_challenge")
