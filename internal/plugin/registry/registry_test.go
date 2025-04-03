@@ -204,7 +204,9 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 			pluginName: "openssl",
 			pluginConfig: internal.PluginConfig{
 				Enabled: true,
-				Config:  map[string]any{},
+				Config: map[string]any{
+					"cert": true,
+				},
 			},
 			wantErr: false,
 		},

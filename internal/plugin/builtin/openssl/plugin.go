@@ -20,6 +20,9 @@ import (
 type Plugin struct {
 	pb.UnimplementedPluginServer
 	dehydratedConfig *pb.DehydratedConfig
+	cert             bool
+	chain            bool
+	fullchain        bool
 }
 
 // CertificateInfo represents the information about a certificate
@@ -35,11 +38,30 @@ type CertificateInfo struct {
 
 // New creates a new openssl plugin instance
 func New() *Plugin {
-	return &Plugin{}
+	return &Plugin{
+		cert:      true,
+		chain:     false,
+		fullchain: false,
+	}
 }
 
 // Initialize initializes the plugin with configuration
 func (p *Plugin) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.InitializeResponse, error) {
+	if cert, ok := req.Config["cert"]; ok {
+		if v, ok := cert.GetKind().(*structpb.Value_BoolValue); ok {
+			p.cert = v.BoolValue
+		}
+	}
+	if chain, ok := req.Config["chain"]; ok {
+		if v, ok := chain.GetKind().(*structpb.Value_BoolValue); ok {
+			p.chain = v.BoolValue
+		}
+	}
+	if fullchain, ok := req.Config["fullchain"]; ok {
+		if v, ok := fullchain.GetKind().(*structpb.Value_BoolValue); ok {
+			p.fullchain = v.BoolValue
+		}
+	}
 	p.dehydratedConfig = req.DehydratedConfig
 	return &pb.InitializeResponse{}, nil
 }
@@ -54,39 +76,36 @@ func (p *Plugin) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*
 		return &pb.GetMetadataResponse{Metadata: metadata}, nil
 	}
 
-	// Find all certificate files
-	certFiles, err := filepath.Glob(filepath.Join(domainDir, "*.pem"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to find certificate files: %w", err)
+	certFiles := map[string]string{}
+	if p.cert {
+		certFiles["cert"] = filepath.Join(domainDir, "cert.pem")
+	}
+	if p.chain {
+		certFiles["chain"] = filepath.Join(domainDir, "chain.pem")
+	}
+	if p.fullchain {
+		certFiles["fullchain"] = filepath.Join(domainDir, "fullchain.pem")
 	}
 
-	certificates := make([]CertificateInfo, 0)
-	for _, certFile := range certFiles {
+	for name, certFile := range certFiles {
 		info, err := p.analyzeCertificate(certFile)
 		if err != nil {
 			continue // Skip invalid certificates
 		}
-		certificates = append(certificates, info)
-	}
-
-	// Convert certificates to metadata
-	if len(certificates) > 0 {
-		for _, certificate := range certificates {
-			b, err := json.Marshal(certificate)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal certificate: %w", err)
-			}
-			certMap := make(map[string]interface{})
-			err = json.Unmarshal(b, &certMap)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal certificate: %w", err)
-			}
-			value, err := structpb.NewValue(certMap)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal certificate: %w", err)
-			}
-			metadata[certificate.File] = value
+		b, err := json.Marshal(info)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal certificate: %w", err)
 		}
+		certMap := make(map[string]interface{})
+		err = json.Unmarshal(b, &certMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal certificate: %w", err)
+		}
+		value, err := structpb.NewValue(certMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal certificate: %w", err)
+		}
+		metadata[name] = value
 	}
 
 	return &pb.GetMetadataResponse{
