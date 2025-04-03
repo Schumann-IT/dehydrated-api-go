@@ -38,7 +38,7 @@ func TestAnalyzeRSACertificate(t *testing.T) {
 
 	// Verify the parsed certificate information
 	assert.Equal(t, "CN=hotspot.hq.schumann-it.com", certInfo["subject"])
-	assert.Equal(t, "CN=R10,O=Let's Encrypt,C=US0", certInfo["issuer"])
+	assert.Equal(t, "CN=R10,O=Let's Encrypt,C=US", certInfo["issuer"])
 	assert.Equal(t, "rsaEncryption", certInfo["key_type"])
 	assert.Equal(t, float64(2048), certInfo["key_size"])
 
