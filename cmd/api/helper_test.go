@@ -170,6 +170,7 @@ func setupDehydratedConfig(baseDir, hookScript, algo string, t *testing.T) {
 	dehydratedConfigFile := filepath.Join(baseDir, "config")
 	dehydratedConfigData := []byte(fmt.Sprintf(`
 CHALLENGETYPE="dns-01"
+CA="letsencrypt-test"
 HOOK="%s"
 KEY_ALGO=%s
 `, hookScript, algo))
