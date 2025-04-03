@@ -203,27 +203,13 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	}
 	c.mu.RUnlock()
 
-	req := &pb.GetMetadataRequest{
-		Domain:           entry.Domain,
-		AlternativeNames: entry.AlternativeNames,
-		Alias:            entry.Alias,
-		Enabled:          entry.Enabled,
-		Comment:          entry.Comment,
-		Metadata:         entry.Metadata,
-	}
-
+	req := entry.ToProto()
 	resp, err := c.client.GetMetadata(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", plugininterface2.ErrPluginError, err)
 	}
 
-	// Convert response metadata to map[string]any
-	result := make(map[string]any)
-	for k, v := range resp.Metadata {
-		result[k] = v.AsInterface()
-	}
-
-	return result, nil
+	return model.FromProto(resp).Metadata, nil
 }
 
 // Close cleans up resources

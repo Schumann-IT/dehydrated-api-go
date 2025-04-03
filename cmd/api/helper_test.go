@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,7 +36,7 @@ DNS_ZONE="%s"
 # Supporting functions
 function log {
     if [ $DEBUG -ge $2 ]; then
-        echo "$1" > /dev/tty
+        echo "$1" 
     fi
 }
 function login_azure {
@@ -173,14 +176,35 @@ KEY_ALGO=%s
 	}
 }
 
-func setupDomains(baseDir string, t *testing.T) {
+func setupDomains(baseDir string, domainsData []byte, t *testing.T) {
 	// Create domains config file
 	domainsFile := filepath.Join(baseDir, "domains.txt")
-	domainsData := []byte(`
-foo.hq.schumann-it.com
-*.whatever.hq.schumann-it.com > whatever
-`)
 	if err := os.WriteFile(domainsFile, domainsData, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
+}
+
+// setupDehydrated downloads the dehydrated script and makes it executable
+func setupDehydrated(baseDir string, t *testing.T) string {
+	// Create the dehydrated script path
+	dehydratedPath := filepath.Join(baseDir, "dehydrated")
+
+	// Download the dehydrated script
+	resp, err := http.Get("https://raw.githubusercontent.com/dehydrated-io/dehydrated/refs/heads/master/dehydrated")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Read the script content
+	scriptContent, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	// Write the script to the file
+	err = os.WriteFile(dehydratedPath, scriptContent, 0755)
+	require.NoError(t, err)
+
+	// Make the script executable
+	err = os.Chmod(dehydratedPath, 0755)
+	require.NoError(t, err)
+
+	return dehydratedPath
 }

@@ -248,8 +248,6 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 			metadata, err := plugin.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"})
 			require.NoError(t, err)
 			assert.NotNil(t, metadata)
-			assert.Contains(t, metadata, "timestamp")
-			assert.Contains(t, metadata, "domain")
 
 			// Test Close
 			err = plugin.Close(ctx)

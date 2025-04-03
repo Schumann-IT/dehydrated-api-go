@@ -179,25 +179,13 @@ func (w *builtinWrapper) Initialize(ctx context.Context, config map[string]any, 
 }
 
 func (w *builtinWrapper) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
-	req := &pb.GetMetadataRequest{
-		Domain:           entry.Domain,
-		AlternativeNames: entry.AlternativeNames,
-		Alias:            entry.Alias,
-		Enabled:          entry.Enabled,
-		Comment:          entry.Comment,
-		Metadata:         entry.Metadata,
-	}
+	req := entry.ToProto()
 	resp, err := w.server.GetMetadata(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert metadata to map[string]any
-	metadata := make(map[string]any)
-	for k, v := range resp.Metadata {
-		metadata[k] = v.AsInterface()
-	}
-	return metadata, nil
+	return model.FromProto(resp).Metadata, nil
 }
 
 func (w *builtinWrapper) Close(ctx context.Context) error {

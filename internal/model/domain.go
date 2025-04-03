@@ -1,6 +1,9 @@
 package model
 
-import "google.golang.org/protobuf/types/known/structpb"
+import (
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"google.golang.org/protobuf/types/known/structpb"
+)
 
 // DomainEntry represents a domain configuration entry
 type DomainEntry struct {
@@ -20,7 +23,39 @@ type DomainEntry struct {
 	Comment string `json:"comment,omitempty" protobuf:"bytes,5,opt,name=comment,proto3"`
 
 	// Metadata
-	Metadata map[string]*structpb.Value `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata,proto3"`
+	Metadata map[string]any `json:"metadata,omitempty" protobuf:"-"`
+}
+
+// ToProto converts the DomainEntry to a protobuf GetMetadataRequest
+func (e *DomainEntry) ToProto() *pb.GetMetadataRequest {
+	metadata := make(map[string]*structpb.Value)
+	for k, v := range e.Metadata {
+		value, err := structpb.NewValue(v)
+		if err == nil {
+			metadata[k] = value
+		}
+	}
+
+	return &pb.GetMetadataRequest{
+		Domain:           e.Domain,
+		AlternativeNames: e.AlternativeNames,
+		Alias:            e.Alias,
+		Enabled:          e.Enabled,
+		Comment:          e.Comment,
+		Metadata:         metadata,
+	}
+}
+
+// FromProto creates a DomainEntry from a protobuf GetMetadataResponse
+func FromProto(resp *pb.GetMetadataResponse) *DomainEntry {
+	metadata := make(map[string]any)
+	for k, v := range resp.Metadata {
+		metadata[k] = v.AsInterface()
+	}
+
+	return &DomainEntry{
+		Metadata: metadata,
+	}
 }
 
 // CreateDomainRequest represents a request to create a new domain entry

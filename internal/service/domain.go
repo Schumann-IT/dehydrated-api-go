@@ -11,7 +11,6 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // DomainServiceConfig holds configuration options for the DomainService
@@ -157,14 +156,9 @@ func (s *DomainService) enrichMetadata(entry *model2.DomainEntry) error {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
 		if entry.Metadata == nil {
-			entry.Metadata = make(map[string]*structpb.Value)
+			entry.Metadata = make(map[string]any)
 		}
-		// Convert metadata to structpb.Value and store under plugin namespace
-		value, err := structpb.NewValue(metadata)
-		if err != nil {
-			return fmt.Errorf("failed to convert metadata from plugin %s: %w", name, err)
-		}
-		entry.Metadata[name] = value
+		entry.Metadata[name] = metadata
 	}
 	return nil
 }
@@ -206,16 +200,13 @@ func (s *DomainService) ListDomains() ([]model2.DomainEntry, error) {
 
 // UpdateDomain updates an existing domain entry
 func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainRequest) (*model2.DomainEntry, error) {
-	s.mutex.RLock()
-	// Make a copy of the current entries
-	currentEntries := make([]model2.DomainEntry, len(s.cache))
-	copy(currentEntries, s.cache)
-	s.mutex.RUnlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// Find and update the domain
 	found := false
 	var updatedEntry model2.DomainEntry
-	for i, existing := range currentEntries {
+	for i, existing := range s.cache {
 		if existing.Domain == domain {
 			updatedEntry = model2.DomainEntry{
 				Domain:           domain,
@@ -230,7 +221,7 @@ func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainReque
 				return nil, fmt.Errorf("invalid domain entry: %v", updatedEntry)
 			}
 
-			currentEntries[i] = updatedEntry
+			s.cache[i] = updatedEntry
 			found = true
 			break
 		}
@@ -241,7 +232,7 @@ func (s *DomainService) UpdateDomain(domain string, req model2.UpdateDomainReque
 	}
 
 	// Write back to file
-	if err := WriteDomainsFile(s.domainsFile, currentEntries); err != nil {
+	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
 		return nil, fmt.Errorf("failed to write domains file: %w", err)
 	}
 
