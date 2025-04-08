@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// setupAzureDnsHook creates and configures the Azure DNS hook script for dehydrated.
+// It returns the path to the created hook script.
+// Parameters:
+//   - baseDir: The base directory where the hook script will be created
+//   - t: The testing context
 func setupAzureDnsHook(baseDir string, t *testing.T) string {
 	// Create azure-dns hook
 	hookFile := filepath.Join(baseDir, "hook.sh")
@@ -168,6 +173,12 @@ exit 0
 	return hookFile
 }
 
+// setupDehydratedConfig creates a dehydrated configuration file with the specified settings.
+// Parameters:
+//   - baseDir: The base directory where the config will be created
+//   - hookScript: Path to the hook script
+//   - algo: The key algorithm to use
+//   - t: The testing context
 func setupDehydratedConfig(baseDir, hookScript, algo string, t *testing.T) {
 	// Create test dehydrated config file
 	dehydratedConfigFile := filepath.Join(baseDir, "config")
@@ -184,6 +195,11 @@ KEY_ALGO="%s"
 	t.Logf("Created dehydrated config with KEY_ALGO=%s", algo)
 }
 
+// setupDomains creates a domains.txt file with the specified domain entries.
+// Parameters:
+//   - baseDir: The base directory where domains.txt will be created
+//   - domainsData: The domain entries to write
+//   - t: The testing context
 func setupDomains(baseDir string, domainsData []byte, t *testing.T) {
 	// Create domains config file
 	domainsFile := filepath.Join(baseDir, "domains.txt")
@@ -192,7 +208,11 @@ func setupDomains(baseDir string, domainsData []byte, t *testing.T) {
 	}
 }
 
-// setupDehydrated downloads the dehydrated script and makes it executable
+// setupDehydrated downloads and sets up the dehydrated script in the specified directory.
+// It returns the path to the dehydrated script.
+// Parameters:
+//   - baseDir: The base directory where dehydrated will be set up
+//   - t: The testing context
 func setupDehydrated(baseDir string, t *testing.T) string {
 	// Create the dehydrated script path
 	dehydratedPath := filepath.Join(baseDir, "dehydrated")

@@ -34,6 +34,9 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// TestConfigLoading verifies that the configuration file is properly loaded
+// and parsed with the correct values for port, dehydrated directory,
+// watcher status, and plugin configuration.
 func TestConfigLoading(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()

@@ -141,6 +141,10 @@ func (s *Server) GetPort() int {
 	return s.port
 }
 
+// main is the entry point of the application. It:
+// 1. Parses command-line flags (--config)
+// 2. Starts the server with the specified configuration
+// 3. Handles graceful shutdown on SIGINT/SIGTERM
 func main() {
 	// Parse command line flags
 	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
