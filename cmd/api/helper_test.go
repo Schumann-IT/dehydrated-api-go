@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func setupAzureDnsHook(baseDir string, t *testing.T) string {
@@ -35,8 +36,10 @@ DNS_ZONE="%s"
 
 # Supporting functions
 function log {
-    if [ $DEBUG -ge $2 ]; then
-        echo "$1" > /dev/tty
+    if tty >/dev/null 2>&1; then
+        if [ $DEBUG -ge $2 ]; then
+            echo "$1" > /dev/tty
+        fi
     fi
 }
 function login_azure {
@@ -101,7 +104,7 @@ case ${PHASE} in
         respCreate=$(az network dns record-set txt create --subscription ${SUBSCRIPTION} -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -n ${CHALLENGE_KEY} --output json)
         log "      Create: '$respCreate'" 4
 
-        respAddRec=$(az network dns record-set txt add-record --subscription ${SUBSCRIPTION} -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -n ${CHALLENGE_KEY} -v ${TOKEN_VALUE} --output json)
+        respAddRec=$(az network dns record-set txt add-record --subscription ${SUBSCRIPTION} -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -n ${CHALLENGE_KEY} --value "${TOKEN_VALUE}" --output json)
         log "      AddRec: '$respAddRec'" 4
 
 		sleep 10
@@ -172,11 +175,13 @@ func setupDehydratedConfig(baseDir, hookScript, algo string, t *testing.T) {
 CHALLENGETYPE="dns-01"
 CA="letsencrypt-test"
 HOOK="%s"
-KEY_ALGO=%s
+KEY_ALGO="%s"
 `, hookScript, algo))
+
 	if err := os.WriteFile(dehydratedConfigFile, dehydratedConfigData, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
+	t.Logf("Created dehydrated config with KEY_ALGO=%s", algo)
 }
 
 func setupDomains(baseDir string, domainsData []byte, t *testing.T) {
