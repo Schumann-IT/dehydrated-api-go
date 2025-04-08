@@ -3,6 +3,8 @@ package registry
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
@@ -16,8 +18,11 @@ import (
 
 // Registry manages plugin instances
 type Registry struct {
-	plugins map[string]plugininterface.Plugin
-	config  *dehydrated.Config
+	mu        sync.RWMutex
+	plugins   map[string]plugininterface.Plugin
+	config    *dehydrated.Config
+	closeOnce sync.Once
+	closed    bool
 }
 
 // NewRegistry creates a new plugin registry
@@ -38,6 +43,13 @@ func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.
 
 // LoadPlugin loads a plugin from the given path with the provided configuration
 func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.closed {
+		return fmt.Errorf("registry is closed")
+	}
+
 	// Check if plugin is already loaded
 	if _, exists := r.plugins[name]; exists {
 		return fmt.Errorf("plugin %s is already loaded", name)
@@ -98,8 +110,12 @@ func (r *Registry) loadBuiltinPlugin(name string) (plugininterface.Plugin, error
 
 // GetPlugin returns a plugin by name
 func (r *Registry) GetPlugin(name string) (plugininterface.Plugin, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// After closing, all plugins are considered "not found"
 	plugin, exists := r.plugins[name]
-	if !exists {
+	if !exists || r.closed {
 		return nil, fmt.Errorf("plugin %s not found", name)
 	}
 
@@ -108,6 +124,9 @@ func (r *Registry) GetPlugin(name string) (plugininterface.Plugin, error) {
 
 // GetPlugins returns all loaded plugins as a map of name to plugin
 func (r *Registry) GetPlugins() map[string]plugininterface.Plugin {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	// Return a copy of the plugins map
 	plugins := make(map[string]plugininterface.Plugin, len(r.plugins))
 	for name, plugin := range r.plugins {
@@ -119,14 +138,27 @@ func (r *Registry) GetPlugins() map[string]plugininterface.Plugin {
 
 // Close closes all plugins
 func (r *Registry) Close(ctx context.Context) error {
-	for name, plugin := range r.plugins {
-		if err := plugin.Close(ctx); err != nil {
-			return fmt.Errorf("failed to close plugin %s: %w", name, err)
-		}
-	}
+	var closeErr error
+	r.closeOnce.Do(func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
 
-	//r.plugins = make(map[string]plugininterface.Plugin)
-	return nil
+		if r.closed {
+			return
+		}
+
+		for name, plugin := range r.plugins {
+			if err := plugin.Close(ctx); err != nil {
+				closeErr = fmt.Errorf("failed to close plugin %s: %w", name, err)
+				return
+			}
+		}
+
+		r.plugins = make(map[string]plugininterface.Plugin)
+		r.closed = true
+	})
+
+	return closeErr
 }
 
 // builtinWrapper wraps a built-in plugin to implement the Plugin interface
