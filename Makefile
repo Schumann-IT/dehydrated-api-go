@@ -6,7 +6,12 @@ GOGET=$(GOCMD) get
 GOCLEAN=$(GOCMD) clean
 GOMOD=$(GOCMD) mod
 GOWORK=$(GOCMD) work
+GOVET=$(GOCMD) vet
 BINARY_NAME=dehydrated-api-go
+BINARY_UNIX=$(BINARY_NAME)_unix
+COVERAGE_FILE=coverage.out
+DOCKER_IMAGE=schumann-it/dehydrated-api-go
+DOCKER_CONTAINER=dehydrated-api-go-container
 MAIN_FILE=cmd/api/main.go
 
 # Version information
@@ -18,8 +23,7 @@ BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildTime=${BUILD_TIME}"
 
 # Tools
-GOLANGCI_LINT_VERSION=v1.55.2
-GOLANGCI_LINT_BIN=$(shell go env GOPATH)/bin/golangci-lint
+GOLANGCI_LINT_BIN=/opt/homebrew/bin/golangci-lint
 MOCKGEN_VERSION=v1.6.0
 MOCKGEN_BIN=$(shell go env GOPATH)/bin/mockgen
 PROTOC_GEN_GO_VERSION=v1.31.0
@@ -29,71 +33,94 @@ PROTOC_GEN_GO_GRPC_BIN=$(shell go env GOPATH)/bin/protoc-gen-go-grpc
 GORELEASER_VERSION=v1.22.1
 GORELEASER_BIN=$(shell go env GOPATH)/bin/goreleaser
 
-.PHONY: all build test clean run deps lint mock generate release
+.PHONY: all build test clean run deps lint mock generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean
 
-all: deps test build
+all: deps test build ## Run deps, test, and build
 
-build:
+build: ## Build the binary
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
 
-test:
-	$(GOTEST) -v -race -coverprofile=coverage.out ./...
-	$(GOTEST) -v -race -coverprofile=coverage.out ./internal/plugin/registry/...
+test: test-app test-scripts
 
-clean:
+test-app:
+	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./...
+	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./internal/plugin/registry/...
+	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
+
+test-scripts:
+	./scripts/test-update-api-config.sh
+	./scripts/test-update-dehydrated-config.sh
+	./scripts/test-configure-cron.sh
+
+clean: ## Clean build artifacts
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
-	rm -f coverage.out
+	rm -f $(BINARY_UNIX)
+	rm -f $(COVERAGE_FILE)
 
-run:
-	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
+run: build ## Build and run the binary
 	./$(BINARY_NAME)
 
-deps:
+deps: ## Download dependencies
 	$(GOMOD) download
 	$(GOMOD) tidy
+	$(GOGET) -v -t -d ./...
 
 # Development tools installation
 install-tools:
 	@echo "Installing development tools..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@go install github.com/golang/mock/mockgen@$(MOCKGEN_VERSION)
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
 	@go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
 
 # Linting
-lint:
+lint: ## Run linter
 	$(GOLANGCI_LINT_BIN) run
 
 # Generate mocks
-mock:
+mock: ## Generate mocks
 	$(MOCKGEN_BIN) -source=internal/plugin/interface/plugin.go -destination=internal/plugin/interface/mock_plugin.go
+	$(MOCKGEN_BIN) -source=internal/model/domain.go -destination=internal/model/mock_domain.go
 
 # Generate code using go generate
-generate:
+generate: ## Generate code using go generate
 	$(GOCMD) generate ./...
 
 # Release with goreleaser
-release:
+release: ## Create a release with goreleaser
 	$(GORELEASER_BIN) release --snapshot --rm-dist
 
 # Development setup
 dev-setup: install-tools deps generate mock lint
 
+# Docker targets
+docker-build: ## Build Docker image
+	docker build -t $(DOCKER_IMAGE) .
+
+docker-run: ## Run Docker container
+	docker run -d --name $(DOCKER_CONTAINER) -p 3000:3000 $(DOCKER_IMAGE)
+
+docker-stop: ## Stop Docker container
+	docker stop $(DOCKER_CONTAINER)
+	docker rm $(DOCKER_CONTAINER)
+
+docker-logs: ## View Docker container logs
+	docker logs $(DOCKER_CONTAINER)
+
+docker-shell: ## Open shell in Docker container
+	docker exec -it $(DOCKER_CONTAINER) /bin/sh
+
+docker-clean: ## Remove Docker container and image
+	docker stop $(DOCKER_CONTAINER) 2>/dev/null || true
+	docker rm $(DOCKER_CONTAINER) 2>/dev/null || true
+	docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
+
 # Show help
-help:
-	@echo "Available targets:"
-	@echo "  all          - Run deps, test, and build"
-	@echo "  build        - Build the binary"
-	@echo "  test         - Run tests with coverage"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  run          - Build and run the binary"
-	@echo "  deps         - Download dependencies"
-	@echo "  install-tools - Install development tools"
-	@echo "  lint         - Run linter"
-	@echo "  mock         - Generate mocks"
-	@echo "  generate     - Generate code using go generate"
-	@echo "  release      - Create a release with goreleaser"
-	@echo "  dev-setup    - Setup development environment"
-	@echo "  help         - Show this help message"
+help: ## Display this help message
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "For more information, see the README.md file."

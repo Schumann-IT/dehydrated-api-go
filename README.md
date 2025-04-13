@@ -12,7 +12,17 @@ A REST API service for managing domains in the Dehydrated ACME client. This serv
 - Graceful shutdown handling
 - YAML-based configuration
 
+## Prerequisites
+
+- Go 1.21 or later
+- Make
+- Docker (optional, for containerized deployment)
+- OpenSSL (for certificate operations)
+- dcron (for scheduled renewals)
+
 ## Installation
+
+### From Source
 
 1. Clone the repository:
 ```bash
@@ -22,7 +32,7 @@ cd dehydrated-api-go
 
 2. Build the project:
 ```bash
-go build -o dehydrated-api ./cmd/api
+make build
 ```
 
 3. Create a configuration file (config.yaml):
@@ -37,17 +47,60 @@ logging:
   output_path: ""
 
 plugins:
-  example-plugin:
+  openssl:
     enabled: true
-    path: "/path/to/plugin"
-    config:
-      api_key: "your-api-key"
+#  example-external-plugin:
+#    enabled: true
+#    path: "/path/to/plugin"
+#    config:
+#      api_key: "your-api-key"
 ```
 
 4. Run the service:
 ```bash
-./dehydrated-api -config config.yaml
+make run
 ```
+
+### Using Docker
+
+1. Build the Docker image:
+```bash
+make docker-build
+```
+
+2. Run the container:
+```bash
+make docker-run
+```
+
+## Configuration
+
+The application can be configured using environment variables:
+
+- `PORT`: API server port (default: 3000)
+- `ENABLE_WATCHER`: Enable file system watcher (default: false)
+- `ENABLE_OPENSSL_PLUGIN`: Enable OpenSSL plugin (default: true)
+- `CRON_SCHEDULE`: Cron schedule for certificate renewal (format: "0 */12 * * *")
+- `EXTERNAL_PLUGINS`: JSON configuration for external plugins
+- `DEHYDRATED_*`: Any dehydrated configuration setting prefixed with DEHYDRATED_
+
+### External Plugins Configuration
+
+External plugins can be configured using the `EXTERNAL_PLUGINS` environment variable in JSON format:
+
+```json
+{
+  "plugin_name": {
+    "enabled": true,
+    "path": "/path/to/plugin",
+    "config": {
+      "key": "value"
+    }
+  }
+}
+```
+
+See [external-plugins.md](docs/external-plugins.md) for detailed documentation.
 
 ## API Usage
 
@@ -169,27 +222,66 @@ dehydrated-api-go/
 ├── cmd/
 │   └── api/           # Main application entry point
 ├── internal/
-│   ├── handler/       # HTTP request handlers
-│   ├── logger/        # Logging configuration
-│   ├── model/         # Data models
-│   └── service/       # Business logic
-├── pkg/
-│   └── dehydrated/    # Dehydrated client integration
-└── plugin/
-    └── registry/      # Plugin management
+│   ├── api/           # API handlers and routes
+│   ├── config/        # Configuration management
+│   ├── dehydrated/    # Dehydrated integration
+│   └── watcher/       # File system watcher
+├── scripts/           # Utility scripts
+│   ├── configure-cron.sh
+│   ├── generate-config.sh
+│   ├── healthcheck.sh
+│   ├── renew-certs.sh
+│   ├── start-api.sh
+│   ├── start-crond.sh
+│   ├── test-configure-cron.sh
+│   ├── update-api-config.sh
+│   └── update-dehydrated-config.sh
+├── examples/          # Example configurations
+│   └── config/
+│       ├── config.yaml
+│       └── dehydrated
+├── docs/             # Documentation
+│   └── external-plugins.md
+├── Dockerfile        # Container definition
+├── Makefile         # Build and development tasks
+└── README.md        # Project documentation
 ```
 
-### Building
+### Development Commands
 
 ```bash
-# Build the main application
-go build -o dehydrated-api ./cmd/api
+# Build the application
+make build
 
 # Run tests
-go test ./...
+make test
+
+# Run linters
+make lint
+
+# Clean build artifacts
+make clean
 
 # Run with race detector
-go run -race ./cmd/api
+make run-race
+
+# Build Docker image
+make docker-build
+
+# Run Docker container
+make docker-run
+
+# Stop Docker container
+make docker-stop
+
+# View Docker logs
+make docker-logs
+
+# Open shell in Docker container
+make docker-shell
+
+# Clean Docker artifacts
+make docker-clean
 ```
 
 ### Adding New Features

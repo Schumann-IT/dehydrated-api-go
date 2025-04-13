@@ -3,9 +3,11 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 
@@ -95,7 +97,7 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test GetDomain
 	t.Run("GetDomain", func(t *testing.T) {
-		resp := httptest.NewRequest("GET", "/api/v1/domains/example.com", nil)
+		resp := httptest.NewRequest("GET", "/api/v1/domains/example.com", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {
@@ -121,7 +123,7 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test GetNonExistentDomain
 	t.Run("GetNonExistentDomain", func(t *testing.T) {
-		resp := httptest.NewRequest("GET", "/api/v1/domains/nonexistent.com", nil)
+		resp := httptest.NewRequest("GET", "/api/v1/domains/nonexistent.com", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {
@@ -135,7 +137,7 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test ListDomains
 	t.Run("ListDomains", func(t *testing.T) {
-		resp := httptest.NewRequest("GET", "/api/v1/domains", nil)
+		resp := httptest.NewRequest("GET", "/api/v1/domains", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {
@@ -191,7 +193,7 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test DeleteDomain
 	t.Run("DeleteDomain", func(t *testing.T) {
-		resp := httptest.NewRequest("DELETE", "/api/v1/domains/example.com", nil)
+		resp := httptest.NewRequest("DELETE", "/api/v1/domains/example.com", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {

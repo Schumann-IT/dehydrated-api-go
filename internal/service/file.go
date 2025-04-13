@@ -2,9 +2,10 @@ package service
 
 import (
 	"bufio"
-	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"strings"
+
+	model2 "github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 // ReadDomainsFile reads a domains.txt file and returns a slice of DomainEntry

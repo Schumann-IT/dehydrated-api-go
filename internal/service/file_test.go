@@ -1,10 +1,11 @@
 package service
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
 func TestFileOperations(t *testing.T) {

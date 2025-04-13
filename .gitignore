@@ -53,8 +53,5 @@ temp/
 debug/
 
 # Local development files
-config.yaml
 domains.txt
 coverage.html
-
-cmd/api/domains.txt

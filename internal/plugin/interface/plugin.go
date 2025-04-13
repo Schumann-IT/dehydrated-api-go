@@ -3,6 +3,7 @@ package plugininterface
 import (
 	"context"
 	"errors"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )

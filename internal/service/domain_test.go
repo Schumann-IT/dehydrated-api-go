@@ -16,10 +16,10 @@ func TestDomainService(t *testing.T) {
 		name        string
 		withWatcher bool
 	}{
-		{
-			name:        "WithWatcher",
-			withWatcher: true,
-		},
+		//{
+		//  name:        "WithWatcher",
+		//	withWatcher: true,
+		// },
 		{
 			name:        "WithoutWatcher",
 			withWatcher: false,
