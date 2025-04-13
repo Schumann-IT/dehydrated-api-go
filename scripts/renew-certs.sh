@@ -1,2 +1,2 @@
 #!/bin/sh
-/app/scripts/dehydrated --cron --config /data/dehydrated/config
+/app/scripts/dehydrated --cron --config /app/config/dehydrated

@@ -183,7 +183,7 @@ func TestRegistryConcurrency(t *testing.T) {
 }
 
 func TestLoadBuiltinPlugin(t *testing.T) {
-	// Create test config
+	// Create test Config
 	cfg := &dehydrated.Config{
 		BaseDir:       "/test/base",
 		CertDir:       "/test/certs",

@@ -20,6 +20,9 @@ type Config struct {
 	// Dehydrated configuration
 	DehydratedBaseDir string `yaml:"dehydratedBaseDir"`
 
+	// DehydratedConfigFile specifies the path to the dehydrated configuration file, typically under the base directory.
+	DehydratedConfigFile string `yaml:"dehydratedConfigFile"`
+
 	// Weather to enable file watcher
 	EnableWatcher bool `yaml:"enableWatcher"`
 
@@ -37,11 +40,12 @@ type PluginConfig struct {
 // NewConfig creates a new Config instance with default values
 func NewConfig() *Config {
 	return &Config{
-		Port:              3000,
-		DehydratedBaseDir: ".",
-		Plugins:           make(map[string]PluginConfig),
-		EnableWatcher:     false,
-		Logging:           logger.DefaultConfig(),
+		Port:                 3000,
+		DehydratedBaseDir:    ".",
+		DehydratedConfigFile: "config",
+		Plugins:              make(map[string]PluginConfig),
+		EnableWatcher:        false,
+		Logging:              logger.DefaultConfig(),
 	}
 }
 
@@ -78,6 +82,9 @@ func (c *Config) Load(path string) *Config {
 		}
 		if fileConfig.DehydratedBaseDir != "" {
 			c.DehydratedBaseDir = fileConfig.DehydratedBaseDir
+		}
+		if fileConfig.DehydratedConfigFile != "" {
+			c.DehydratedConfigFile = fileConfig.DehydratedConfigFile
 		}
 		if fileConfig.EnableWatcher {
 			c.EnableWatcher = true

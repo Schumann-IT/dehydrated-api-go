@@ -20,6 +20,8 @@ fi
 /app/scripts/update-api-config.sh
 # update dehydrated config from env variables
 /app/scripts/update-dehydrated-config.sh
+# prepare account
+/app/scripts/dehydrated --register --accept-terms --config /app/config/dehydrated
 # configure cron if needed
 /app/scripts/configure-cron.sh
 # start crond if needed

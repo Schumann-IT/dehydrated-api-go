@@ -59,9 +59,10 @@ func runServer(configPath string) *Server {
 	)
 
 	domainService, err := service.NewDomainService(service.DomainServiceConfig{
-		DehydratedBaseDir: cfg.DehydratedBaseDir,
-		EnableWatcher:     cfg.EnableWatcher,
-		PluginConfig:      cfg.Plugins,
+		DehydratedBaseDir:    cfg.DehydratedBaseDir,
+		DehydratedConfigFile: cfg.DehydratedConfigFile,
+		EnableWatcher:        cfg.EnableWatcher,
+		PluginConfig:         cfg.Plugins,
 	})
 	if err != nil {
 		log.Fatal("Failed to create domain service",
@@ -81,6 +82,10 @@ func runServer(configPath string) *Server {
 	// Create domain handler
 	domainHandler := handler.NewDomainHandler(domainService)
 	domainHandler.RegisterRoutes(app)
+
+	// Create config handler
+	configHandler := handler.NewConfigHandler(domainService)
+	configHandler.RegisterRoutes(app)
 
 	// Create server instance
 	server := &Server{

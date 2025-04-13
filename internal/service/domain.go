@@ -15,9 +15,10 @@ import (
 
 // DomainServiceConfig holds configuration options for the DomainService
 type DomainServiceConfig struct {
-	DehydratedBaseDir string
-	EnableWatcher     bool
-	PluginConfig      map[string]internal.PluginConfig
+	DehydratedBaseDir    string
+	DehydratedConfigFile string
+	EnableWatcher        bool
+	PluginConfig         map[string]internal.PluginConfig
 }
 
 // DomainService handles domain-related business logic
@@ -26,14 +27,18 @@ type DomainService struct {
 	watcher     *FileWatcher
 	cache       []model.DomainEntry
 	mutex       sync.RWMutex
-	registry    *registry.Registry
+	Registry    *registry.Registry
 }
 
 // NewDomainService creates a new DomainService instance
 func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
-	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir).Load()
+	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir)
+	if config.DehydratedConfigFile != "" {
+		cfg = cfg.WithConfigFile(config.DehydratedConfigFile)
+	}
+	cfg.Load()
 
-	// Create plugin registry
+	// Create plugin Registry
 	reg, err := registry.NewRegistry(config.PluginConfig, cfg)
 	if err != nil {
 		return nil, err
@@ -53,7 +58,7 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 
 	s := &DomainService{
 		domainsFile: cfg.DomainsFile,
-		registry:    reg,
+		Registry:    reg,
 	}
 
 	// Initialize the cache
@@ -97,9 +102,9 @@ func (s *DomainService) Close() error {
 		}
 	}
 
-	if s.registry != nil {
-		if err := s.registry.Close(context.Background()); err != nil {
-			errs = append(errs, fmt.Errorf("failed to close plugin registry: %w", err))
+	if s.Registry != nil {
+		if err := s.Registry.Close(context.Background()); err != nil {
+			errs = append(errs, fmt.Errorf("failed to close plugin Registry: %w", err))
 		}
 	}
 
@@ -150,7 +155,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // enrichMetadata enriches the domain entry with metadata from plugins
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	ctx := context.Background()
-	for name, p := range s.registry.GetPlugins() {
+	for name, p := range s.Registry.GetPlugins() {
 		metadata, err := p.GetMetadata(ctx, *entry)
 		if err != nil {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)

@@ -55,3 +55,5 @@ debug/
 # Local development files
 domains.txt
 coverage.html
+data/
+examples/config/*-test*

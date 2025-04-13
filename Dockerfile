@@ -3,7 +3,7 @@ FROM alpine:3.19 AS downloader
 ARG GOOS="linux"
 ARG GOARCH="arm64"
 ARG ARCH="arm64"
-ARG VERSION="v0.1.8"
+ARG VERSION="v0.0.1"
 
 WORKDIR /build
 
@@ -33,6 +33,26 @@ RUN apk add --no-cache \
       dcron \
       yq
 
+# Install python build tools
+RUN apk add --no-cache \
+      python3 \
+      py3-pip \
+      gcc \
+      musl-dev \
+      python3-dev \
+      libffi-dev \
+      openssl-dev \
+      cargo
+
+# Create and activate a virtual environment for Azure CLI
+RUN python3 -m venv /opt/venv \
+  && . /opt/venv/bin/activate \
+  && pip install --upgrade pip \
+  && pip install --no-cache-dir azure-cli \
+  && deactivate
+
+ENV PATH="/opt/venv/bin:$PATH"
+
 RUN mkdir -p /app/scripts \
     && mkdir -p /app/config
 
@@ -41,8 +61,8 @@ COPY --from=downloader /downloads/dehydrated /app/scripts/
 COPY --from=downloader /downloads/dehydrated-api-go /app/
 
 # install default configs
-COPY examples/config/config.yaml /app/config/
-COPY examples/config/dehydrated /app/config/
+COPY data/config.yaml /app/config/
+COPY data/dehydrated /app/config/
 
 # install scripts
 COPY scripts/update-api-config.sh /app/scripts/
@@ -52,6 +72,7 @@ COPY scripts/start-crond.sh /app/scripts/
 COPY scripts/renew-certs.sh /app/scripts/
 COPY scripts/start-api.sh /app/scripts/
 COPY scripts/healthcheck.sh /app/scripts/
+COPY scripts/dehydrated-hook-azure.sh /app/scripts/
 
 RUN chmod +x /app/scripts/*
 

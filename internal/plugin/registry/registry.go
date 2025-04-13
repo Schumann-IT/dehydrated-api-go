@@ -20,7 +20,7 @@ import (
 type Registry struct {
 	mu        sync.RWMutex
 	plugins   map[string]plugininterface.Plugin
-	config    *dehydrated.Config
+	Config    *dehydrated.Config
 	closeOnce sync.Once
 	closed    bool
 }
@@ -29,7 +29,7 @@ type Registry struct {
 func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
 	r := &Registry{
 		plugins: make(map[string]plugininterface.Plugin),
-		config:  cfg,
+		Config:  cfg,
 	}
 
 	for name, pc := range pluginConfig {
@@ -55,7 +55,7 @@ func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 		return fmt.Errorf("plugin %s is already loaded", name)
 	}
 
-	// Convert config to map[string]string
+	// Convert Config to map[string]string
 	configMap := make(map[string]any)
 	for k, v := range cfg.Config {
 		if str, ok := v.(string); ok {
@@ -69,7 +69,7 @@ func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to load built-in plugin %s: %w", name, err)
 		}
-		err = plugin.Initialize(context.Background(), configMap, r.config)
+		err = plugin.Initialize(context.Background(), configMap, r.Config)
 		if err != nil {
 			return fmt.Errorf("failed to initialize built-in plugin %s: %w", name, err)
 		}
@@ -78,7 +78,7 @@ func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
 	}
 
 	// Create new gRPC client
-	client, err := grpc.NewClient(cfg.Path, configMap, r.config)
+	client, err := grpc.NewClient(cfg.Path, configMap, r.Config)
 	if err != nil {
 		return fmt.Errorf("failed to create plugin client: %w", err)
 	}
@@ -102,7 +102,7 @@ func (r *Registry) loadBuiltinPlugin(name string) (plugininterface.Plugin, error
 	// Create a wrapper for the built-in plugin
 	wrapper := &builtinWrapper{
 		server: server,
-		config: r.config,
+		config: r.Config,
 	}
 
 	return wrapper, nil
@@ -168,17 +168,17 @@ type builtinWrapper struct {
 }
 
 func (w *builtinWrapper) Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error {
-	// Convert config to map[string]*structpb.Value
+	// Convert Config to map[string]*structpb.Value
 	configMap := make(map[string]*structpb.Value)
 	for k, v := range config {
 		value, err := structpb.NewValue(v)
 		if err != nil {
-			return fmt.Errorf("failed to convert config value for key %s: %w", k, err)
+			return fmt.Errorf("failed to convert Config value for key %s: %w", k, err)
 		}
 		configMap[k] = value
 	}
 
-	// Convert dehydrated config
+	// Convert dehydrated Config
 	dehydratedConfigProto := &pb.DehydratedConfig{
 		BaseDir:       dehydratedConfig.BaseDir,
 		CertDir:       dehydratedConfig.CertDir,
