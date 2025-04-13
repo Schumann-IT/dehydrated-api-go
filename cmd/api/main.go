@@ -8,12 +8,12 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/gofiber/contrib/fiberzap/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
-
-	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
 
@@ -46,6 +46,8 @@ func runServer(configPath string) *Server {
 	}
 	defer logger.Sync()
 
+	log = logger.L()
+
 	log.Info("Logger initialized",
 		zap.String("level", cfg.Logging.Level),
 		zap.String("encoding", cfg.Logging.Encoding),
@@ -70,7 +72,7 @@ func runServer(configPath string) *Server {
 			zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
 		)
 	}
-	defer domainService.Close()
+	//defer domainService.Close()
 
 	log.Info("Domain service created successfully",
 		zap.Int("enabled_plugins", len(cfg.Plugins)),
@@ -78,6 +80,10 @@ func runServer(configPath string) *Server {
 
 	// Create fiber app
 	app := fiber.New()
+
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: log,
+	}))
 
 	// Create domain handler
 	domainHandler := handler.NewDomainHandler(domainService)

@@ -6,7 +6,7 @@ CONFIG_FILE=/app/config/config.yaml
 mkdir -p /data/dehydrated
 
 # Use config from base dir if exists
-if [ ! -f "/data/dehydrated/config.yaml" ]; then
+if [ -f "/data/dehydrated/config.yaml" ]; then
   CONFIG_FILE=/data/dehydrated/config.yaml
 fi
 

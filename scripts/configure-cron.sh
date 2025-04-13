@@ -18,4 +18,4 @@ LOG_FILE="${BASE_DIR}/cron.log"
 mkdir -p ${CRON_DIR}
 
 # Create the cron job
-echo "${CRON_SCHEDULE} ${APP_USER} /app/scripts/renew-certs.sh >> ${LOG_FILE} 2>&1" > ${CRON_DIR}/renew-certs
+echo "${CRON_SCHEDULE} /app/scripts/renew-certs.sh >> ${LOG_FILE} 2>&1" > ${CRON_DIR}/renew-certs

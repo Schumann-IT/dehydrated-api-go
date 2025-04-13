@@ -19,12 +19,11 @@ DEBUG=4
 
 # Supporting functions
 function log {
-    if tty >/dev/null 2>&1; then
-        if [ $DEBUG -ge $2 ]; then
-            echo "$1" > /dev/tty
-        fi
+    if [ $DEBUG -ge $2 ]; then
+        echo "$1" >> /data/dehydrated/azure-hook.log
     fi
 }
+
 function login_azure {
     # Azure DNS Connection Variables
     # You should create an SPN in Azure first and authorize it to make changes to Azure DNS

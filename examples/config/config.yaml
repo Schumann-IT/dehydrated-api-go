@@ -14,3 +14,7 @@ plugins:
   #     host: fw.example.com
   #     user: admin
   #     password: password
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""

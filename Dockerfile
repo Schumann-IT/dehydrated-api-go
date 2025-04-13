@@ -3,7 +3,7 @@ FROM alpine:3.19 AS downloader
 ARG GOOS="linux"
 ARG GOARCH="arm64"
 ARG ARCH="arm64"
-ARG VERSION="v0.0.1"
+ARG VERSION="v0.0.3"
 
 WORKDIR /build
 
@@ -79,11 +79,11 @@ RUN chmod +x /app/scripts/*
 # Set environment variables
 ENV PORT=3000
 ENV ENABLE_WATCHER=false
-ENV ENABLE_OPENSSL_PLUGIN=true
+ENV ENABLE_OPENSSL_PLUGIN=false
 # Format: 0 */12 * * *
 ENV CRON_SCHEDULE=""
 # Format: {"plugin_name":{"enabled":true,"path":"/path/to/plugin"}}
-ENV EXTERNAL_PLUGINS="{}"
+ENV EXTERNAL_PLUGINS=""
 # dehydrated config settings @see https://github.com/dehydrated-io/dehydrated/blob/master/docs/examples/config
 # each setting needs to be prefixed with DEHYDRATED_
 # some settings are manged internally and cannot be changed: BASEDIR, CERTDIR, DOMAINS_TXT
