@@ -61,8 +61,8 @@ COPY --from=downloader /downloads/dehydrated /app/scripts/
 COPY --from=downloader /downloads/dehydrated-api-go /app/
 
 # install default configs
-COPY data/config.yaml /app/config/
-COPY data/dehydrated /app/config/
+COPY examples/config/config.yaml /app/config/
+COPY examples/config/dehydrated /app/config/
 
 # install scripts
 COPY scripts/update-api-config.sh /app/scripts/
