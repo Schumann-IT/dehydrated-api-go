@@ -12,10 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/server"
 )
 
 // TestMain handles global state for all tests in this package

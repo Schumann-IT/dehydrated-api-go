@@ -6,9 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/zap"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/server"
-	"go.uber.org/zap"
 )
 
 func main() {

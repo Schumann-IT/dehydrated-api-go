@@ -6,10 +6,11 @@ import (
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
-	"go.uber.org/zap"
 )
 
 // Server represents a running server instance

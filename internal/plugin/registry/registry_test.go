@@ -3,11 +3,12 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"

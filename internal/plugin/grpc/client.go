@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
-
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Client represents a gRPC plugin client
