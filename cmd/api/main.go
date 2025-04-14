@@ -57,6 +57,7 @@ func runServer(configPath string) *Server {
 	// Create domain service
 	log.Debug("Creating domain service",
 		zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
+		zap.String("dehydrated_config_file", cfg.DehydratedConfigFile),
 		zap.Bool("watcher_enabled", cfg.EnableWatcher),
 	)
 
@@ -72,7 +73,6 @@ func runServer(configPath string) *Server {
 			zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
 		)
 	}
-	//defer domainService.Close()
 
 	log.Info("Domain service created successfully",
 		zap.Int("enabled_plugins", len(cfg.Plugins)),
@@ -128,6 +128,8 @@ func runServer(configPath string) *Server {
 
 		// Graceful shutdown
 		log.Info("Starting graceful shutdown")
+
+		domainService.Close()
 
 		if err := app.Shutdown(); err != nil {
 			log.Error("Error during shutdown",
