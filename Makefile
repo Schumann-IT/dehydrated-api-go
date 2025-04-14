@@ -24,6 +24,7 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.Bu
 
 # Tools
 GOLANGCI_LINT_BIN=/opt/homebrew/bin/golangci-lint
+GORELEASER_BIN=/opt/homebrew/bin/goreleaser
 PROTOC_GEN_GO_BIN=/opt/homebrew/bin/protoc-gen-go
 PROTOC_GEN_GO_GRPC_BIN=/opt/homebrew/bin/protoc-gen-go-grpc
 
