@@ -26,14 +26,10 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.Bu
 GOLANGCI_LINT_BIN=/opt/homebrew/bin/golangci-lint
 MOCKGEN_VERSION=v1.6.0
 MOCKGEN_BIN=$(shell go env GOPATH)/bin/mockgen
-PROTOC_GEN_GO_VERSION=v1.31.0
-PROTOC_GEN_GO_BIN=$(shell go env GOPATH)/bin/protoc-gen-go
-PROTOC_GEN_GO_GRPC_VERSION=v1.3.0
-PROTOC_GEN_GO_GRPC_BIN=$(shell go env GOPATH)/bin/protoc-gen-go-grpc
-GORELEASER_VERSION=v1.22.1
-GORELEASER_BIN=$(shell go env GOPATH)/bin/goreleaser
+PROTOC_GEN_GO_BIN=/opt/homebrew/bin/protoc-gen-go
+PROTOC_GEN_GO_GRPC_BIN=/opt/homebrew/bin/protoc-gen-go-grpc
 
-.PHONY: all build test clean run deps lint mock generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean
+.PHONY: all build test clean run deps lint mock generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean proto
 
 all: deps test build ## Run deps, test, and build
 
@@ -69,9 +65,6 @@ deps: ## Download dependencies
 install-tools:
 	@echo "Installing development tools..."
 	@go install github.com/golang/mock/mockgen@$(MOCKGEN_VERSION)
-	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
-	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
-	@go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
 
 # Linting
 lint: ## Run linter
@@ -114,6 +107,12 @@ docker-clean: ## Remove Docker container and image
 	docker stop $(DOCKER_CONTAINER) 2>/dev/null || true
 	docker rm $(DOCKER_CONTAINER) 2>/dev/null || true
 	docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
+
+# Generate protobuf files
+proto: ## Generate protobuf files
+	@echo "Generating protobuf files..."
+	@rm -f proto/plugin/*.pb.go
+	@cd proto/plugin && protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin.proto
 
 # Show help
 help: ## Display this help message
