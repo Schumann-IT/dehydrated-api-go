@@ -2,6 +2,9 @@ package model
 
 import "testing"
 
+// TestIsValidDomain tests the domain validation function with various domain names.
+// It verifies that the validation correctly identifies valid and invalid domain names,
+// including special cases like wildcard domains and domains with hyphens.
 func TestIsValidDomain(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -37,6 +40,9 @@ func TestIsValidDomain(t *testing.T) {
 	}
 }
 
+// TestIsValidDomainEntry tests the domain entry validation function.
+// It verifies that the validation correctly handles both valid and invalid domain entries,
+// including entries with various domain configurations.
 func TestIsValidDomainEntry(t *testing.T) {
 	tests := []struct {
 		name     string

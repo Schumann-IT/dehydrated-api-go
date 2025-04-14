@@ -902,10 +902,10 @@ func TestResourceCleanup(t *testing.T) {
 				assert.NoError(t, err)
 
 				client := &Client{
-					client:   pb.NewPluginClient(conn),
-					conn:     conn,
-					tmpDir:   tmpDir,
-					sockFile: filepath.Join(tmpDir, "plugin.sock"),
+					client:     pb.NewPluginClient(conn),
+					conn:       conn,
+					tmpDir:     tmpDir,
+					socketFile: filepath.Join(tmpDir, "plugin.sock"),
 				}
 
 				return client, tmpDir, func() {
@@ -937,11 +937,11 @@ func TestResourceCleanup(t *testing.T) {
 				assert.NoError(t, err)
 
 				client := &Client{
-					client:    pb.NewPluginClient(conn),
-					conn:      conn,
-					tmpDir:    tmpDir,
-					sockFile:  filepath.Join(tmpDir, "plugin.sock"),
-					lastError: fmt.Errorf("initialization error"),
+					client:     pb.NewPluginClient(conn),
+					conn:       conn,
+					tmpDir:     tmpDir,
+					socketFile: filepath.Join(tmpDir, "plugin.sock"),
+					lastError:  fmt.Errorf("initialization error"),
 				}
 
 				return client, tmpDir, func() {

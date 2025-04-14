@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,10 +8,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
+// Package service provides core business logic for the dehydrated-api-go application.
+// It includes domain management, file operations, and plugin integration services.
+
+// TestDomainService tests the core functionality of the DomainService.
+// It verifies domain creation, retrieval, updating, listing, and deletion operations
+// with both watcher enabled and disabled configurations.
 func TestDomainService(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -118,6 +125,9 @@ func TestDomainService(t *testing.T) {
 	}
 }
 
+// TestNewDomainService tests the initialization of the DomainService.
+// It verifies proper setup with valid and invalid configurations,
+// including watcher initialization and file path handling.
 func TestNewDomainService(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -177,7 +187,8 @@ func TestNewDomainService(t *testing.T) {
 	})
 }
 
-// buildTestPlugin builds the test plugin
+// buildTestPlugin builds the test plugin for integration testing.
+// It compiles the test plugin from source and returns the path to the built binary.
 func buildTestPlugin(t *testing.T) string {
 	// Get the current directory
 	dir, err := os.Getwd()
@@ -196,6 +207,8 @@ func buildTestPlugin(t *testing.T) string {
 	return pluginPath
 }
 
+// TestDomainServiceErrors tests error handling in the DomainService.
+// It verifies proper error responses for invalid operations and edge cases.
 func TestDomainServiceErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -245,6 +258,8 @@ func TestDomainServiceErrors(t *testing.T) {
 	})
 }
 
+// TestMetadataEnrichment tests the metadata enrichment functionality.
+// It verifies that domain entries are properly enriched with metadata from plugins.
 func TestMetadataEnrichment(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -303,6 +318,9 @@ func TestMetadataEnrichment(t *testing.T) {
 	})
 }
 
+// TestConcurrentOperations tests the thread-safety of the DomainService.
+// It verifies that concurrent operations on the service work correctly
+// without race conditions or data corruption.
 func TestConcurrentOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := DomainServiceConfig{
@@ -352,6 +370,9 @@ func TestConcurrentOperations(t *testing.T) {
 	})
 }
 
+// TestEdgeCases tests various edge cases in the DomainService.
+// It verifies proper handling of special domain names, empty values,
+// and other boundary conditions.
 func TestEdgeCases(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -406,6 +427,9 @@ func TestEdgeCases(t *testing.T) {
 	})
 }
 
+// TestFileWatcherEdgeCases tests edge cases in the file watcher functionality.
+// It verifies proper handling of file system events, including rapid changes
+// and file system errors.
 func TestFileWatcherEdgeCases(t *testing.T) {
 	tmpDir := t.TempDir()
 	domainsFile := filepath.Join(tmpDir, "domains.txt")
@@ -453,6 +477,8 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 	})
 }
 
+// TestDomainServiceCleanup tests the cleanup functionality of the DomainService.
+// It verifies that resources are properly released when the service is closed.
 func TestDomainServiceCleanup(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -490,6 +516,9 @@ func TestDomainServiceCleanup(t *testing.T) {
 	})
 }
 
+// TestDomainServiceOperations tests various domain service operations.
+// It verifies the complete lifecycle of domain entries, including creation,
+// modification, and deletion with various configurations.
 func TestDomainServiceOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 

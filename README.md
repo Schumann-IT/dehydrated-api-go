@@ -315,3 +315,13 @@ make docker-clean
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
+
+## TODO
+
+- move builtin plugin code (wrapper etc) to the builtin package
+- add tests
+  - handler/config
+  - logger
+- convert the global logger to dependency injection
+- move the DomainService interface to the service package  
+- move tests from cmd/api to internal/server

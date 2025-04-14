@@ -1,3 +1,5 @@
+// Package service provides core business logic for the dehydrated-api-go application.
+// It includes domain management, file operations, and plugin integration services.
 package service
 
 import (
@@ -10,17 +12,20 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// FileWatcher watches for changes to a file
+// FileWatcher watches for changes to a file and triggers a callback when changes are detected.
+// It implements debouncing to prevent multiple rapid callbacks for the same file change.
 type FileWatcher struct {
-	filePath    string
-	watcher     *fsnotify.Watcher
-	onChange    func() error
-	mutex       sync.Mutex
-	debounceMap map[string]time.Time
-	done        chan struct{}
+	filePath    string               // Path to the file being watched
+	watcher     *fsnotify.Watcher    // Underlying filesystem watcher
+	onChange    func() error         // Callback function to execute on file changes
+	mutex       sync.Mutex           // Mutex for thread-safe access to debounce map
+	debounceMap map[string]time.Time // Map for tracking last event time per file
+	done        chan struct{}        // Channel for signaling shutdown
 }
 
-// NewFileWatcher creates a new FileWatcher instance
+// NewFileWatcher creates a new FileWatcher instance for the specified file.
+// It sets up the filesystem watcher and starts a goroutine to monitor for changes.
+// The onChange callback will be called when the file is modified, created, or removed.
 func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -51,7 +56,9 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 	return fw, nil
 }
 
-// watch monitors the file for changes
+// watch monitors the file for changes and triggers the callback when appropriate.
+// It implements debouncing to prevent multiple rapid callbacks for the same file change.
+// The method runs in a goroutine and continues until the watcher is closed.
 func (fw *FileWatcher) watch() {
 	const debounceInterval = 100 * time.Millisecond
 
@@ -96,7 +103,8 @@ func (fw *FileWatcher) watch() {
 	}
 }
 
-// Close stops watching the file and cleans up resources
+// Close stops watching the file and cleans up resources.
+// It signals the watch goroutine to exit and closes the underlying watcher.
 func (fw *FileWatcher) Close() error {
 	close(fw.done)
 	return fw.watcher.Close()

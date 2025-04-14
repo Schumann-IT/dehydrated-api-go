@@ -1,36 +1,51 @@
+// Package server provides configuration management for the dehydrated-api-go server.
+// It handles loading and validating server configuration from YAML files,
+// including server settings, plugin configurations, and logging options.
 package server
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
 )
 
-// Config holds the application configuration
+// Config holds the application configuration for the dehydrated-api-go server.
+// It includes settings for the HTTP server, plugin management, dehydrated client,
+// and logging configuration.
 type Config struct {
 	// Server configuration
-	Port int `yaml:"port"`
+	Port int `yaml:"port"` // Port number for the HTTP server (1-65535)
 
 	// Plugin configuration
-	Plugins map[string]plugin.PluginConfig `yaml:"plugins"`
+	Plugins map[string]plugin.PluginConfig `yaml:"plugins"` // Map of plugin names to their configurations
 
 	// Dehydrated configuration
-	DehydratedBaseDir string `yaml:"dehydratedBaseDir"`
+	DehydratedBaseDir string `yaml:"dehydratedBaseDir"` // Base directory for dehydrated client files
 
-	// DehydratedConfigFile specifies the path to the dehydrated configuration file, typically under the base directory.
+	// DehydratedConfigFile specifies the path to the dehydrated configuration file.
+	// This file is typically located under the base directory and contains
+	// dehydrated client-specific settings.
 	DehydratedConfigFile string `yaml:"dehydratedConfigFile"`
 
-	// Weather to enable file watcher
+	// EnableWatcher determines whether the file watcher is active.
+	// When enabled, the server monitors for changes in the dehydrated configuration.
 	EnableWatcher bool `yaml:"enableWatcher"`
 
 	// Logging configuration
-	Logging *logger.Config `yaml:"logging"`
+	Logging *logger.Config `yaml:"logging"` // Configuration for the application logger
 }
 
-// NewConfig creates a new Config instance with default values
+// NewConfig creates a new Config instance with default values.
+// The default configuration includes:
+// - Port: 3000
+// - DehydratedBaseDir: "."
+// - DehydratedConfigFile: "config"
+// - EnableWatcher: false
+// - Logging: default logger configuration
 func NewConfig() *Config {
 	return &Config{
 		Port:                 3000,
@@ -42,13 +57,16 @@ func NewConfig() *Config {
 	}
 }
 
-// WithBaseDir sets the dehydrated base directory
+// WithBaseDir sets the dehydrated base directory in the configuration.
+// This method returns the config instance for method chaining.
 func (c *Config) WithBaseDir(dir string) *Config {
 	c.DehydratedBaseDir = dir
 	return c
 }
 
-// Load loads configuration from a YAML file and merges it with defaults
+// Load loads configuration from a YAML file and merges it with defaults.
+// If the file doesn't exist or has invalid content, the default configuration is returned.
+// The method merges non-zero values from the file with the existing configuration.
 func (c *Config) Load(path string) *Config {
 	absConfigPath, _ := filepath.Abs(path)
 
@@ -136,7 +154,11 @@ func (c *Config) Load(path string) *Config {
 	return c
 }
 
-// Validate checks if the configuration is valid
+// Validate checks if the configuration is valid and returns an error if any issues are found.
+// It validates:
+// - Port number (must be between 1 and 65535)
+// - Dehydrated base directory (must exist)
+// - Plugin configurations (paths must exist and be absolute)
 func (c *Config) Validate() error {
 	// Validate port
 	if c.Port < 1 || c.Port > 65535 {
@@ -172,7 +194,8 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// DomainsFile returns the path to the domains.txt file
+// DomainsFile returns the absolute path to the domains.txt file.
+// This file contains the list of domains managed by the dehydrated client.
 func (c *Config) DomainsFile() string {
 	return filepath.Join(c.DehydratedBaseDir, "domains.txt")
 }

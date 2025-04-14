@@ -1,3 +1,5 @@
+// Package server provides the HTTP server implementation for the dehydrated-api-go application.
+// It handles server lifecycle management, configuration loading, and graceful shutdown.
 package server
 
 import (
@@ -13,15 +15,18 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
 
-// Server represents a running server instance
+// Server represents a running server instance that manages the HTTP server lifecycle.
+// It handles server startup, shutdown, and maintains the application state.
 type Server struct {
-	app      *fiber.App
-	shutdown chan struct{}
-	wg       sync.WaitGroup
-	port     int
+	app      *fiber.App     // The Fiber web framework instance
+	shutdown chan struct{}  // Channel for signaling shutdown
+	wg       sync.WaitGroup // WaitGroup for managing goroutines
+	port     int            // Port number the server listens on
 }
 
-// NewServer creates a new server instance
+// NewServer creates a new server instance with the specified configuration file.
+// It initializes the server with default settings and loads configuration from the provided path.
+// The server is started in a goroutine and can be shut down gracefully using the Shutdown method.
 func NewServer(configPath string) *Server {
 	log := logger.L()
 	log.Debug("Using configuration file",
@@ -140,13 +145,16 @@ func NewServer(configPath string) *Server {
 	return server
 }
 
-// Shutdown gracefully shuts down the server
+// Shutdown gracefully shuts down the server and its associated resources.
+// It signals all goroutines to stop and waits for them to complete.
+// This method blocks until all resources are cleaned up.
 func (s *Server) Shutdown() {
 	close(s.shutdown)
 	s.wg.Wait()
 }
 
-// GetPort returns the port the server is listening on
+// GetPort returns the port number that the server is listening on.
+// This is useful for testing and monitoring purposes.
 func (s *Server) GetPort() int {
 	return s.port
 }

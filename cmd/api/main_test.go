@@ -19,7 +19,8 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/server"
 )
 
-// TestMain handles global state for all tests in this package
+// TestMain handles global state for all tests in this package.
+// It saves and restores the original command line arguments and flags.
 func TestMain(m *testing.M) {
 	// Save original state
 	originalArgs := os.Args
@@ -62,6 +63,9 @@ plugins:
 	assert.NotNil(t, cfg.Plugins["openssl"])
 }
 
+// TestMainAccIntegration performs an integration test of the main application.
+// It creates a temporary configuration, starts the server, and verifies it runs correctly.
+// This test is skipped unless the ACC_TEST environment variable is set.
 func TestMainAccIntegration(t *testing.T) {
 	if os.Getenv("ACC_TEST") == "" {
 		t.Skip("Skipping integration test; ACC_TEST not set")
@@ -90,6 +94,9 @@ plugins:
 	time.Sleep(100 * time.Millisecond)
 }
 
+// TestMainAccWithInvalidPort tests the server's behavior when configured with an invalid port.
+// It verifies that the server handles the error gracefully without panicking.
+// This test is skipped unless the ACC_TEST environment variable is set.
 func TestMainAccWithInvalidPort(t *testing.T) {
 	if os.Getenv("ACC_TEST") == "" {
 		t.Skip("Skipping integration test; ACC_TEST not set")
@@ -115,7 +122,9 @@ enableWatcher: false
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestMainAccDehydrated tests the dehydrated integration with different key algorithms
+// TestMainAccDehydrated tests the dehydrated integration with different key algorithms.
+// It verifies that the server can work with both RSA and ECDSA certificates.
+// This test is skipped unless the ACC_TEST environment variable is set.
 func TestMainAccDehydrated(t *testing.T) {
 	if os.Getenv("ACC_TEST") == "" {
 		t.Skip("Skipping integration test; ACC_TEST not set")

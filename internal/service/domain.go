@@ -1,3 +1,5 @@
+// Package service provides core business logic for the dehydrated-api-go application.
+// It includes domain management, file operations, and plugin integration services.
 package service
 
 import (
@@ -13,24 +15,28 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 )
 
-// DomainServiceConfig holds configuration options for the DomainService
+// DomainServiceConfig holds configuration options for the DomainService.
+// It specifies paths, settings, and plugin configurations needed to initialize the service.
 type DomainServiceConfig struct {
-	DehydratedBaseDir    string
-	DehydratedConfigFile string
-	EnableWatcher        bool
-	PluginConfig         map[string]plugin.PluginConfig
+	DehydratedBaseDir    string                         // Base directory for dehydrated client files
+	DehydratedConfigFile string                         // Path to dehydrated configuration file
+	EnableWatcher        bool                           // Whether to enable file change monitoring
+	PluginConfig         map[string]plugin.PluginConfig // Configuration for enabled plugins
 }
 
-// DomainService handles domain-related business logic
+// DomainService handles domain-related business logic and operations.
+// It manages domain entries, integrates with plugins, and provides thread-safe access to domain data.
 type DomainService struct {
-	domainsFile string
-	watcher     *FileWatcher
-	cache       []model.DomainEntry
-	mutex       sync.RWMutex
-	Registry    *registry.Registry
+	domainsFile string              // Path to the domains.txt file
+	watcher     *FileWatcher        // File watcher for monitoring changes
+	cache       []model.DomainEntry // In-memory cache of domain entries
+	mutex       sync.RWMutex        // Mutex for thread-safe access to the cache
+	Registry    *registry.Registry  // Plugin registry for metadata enrichment
 }
 
-// NewDomainService creates a new DomainService instance
+// NewDomainService creates a new DomainService instance with the provided configuration.
+// It initializes the dehydrated client, sets up the plugin registry, and optionally
+// enables file watching for automatic updates.
 func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir)
 	if config.DehydratedConfigFile != "" {
@@ -78,7 +84,8 @@ func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
 	return s, nil
 }
 
-// reloadCache reloads the domain entries from the file into the cache
+// reloadCache reloads the domain entries from the file into the cache.
+// This method is called during initialization and when file changes are detected.
 func (s *DomainService) reloadCache() error {
 	entries, err := ReadDomainsFile(s.domainsFile)
 	if err != nil {
@@ -92,7 +99,8 @@ func (s *DomainService) reloadCache() error {
 	return nil
 }
 
-// Close cleans up resources
+// Close cleans up resources used by the DomainService.
+// It stops the file watcher and closes all plugin connections.
 func (s *DomainService) Close() error {
 	var errs []error
 
@@ -114,7 +122,8 @@ func (s *DomainService) Close() error {
 	return nil
 }
 
-// CreateDomain adds a new domain entry
+// CreateDomain adds a new domain entry to the domains file.
+// It validates the entry, checks for duplicates, and updates both the cache and file.
 func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
 	entry := model.DomainEntry{
 		Domain:           req.Domain,
@@ -152,7 +161,8 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	return &entry, nil
 }
 
-// enrichMetadata enriches the domain entry with metadata from plugins
+// enrichMetadata enriches the domain entry with metadata from all enabled plugins.
+// It calls each plugin's GetMetadata method and merges the results into the entry.
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	ctx := context.Background()
 	for name, p := range s.Registry.GetPlugins() {
@@ -168,7 +178,8 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	return nil
 }
 
-// GetDomain retrieves a domain entry
+// GetDomain retrieves a domain entry by its domain name.
+// It returns a copy of the entry with metadata enriched from plugins.
 func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -186,7 +197,8 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	return nil, fmt.Errorf("domain not found: %s", domain)
 }
 
-// ListDomains returns all domain entries
+// ListDomains returns all domain entries with their metadata enriched from plugins.
+// It returns a copy of the cached entries to prevent modification of the cache.
 func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -203,7 +215,8 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	return entries, nil
 }
 
-// UpdateDomain updates an existing domain entry
+// UpdateDomain updates an existing domain entry with new information.
+// It validates the updated entry and writes the changes to both cache and file.
 func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -244,7 +257,8 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	return &updatedEntry, nil
 }
 
-// DeleteDomain removes a domain entry
+// DeleteDomain removes a domain entry from both the cache and the domains file.
+// It returns an error if the domain is not found.
 func (s *DomainService) DeleteDomain(domain string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

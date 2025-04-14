@@ -69,7 +69,8 @@ func TestDehydratedConfigTypeConsistency(t *testing.T) {
 	}
 }
 
-// Helper functions
+// getProtoFields extracts the field names and protobuf tags from a proto message type.
+// It returns a map of field names to their protobuf tags.
 func getProtoFields(t reflect.Type) map[string]string {
 	fields := make(map[string]string)
 	for i := 0; i < t.NumField(); i++ {
@@ -81,6 +82,8 @@ func getProtoFields(t reflect.Type) map[string]string {
 	return fields
 }
 
+// getModelFields extracts the field names and protobuf tags from a model type.
+// It returns a map of field names to their protobuf tags.
 func getModelFields(t reflect.Type) map[string]string {
 	fields := make(map[string]string)
 	for i := 0; i < t.NumField(); i++ {

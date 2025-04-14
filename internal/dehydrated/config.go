@@ -1,3 +1,5 @@
+// Package dehydrated provides functionality for working with the dehydrated ACME client.
+// It includes configuration management, path resolution, and integration with the dehydrated script.
 package dehydrated
 
 import (
@@ -74,7 +76,8 @@ type Config struct {
 	ConfigD      string `json:"config_d,omitempty" protobuf:"bytes,43,opt,name=config_d,json=configD,proto3"`                // Directory containing additional config files
 }
 
-// NewConfig creates a new Config with default values
+// NewConfig creates a new Config with default values.
+// It initializes all fields with sensible defaults for the dehydrated ACME client.
 func NewConfig() *Config {
 	return &Config{
 		BaseDir:         ".",
@@ -100,7 +103,8 @@ func NewConfig() *Config {
 	}
 }
 
-// DefaultConfig returns a new Config with default values
+// DefaultConfig returns a new Config with default values for production use.
+// It sets up the configuration for Let's Encrypt v2 API with standard settings.
 func DefaultConfig() *Config {
 	return &Config{
 		Group:    "www-data",
@@ -111,19 +115,23 @@ func DefaultConfig() *Config {
 	}
 }
 
-// WithBaseDir sets the base directory for the config
+// WithBaseDir sets the base directory for the config.
+// This is the root directory where all other paths will be resolved relative to.
 func (c *Config) WithBaseDir(baseDir string) *Config {
 	c.BaseDir = baseDir
 	return c
 }
 
-// WithConfigFile sets the path to the config file
+// WithConfigFile sets the path to the config file.
+// This file will be used to load configuration settings for dehydrated.
 func (c *Config) WithConfigFile(configFile string) *Config {
 	c.ConfigFile = configFile
 	return c
 }
 
-// Load loads the configuration from files
+// Load loads the configuration from files.
+// It reads the config file if specified, resolves all paths to absolute paths,
+// and returns the config for method chaining.
 func (c *Config) Load() *Config {
 	// make baseDir absolute
 	if !filepath.IsAbs(c.BaseDir) {
@@ -137,6 +145,9 @@ func (c *Config) Load() *Config {
 	return c
 }
 
+// findAndSetConfigFile searches for a config file in the base directory.
+// It looks for files named "config" or "config.sh" and sets the ConfigFile field
+// if one is found.
 func (c *Config) findAndSetConfigFile() {
 	if c.ConfigFile == "" {
 		files := []string{"config", "config.sh"}
@@ -149,7 +160,9 @@ func (c *Config) findAndSetConfigFile() {
 	}
 }
 
-// load loads configuration from a config file if it exists
+// load loads configuration from a config file if it exists.
+// It parses the file line by line, looking for key-value pairs in the format
+// KEY=value or export KEY=value.
 func (c *Config) load() {
 	if c.ConfigFile == "" {
 		c.findAndSetConfigFile()
@@ -287,6 +300,9 @@ func (c *Config) load() {
 	c.resolvePaths()
 }
 
+// ensureAbs converts a relative path to an absolute path.
+// If the path is already absolute, it is returned as is.
+// Otherwise, it is joined with the base directory.
 func (c *Config) ensureAbs(p string) string {
 	if !filepath.IsAbs(p) {
 		return filepath.Join(c.BaseDir, p)
@@ -295,7 +311,9 @@ func (c *Config) ensureAbs(p string) string {
 	return p
 }
 
-// resolvePaths converts relative paths to absolute paths
+// resolvePaths converts relative paths to absolute paths.
+// It ensures all paths in the configuration are absolute, using the base directory
+// as the root for relative paths.
 func (c *Config) resolvePaths() {
 	c.BaseDir = c.ensureAbs(c.BaseDir)
 	c.CertDir = c.ensureAbs(c.CertDir)

@@ -92,33 +92,3 @@ func TestDomainEntryTypeConsistency(t *testing.T) {
 		})
 	}
 }
-
-// Helper functions
-func getProtoFields(t reflect.Type) map[string]string {
-	fields := make(map[string]string)
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		tag := field.Tag.Get("protobuf")
-		if tag != "" {
-			fields[field.Name] = tag
-		}
-	}
-	return fields
-}
-
-func getModelFields(t reflect.Type) map[string]string {
-	fields := make(map[string]string)
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		tag := field.Tag.Get("protobuf")
-		if tag != "" {
-			fields[field.Name] = tag
-		}
-	}
-	return fields
-}
-
-func getFieldType(t reflect.Type, fieldName string) reflect.Type {
-	field, _ := t.FieldByName(fieldName)
-	return field.Type
-}

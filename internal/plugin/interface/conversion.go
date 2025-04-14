@@ -1,3 +1,5 @@
+// Package plugininterface provides utility functions for plugin implementations.
+// It includes helper functions for type conversion and data manipulation.
 package plugininterface
 
 import (
@@ -7,7 +9,9 @@ import (
 )
 
 // ConvertToStructValue converts a map[string]any to map[string]*structpb.Value
-// This is a utility function used by plugin implementations to convert Go types to protobuf types.
+// This utility function is used by plugin implementations to convert Go types to protobuf types.
+// It handles the conversion of various Go types to their protobuf equivalents.
+// Returns an error if any value cannot be converted to a protobuf value.
 func ConvertToStructValue(config map[string]any) (map[string]*structpb.Value, error) {
 	if config == nil {
 		return nil, nil

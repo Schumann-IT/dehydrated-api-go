@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestAnalyzeRSACertificate verifies that the plugin correctly analyzes RSA certificates.
+// It tests the extraction of certificate metadata including:
+// - Subject and issuer DN
+// - Validity period (NotBefore and NotAfter)
+// - Key type (RSA) and size (4096 bits)
 func TestAnalyzeRSACertificate(t *testing.T) {
 	// Create a new plugin instance
 	plugin := New()
@@ -51,6 +56,11 @@ func TestAnalyzeRSACertificate(t *testing.T) {
 	assert.Equal(t, time.Date(2026, 4, 3, 15, 42, 36, 0, time.UTC), notAfter)
 }
 
+// TestAnalyzeECCertificate verifies that the plugin correctly analyzes EC certificates.
+// It tests the extraction of certificate metadata including:
+// - Subject and issuer DN
+// - Validity period (NotBefore and NotAfter)
+// - Key type (EC) and size (256 bits)
 func TestAnalyzeECCertificate(t *testing.T) {
 	// Create a new plugin instance
 	plugin := New()

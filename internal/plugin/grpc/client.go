@@ -1,3 +1,6 @@
+// Package grpc provides gRPC-based plugin client implementation.
+// It handles communication with plugins using gRPC protocol, including process management,
+// socket file handling, and request/response conversion.
 package grpc
 
 import (
@@ -14,29 +17,33 @@ import (
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	plugininterface2 "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
+	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
-// Client represents a gRPC plugin client
+// Client represents a gRPC plugin client.
+// It manages the lifecycle of a plugin process and handles communication via gRPC.
 type Client struct {
-	client    pb.PluginClient
-	conn      *grpc.ClientConn
-	tmpDir    string
-	sockFile  string
-	lastError error
-	mu        sync.RWMutex
-	cmd       *exec.Cmd
+	client     pb.PluginClient
+	conn       *grpc.ClientConn
+	tmpDir     string
+	socketFile string
+	lastError  error
+	mu         sync.RWMutex
+	cmd        *exec.Cmd
 }
 
-// NewClient creates a new gRPC plugin client
+// NewClient creates a new gRPC plugin client.
+// It sets up a temporary directory for the socket file and starts the plugin process.
+// The pluginPath parameter specifies the path to the plugin executable.
+// Returns a new Client instance and an error if initialization fails.
 func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehydrated.Config) (*Client, error) {
 	if dehydratedConfig == nil {
 		return nil, fmt.Errorf("dehydrated config is nil")
 	}
 
 	// Convert config to structpb.Value to validate it
-	_, err := plugininterface2.ConvertToStructValue(config)
+	_, err := plugininterface.ConvertToStructValue(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert config: %w", err)
 	}
@@ -47,11 +54,11 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	sockFile := filepath.Join(tmpDir, "plugin.sock")
+	socketFile := filepath.Join(tmpDir, "plugin.sock")
 
 	// Start the plugin process
 	cmd := exec.Command(pluginPath)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", sockFile))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PLUGIN_SOCKET=%s", socketFile))
 
 	if err := cmd.Start(); err != nil {
 		os.RemoveAll(tmpDir)
@@ -67,7 +74,7 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 			os.RemoveAll(tmpDir)
 			return nil, fmt.Errorf("timeout waiting for plugin socket")
 		default:
-			if _, err := os.Stat(sockFile); err == nil {
+			if _, err := os.Stat(socketFile); err == nil {
 				goto connected
 			}
 			time.Sleep(10 * time.Millisecond)
@@ -77,7 +84,7 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 connected:
 	// Connect to the plugin
 	conn, err := grpc.Dial(
-		"unix://"+sockFile,
+		"unix://"+socketFile,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -88,10 +95,10 @@ connected:
 	}
 
 	client := &Client{
-		client:   pb.NewPluginClient(conn),
-		conn:     conn,
-		tmpDir:   tmpDir,
-		sockFile: sockFile,
+		client:     pb.NewPluginClient(conn),
+		conn:       conn,
+		tmpDir:     tmpDir,
+		socketFile: socketFile,
 	}
 
 	// Initialize the plugin
@@ -120,7 +127,10 @@ func convertToStructValue(config map[string]any) (map[string]*structpb.Value, er
 	return result, nil
 }
 
-// Initialize initializes the plugin with the given configuration
+// Initialize initializes the plugin with the provided configuration.
+// It converts the configuration to protobuf format and sends it to the plugin.
+// The context can be used for cancellation and timeout control.
+// Returns an error if initialization fails.
 func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error {
 	c.mu.RLock()
 	if c.client == nil {
@@ -189,12 +199,15 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 
 	_, err = c.client.Initialize(ctx, req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", plugininterface2.ErrPluginError, err)
+		return fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
 	}
 	return nil
 }
 
-// GetMetadata retrieves metadata for a domain
+// GetMetadata retrieves metadata for a domain entry from the plugin.
+// It converts the domain entry to protobuf format and sends it to the plugin.
+// The context can be used for cancellation and timeout control.
+// Returns a map of metadata key-value pairs and an error if the operation fails.
 func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
 	c.mu.RLock()
 	if c.client == nil {
@@ -206,13 +219,16 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	req := entry.ToProto()
 	resp, err := c.client.GetMetadata(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", plugininterface2.ErrPluginError, err)
+		return nil, fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
 	}
 
 	return model.FromProto(resp).Metadata, nil
 }
 
-// Close cleans up resources
+// Close terminates the plugin process and cleans up resources.
+// It sends a shutdown request to the plugin and waits for it to terminate.
+// The context can be used for cancellation and timeout control.
+// Returns an error if cleanup fails.
 func (c *Client) Close(ctx context.Context) error {
 	var errs []error
 

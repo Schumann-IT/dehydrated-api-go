@@ -1,3 +1,5 @@
+// Package plugininterface defines the core interfaces for plugin implementations.
+// It provides the contract that all plugins must follow to integrate with the dehydrated-api-go application.
 package plugininterface
 
 import (
@@ -8,19 +10,29 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
-// ErrPluginError is returned when a plugin encounters an error
+// ErrPluginError is returned when a plugin encounters an error during operation.
+// This error is used to distinguish plugin-specific errors from other types of errors.
 var ErrPluginError = errors.New("plugin error")
 
-// Plugin defines the interface that all plugins must implement
+// Plugin defines the interface that all plugins must implement.
+// This interface provides the contract for plugin initialization, metadata retrieval,
+// and cleanup operations.
 type Plugin interface {
-	// Initialize is called when the plugin is loaded
-	// config contains plugin-specific configuration
-	// dehydratedConfig contains the dehydrated configuration
+	// Initialize is called when the plugin is loaded.
+	// It sets up the plugin with the provided configuration and dehydrated settings.
+	// The context can be used for cancellation and timeout control.
+	// Returns an error if initialization fails.
 	Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error
 
-	// GetMetadata returns metadata for a domain entry
+	// GetMetadata returns metadata for a domain entry.
+	// This method is called to retrieve plugin-specific information about a domain.
+	// The context can be used for cancellation and timeout control.
+	// Returns a map of metadata key-value pairs and an error if the operation fails.
 	GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error)
 
-	// Close is called when the plugin is being unloaded
+	// Close is called when the plugin is being unloaded.
+	// It performs any necessary cleanup operations.
+	// The context can be used for cancellation and timeout control.
+	// Returns an error if cleanup fails.
 	Close(ctx context.Context) error
 }

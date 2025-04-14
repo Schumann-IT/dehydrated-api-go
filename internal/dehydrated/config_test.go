@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestDefaultConfig verifies that the DefaultConfig function returns a Config
+// with the expected default values for production use.
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
@@ -18,6 +20,9 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, "v2", config.Api, "Expected Api to be v2")
 }
 
+// TestLoadConfig tests loading configuration from a config file.
+// It creates a temporary config file with various settings and verifies
+// that they are correctly loaded into the Config struct.
 func TestLoadConfig(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -202,6 +207,8 @@ API=v2
 	}
 }
 
+// TestLoadConfigFromShellScript tests loading configuration from a shell script.
+// It verifies that the script is correctly parsed and the settings are loaded.
 func TestLoadConfigFromShellScript(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -323,6 +330,9 @@ API=v2
 	}
 }
 
+// TestLoadConfigWithShellScriptFromFixtures tests loading configuration from
+// a shell script in the fixtures directory. It verifies that the script is
+// correctly parsed and the settings are loaded.
 func TestLoadConfigWithShellScriptFromFixtures(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -398,6 +408,9 @@ CHALLENGETYPE="dns-01"
 	}
 }
 
+// TestConfig tests various Config methods including WithBaseDir, WithConfigFile,
+// and Load. It verifies that the methods work correctly and return the expected
+// Config instance.
 func TestConfig(t *testing.T) {
 	t.Run("DefaultValues", func(t *testing.T) {
 		cfg := DefaultConfig()

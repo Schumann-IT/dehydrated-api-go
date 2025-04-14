@@ -1,3 +1,5 @@
+// Package main provides the entry point for the dehydrated-api-go application.
+// It initializes the server with configuration from a YAML file and handles graceful shutdown.
 package main
 
 import (
@@ -12,6 +14,9 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/server"
 )
 
+// main is the entry point for the dehydrated-api-go application.
+// It parses command line flags, initializes the server with the specified configuration,
+// and handles graceful shutdown when receiving interrupt signals.
 func main() {
 	// Parse command line flags
 	configPath := flag.String("config", "config.yaml", "Path to the configuration file")

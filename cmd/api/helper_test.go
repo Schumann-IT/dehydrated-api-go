@@ -13,6 +13,7 @@ import (
 
 // setupAzureDnsHook creates and configures the Azure DNS hook script for dehydrated.
 // It returns the path to the created hook script.
+//
 // Parameters:
 //   - baseDir: The base directory where the hook script will be created
 //   - t: The testing context
@@ -174,6 +175,7 @@ exit 0
 }
 
 // setupDehydratedConfig creates a dehydrated configuration file with the specified settings.
+//
 // Parameters:
 //   - baseDir: The base directory where the config will be created
 //   - hookScript: Path to the hook script
@@ -196,6 +198,7 @@ KEY_ALGO="%s"
 }
 
 // setupDomains creates a domains.txt file with the specified domain entries.
+//
 // Parameters:
 //   - baseDir: The base directory where domains.txt will be created
 //   - domainsData: The domain entries to write
@@ -210,6 +213,7 @@ func setupDomains(baseDir string, domainsData []byte, t *testing.T) {
 
 // setupDehydrated downloads and sets up the dehydrated script in the specified directory.
 // It returns the path to the dehydrated script.
+//
 // Parameters:
 //   - baseDir: The base directory where dehydrated will be set up
 //   - t: The testing context
