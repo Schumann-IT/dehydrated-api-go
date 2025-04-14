@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +54,7 @@ plugins:
 	require.NoError(t, err)
 
 	// Test config loading
-	cfg := internal.NewConfig().Load(configPath)
+	cfg := server.NewConfig().Load(configPath)
 	assert.Equal(t, 8080, cfg.Port)
 	assert.Equal(t, tmpDir, cfg.DehydratedBaseDir)
 	assert.True(t, cfg.EnableWatcher)
@@ -82,8 +82,8 @@ plugins:
 	require.NoError(t, err)
 
 	// Start server
-	server := runServer(configPath)
-	defer server.Shutdown()
+	s := server.NewServer(configPath)
+	defer s.Shutdown()
 
 	// Give the server time to start
 	time.Sleep(100 * time.Millisecond)
@@ -107,8 +107,8 @@ enableWatcher: false
 	require.NoError(t, err)
 
 	// Start server - it should log an error but not panic
-	server := runServer(configPath)
-	defer server.Shutdown()
+	s := server.NewServer(configPath)
+	defer s.Shutdown()
 
 	// Give the server time to start and log the error
 	time.Sleep(100 * time.Millisecond)
@@ -203,14 +203,14 @@ plugins:
 			}
 
 			// Start server with dynamic port
-			server := runServer(configPath)
-			defer server.Shutdown()
+			s := server.NewServer(configPath)
+			defer s.Shutdown()
 
 			// Give the server time to start
 			time.Sleep(100 * time.Millisecond)
 
 			// Get the actual port the server is listening on
-			serverPort := server.GetPort()
+			serverPort := s.GetPort()
 			t.Logf("Server started on port %d", serverPort)
 
 			// Verify previously setup domains are accessible

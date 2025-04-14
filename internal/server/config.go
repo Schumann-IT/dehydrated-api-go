@@ -1,12 +1,12 @@
-package internal
+package server
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/logger"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/logger"
-	"gopkg.in/yaml.v3"
 )
 
 // Config holds the application configuration
@@ -15,7 +15,7 @@ type Config struct {
 	Port int `yaml:"port"`
 
 	// Plugin configuration
-	Plugins map[string]PluginConfig `yaml:"plugins"`
+	Plugins map[string]plugin.PluginConfig `yaml:"plugins"`
 
 	// Dehydrated configuration
 	DehydratedBaseDir string `yaml:"dehydratedBaseDir"`
@@ -30,20 +30,13 @@ type Config struct {
 	Logging *logger.Config `yaml:"logging"`
 }
 
-// PluginConfig holds configuration for a plugin
-type PluginConfig struct {
-	Enabled bool           `yaml:"enabled"`
-	Path    string         `yaml:"path"`
-	Config  map[string]any `yaml:"config"`
-}
-
 // NewConfig creates a new Config instance with default values
 func NewConfig() *Config {
 	return &Config{
 		Port:                 3000,
 		DehydratedBaseDir:    ".",
 		DehydratedConfigFile: "config",
-		Plugins:              make(map[string]PluginConfig),
+		Plugins:              make(map[string]plugin.PluginConfig),
 		EnableWatcher:        false,
 		Logging:              logger.DefaultConfig(),
 	}
@@ -61,7 +54,7 @@ func (c *Config) Load(path string) *Config {
 
 	// Create a temporary config to hold file contents
 	fileConfig := &Config{
-		Plugins: make(map[string]PluginConfig),
+		Plugins: make(map[string]plugin.PluginConfig),
 	}
 
 	// Load configuration from file if it exists
@@ -107,10 +100,10 @@ func (c *Config) Load(path string) *Config {
 		}
 
 		// Merge plugin configurations
-		for name, plugin := range fileConfig.Plugins {
+		for name, p := range fileConfig.Plugins {
 			// If plugin doesn't exist in defaults, create it
 			if _, exists := c.Plugins[name]; !exists {
-				c.Plugins[name] = PluginConfig{
+				c.Plugins[name] = plugin.PluginConfig{
 					Config: make(map[string]any),
 				}
 			}
@@ -119,18 +112,18 @@ func (c *Config) Load(path string) *Config {
 			existingPlugin := c.Plugins[name]
 
 			// Merge plugin settings
-			if plugin.Enabled {
+			if p.Enabled {
 				existingPlugin.Enabled = true
 			}
-			if plugin.Path != "" {
-				existingPlugin.Path = plugin.Path
+			if p.Path != "" {
+				existingPlugin.Path = p.Path
 			}
-			if plugin.Config != nil {
+			if p.Config != nil {
 				// Merge plugin config maps
 				if existingPlugin.Config == nil {
 					existingPlugin.Config = make(map[string]any)
 				}
-				for k, v := range plugin.Config {
+				for k, v := range p.Config {
 					existingPlugin.Config[k] = v
 				}
 			}
@@ -156,23 +149,23 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate plugin configurations
-	for name, plugin := range c.Plugins {
-		if !plugin.Enabled {
+	for name, p := range c.Plugins {
+		if !p.Enabled {
 			continue
 		}
 
-		if plugin.Path == "" {
+		if p.Path == "" {
 			return fmt.Errorf("plugin path is required for enabled plugin: %s", name)
 		}
 
 		// Check if plugin path exists and is executable
-		if _, err := os.Stat(plugin.Path); err != nil {
-			return fmt.Errorf("plugin path does not exist: %s", plugin.Path)
+		if _, err := os.Stat(p.Path); err != nil {
+			return fmt.Errorf("plugin path does not exist: %s", p.Path)
 		}
 
 		// Check if plugin path is absolute
-		if !filepath.IsAbs(plugin.Path) {
-			return fmt.Errorf("plugin path must be absolute: %s", plugin.Path)
+		if !filepath.IsAbs(p.Path) {
+			return fmt.Errorf("plugin path must be absolute: %s", p.Path)
 		}
 	}
 

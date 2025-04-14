@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
@@ -18,7 +18,7 @@ type DomainServiceConfig struct {
 	DehydratedBaseDir    string
 	DehydratedConfigFile string
 	EnableWatcher        bool
-	PluginConfig         map[string]internal.PluginConfig
+	PluginConfig         map[string]plugin.PluginConfig
 }
 
 // DomainService handles domain-related business logic

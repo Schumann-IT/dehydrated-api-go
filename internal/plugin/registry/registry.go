@@ -3,9 +3,9 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"sync"
 
-	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/openssl"
@@ -26,7 +26,7 @@ type Registry struct {
 }
 
 // NewRegistry creates a new plugin registry
-func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
+func NewRegistry(pluginConfig map[string]plugin.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
 	r := &Registry{
 		plugins: make(map[string]plugininterface.Plugin),
 		Config:  cfg,
@@ -42,7 +42,7 @@ func NewRegistry(pluginConfig map[string]internal.PluginConfig, cfg *dehydrated.
 }
 
 // LoadPlugin loads a plugin from the given path with the provided configuration
-func (r *Registry) LoadPlugin(name string, cfg internal.PluginConfig) error {
+func (r *Registry) LoadPlugin(name string, cfg plugin.PluginConfig) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

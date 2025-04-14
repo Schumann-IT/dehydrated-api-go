@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,7 +33,7 @@ func TestDomainService(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create plugin config with a built-in timestamp plugin
-			pluginConfig := map[string]internal.PluginConfig{}
+			pluginConfig := map[string]plugin.PluginConfig{}
 
 			// Create domain service config
 			config := DomainServiceConfig{
@@ -201,7 +201,7 @@ func TestDomainServiceErrors(t *testing.T) {
 
 	t.Run("RegistryCreationFailure", func(t *testing.T) {
 		// Create invalid plugin config to force registry creation failure
-		pluginConfig := map[string]internal.PluginConfig{
+		pluginConfig := map[string]plugin.PluginConfig{
 			"invalid": {
 				Enabled: true,
 				Path:    "/nonexistent/path",
@@ -250,7 +250,7 @@ func TestMetadataEnrichment(t *testing.T) {
 
 	t.Run("SuccessfulEnrichment", func(t *testing.T) {
 		pluginPath := buildTestPlugin(t)
-		pluginConfig := map[string]internal.PluginConfig{
+		pluginConfig := map[string]plugin.PluginConfig{
 			"test": {
 				Enabled: true,
 				Path:    pluginPath,
@@ -283,7 +283,7 @@ func TestMetadataEnrichment(t *testing.T) {
 
 	t.Run("EnrichmentFailure", func(t *testing.T) {
 		// Create a plugin config that will fail
-		pluginConfig := map[string]internal.PluginConfig{
+		pluginConfig := map[string]plugin.PluginConfig{
 			"failing": {
 				Enabled: true,
 				Path:    "/nonexistent/path",
@@ -371,7 +371,7 @@ func TestEdgeCases(t *testing.T) {
 	})
 
 	t.Run("InvalidPluginConfig", func(t *testing.T) {
-		pluginConfig := map[string]internal.PluginConfig{
+		pluginConfig := map[string]plugin.PluginConfig{
 			"invalid": {
 				Enabled: true,
 				Path:    "/nonexistent/path",
@@ -526,7 +526,7 @@ func TestDomainServiceOperations(t *testing.T) {
 
 	t.Run("CreateDomainWithInvalidMetadata", func(t *testing.T) {
 		pluginPath := buildTestPlugin(t)
-		pluginConfig := map[string]internal.PluginConfig{
+		pluginConfig := map[string]plugin.PluginConfig{
 			"test": {
 				Enabled: true,
 				Path:    pluginPath,

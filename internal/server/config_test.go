@@ -1,7 +1,8 @@
-package internal
+package server
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"path/filepath"
 	"testing"
@@ -101,7 +102,7 @@ plugins:
 
 		// Test invalid plugin config
 		cfg = NewConfig()
-		cfg.Plugins = map[string]PluginConfig{
+		cfg.Plugins = map[string]plugin.PluginConfig{
 			"test": {
 				Enabled: true,
 				Path:    "",
@@ -132,7 +133,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: tmpDir,
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"test": {
 							Enabled: true,
 							Path:    pluginPath,
@@ -181,7 +182,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: ".",
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"test": {
 							Enabled: true,
 							Path:    "",
@@ -198,7 +199,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: ".",
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"test": {
 							Enabled: true,
 							Path:    "/non/existent/plugin",
@@ -221,7 +222,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: tmpDir,
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"test": {
 							Enabled: true,
 							Path:    "test-plugin", // Relative path
@@ -238,7 +239,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: ".",
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"test": {
 							Enabled: false,
 							Path:    "/non/existent/plugin",
@@ -260,7 +261,7 @@ func TestConfigValidation(t *testing.T) {
 				return &Config{
 					Port:              3000,
 					DehydratedBaseDir: tmpDir,
-					Plugins: map[string]PluginConfig{
+					Plugins: map[string]plugin.PluginConfig{
 						"valid": {
 							Enabled: true,
 							Path:    validPluginPath,
@@ -326,7 +327,7 @@ logging:
 				Port:              8080,
 				DehydratedBaseDir: "/test/dir",
 				EnableWatcher:     true,
-				Plugins: map[string]PluginConfig{
+				Plugins: map[string]plugin.PluginConfig{
 					"test": {
 						Enabled: true,
 						Path:    "/test/plugin",
@@ -354,7 +355,7 @@ plugins:
 				Port:              8080,
 				DehydratedBaseDir: ".",
 				EnableWatcher:     false,
-				Plugins: map[string]PluginConfig{
+				Plugins: map[string]plugin.PluginConfig{
 					"test": {
 						Enabled: true,
 						Config:  make(map[string]any),
@@ -369,7 +370,7 @@ plugins:
 				Port:              3000,
 				DehydratedBaseDir: ".",
 				EnableWatcher:     false,
-				Plugins:           make(map[string]PluginConfig),
+				Plugins:           make(map[string]plugin.PluginConfig),
 			},
 		},
 		{
@@ -381,7 +382,7 @@ port: not-a-number
 				Port:              3000,
 				DehydratedBaseDir: ".",
 				EnableWatcher:     false,
-				Plugins:           make(map[string]PluginConfig),
+				Plugins:           make(map[string]plugin.PluginConfig),
 			},
 		},
 	}

@@ -3,12 +3,12 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
-	"github.com/schumann-it/dehydrated-api-go/internal"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 
@@ -41,12 +41,12 @@ func TestRegistry(t *testing.T) {
 	pluginPath := buildTestPlugin(t)
 	defer os.Remove(pluginPath)
 
-	pc := internal.PluginConfig{
+	pc := plugin.PluginConfig{
 		Enabled: true,
 		Path:    pluginPath,
 		Config:  map[string]any{"key": "value"},
 	}
-	registry, err := NewRegistry(map[string]internal.PluginConfig{
+	registry, err := NewRegistry(map[string]plugin.PluginConfig{
 		"test": pc,
 	}, &dehydrated.Config{})
 	if err != nil {
@@ -100,12 +100,12 @@ func TestRegistryConcurrency(t *testing.T) {
 	pluginPath := buildTestPlugin(t)
 	defer os.Remove(pluginPath)
 
-	pc := internal.PluginConfig{
+	pc := plugin.PluginConfig{
 		Enabled: true,
 		Path:    pluginPath,
 		Config:  map[string]any{"key": "value"},
 	}
-	registry, err := NewRegistry(map[string]internal.PluginConfig{}, &dehydrated.Config{})
+	registry, err := NewRegistry(map[string]plugin.PluginConfig{}, &dehydrated.Config{})
 	require.NoError(t, err)
 
 	// Test concurrent plugin loading
@@ -195,14 +195,14 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 	tests := []struct {
 		name         string
 		pluginName   string
-		pluginConfig internal.PluginConfig
+		pluginConfig plugin.PluginConfig
 		wantErr      bool
 		errContains  string
 	}{
 		{
 			name:       "load openssl plugin successfully",
 			pluginName: "openssl",
-			pluginConfig: internal.PluginConfig{
+			pluginConfig: plugin.PluginConfig{
 				Enabled: true,
 				Config: map[string]any{
 					"cert": true,
@@ -213,7 +213,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 		{
 			name:       "load non-existent built-in plugin",
 			pluginName: "non-existent",
-			pluginConfig: internal.PluginConfig{
+			pluginConfig: plugin.PluginConfig{
 				Enabled: true,
 				Config:  map[string]any{},
 			},
@@ -225,7 +225,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create new registry
-			reg, err := NewRegistry(map[string]internal.PluginConfig{
+			reg, err := NewRegistry(map[string]plugin.PluginConfig{
 				tt.pluginName: tt.pluginConfig,
 			}, cfg)
 			if tt.wantErr {
@@ -267,7 +267,7 @@ func TestLoadPluginTwice(t *testing.T) {
 		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg, err := NewRegistry(map[string]internal.PluginConfig{
+	reg, err := NewRegistry(map[string]plugin.PluginConfig{
 		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
@@ -276,7 +276,7 @@ func TestLoadPluginTwice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to load same plugin again
-	err = reg.LoadPlugin("openssl", internal.PluginConfig{})
+	err = reg.LoadPlugin("openssl", plugin.PluginConfig{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "plugin openssl is already loaded")
 }
@@ -290,7 +290,7 @@ func TestGetNonExistentPlugin(t *testing.T) {
 		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg, err := NewRegistry(map[string]internal.PluginConfig{}, cfg)
+	reg, err := NewRegistry(map[string]plugin.PluginConfig{}, cfg)
 	require.NoError(t, err)
 
 	// Try to get non-existent plugin
@@ -309,7 +309,7 @@ func TestCloseRegistry(t *testing.T) {
 		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
 	}
 
-	reg, err := NewRegistry(map[string]internal.PluginConfig{
+	reg, err := NewRegistry(map[string]plugin.PluginConfig{
 		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
