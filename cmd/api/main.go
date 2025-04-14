@@ -5,10 +5,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 
 	"go.uber.org/zap"
 
@@ -25,15 +26,24 @@ var (
 	BuildTime = "unknown"
 )
 
+// ANSI escape codes for text formatting
+const (
+	bold  = "\033[1m"
+	reset = "\033[0m"
+)
+
 // main is the entry point for the dehydrated-api-go application.
 // It parses command line flags, initializes the server with the specified configuration,
 // and handles graceful shutdown when receiving interrupt signals.
 func main() {
 	// Parse command line flags
-	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
 	showVersion := flag.Bool("version", false, "Show version information")
-	verbose := flag.Bool("verbose", false, "Verbose output")
+	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
+	showInfo := flag.Bool("info", false, "Show parsed config")
 	flag.Parse()
+
+	// show version info and exit if --version exists
+	outputVersion(*showVersion, true)
 
 	// load server config
 	sc := server.NewConfig().Load(*configPath)
@@ -45,18 +55,8 @@ func main() {
 	}
 	dc.Load()
 
-	// show version info
-	if *showVersion {
-		fmt.Printf("dehydrated-api-go version %s (commit: %s, built: %s)\n", Version, Commit, BuildTime)
-		if *verbose {
-			fmt.Println("Server Config:")
-			fmt.Printf("%s", sc.String())
-			fmt.Println("")
-			fmt.Println("Dehydrated Config")
-			fmt.Printf("%s", dc.String())
-		}
-		os.Exit(0)
-	}
+	// show info and exit if --info exists
+	outputConfigs(*showInfo, sc, dc)
 
 	// start the server
 	s := server.NewServer(sc, dc)
@@ -73,4 +73,27 @@ func main() {
 
 	// Shutdown server
 	s.Shutdown()
+}
+
+func outputVersion(doPrint, exit bool) {
+	if doPrint {
+		fmt.Printf("dehydrated-api-go version %s (commit: %s, built: %s)\n", Version, Commit, BuildTime)
+		if exit {
+			os.Exit(0)
+		}
+	}
+}
+
+func outputConfigs(doPrint bool, sc *server.Config, dc *dehydrated.Config) {
+	if doPrint {
+		outputVersion(true, false)
+		fmt.Printf("%sServer Config:%s", bold, reset)
+		fmt.Println()
+		fmt.Printf("%s", sc.String())
+		fmt.Println()
+		fmt.Printf("%sDehydrated Config:%s", bold, reset)
+		fmt.Println()
+		fmt.Printf("%s", dc.String())
+		os.Exit(0)
+	}
 }

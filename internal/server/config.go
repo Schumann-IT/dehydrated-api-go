@@ -151,6 +151,14 @@ func (c *Config) Load(path string) *Config {
 		}
 	}
 
+	if !filepath.IsAbs(c.DehydratedBaseDir) {
+		c.DehydratedBaseDir = filepath.Join(filepath.Dir(absConfigPath), c.DehydratedBaseDir)
+	}
+
+	if !filepath.IsAbs(c.DehydratedConfigFile) {
+		c.DehydratedConfigFile = filepath.Join(c.DehydratedBaseDir, c.DehydratedConfigFile)
+	}
+
 	return c
 }
 
