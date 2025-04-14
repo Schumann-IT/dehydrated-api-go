@@ -3,16 +3,25 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
+
+// DomainService defines the interface for domain operations
+type DomainService interface {
+	ListDomains() ([]model.DomainEntry, error)
+	GetDomain(domain string) (*model.DomainEntry, error)
+	CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error)
+	UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error)
+	DeleteDomain(domain string) error
+	Close() error
+}
 
 // DomainHandler handles HTTP requests for domain operations
 type DomainHandler struct {
-	service *service.DomainService
+	service DomainService
 }
 
 // NewDomainHandler creates a new DomainHandler instance
-func NewDomainHandler(service *service.DomainService) *DomainHandler {
+func NewDomainHandler(service DomainService) *DomainHandler {
 	return &DomainHandler{
 		service: service,
 	}
@@ -20,12 +29,11 @@ func NewDomainHandler(service *service.DomainService) *DomainHandler {
 
 // RegisterRoutes registers all domain-related routes
 func (h *DomainHandler) RegisterRoutes(app *fiber.App) {
-	domains := app.Group("/api/v1/domains")
-	domains.Get("/", h.ListDomains)
-	domains.Get("/:domain", h.GetDomain)
-	domains.Post("/", h.CreateDomain)
-	domains.Put("/:domain", h.UpdateDomain)
-	domains.Delete("/:domain", h.DeleteDomain)
+	app.Get("/api/v1/domains", h.ListDomains)
+	app.Get("/api/v1/domains/:domain", h.GetDomain)
+	app.Post("/api/v1/domains", h.CreateDomain)
+	app.Put("/api/v1/domains/:domain", h.UpdateDomain)
+	app.Delete("/api/v1/domains/:domain", h.DeleteDomain)
 }
 
 // ListDomains handles GET /api/v1/domains

@@ -44,7 +44,6 @@ test: test-app test-scripts
 
 test-app:
 	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./...
-	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./internal/plugin/registry/...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 
 test-scripts:

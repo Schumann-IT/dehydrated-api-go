@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -202,6 +203,120 @@ func TestDomainHandler(t *testing.T) {
 
 		if result.StatusCode != fiber.StatusNoContent {
 			t.Errorf("Expected status %d, got %d", fiber.StatusNoContent, result.StatusCode)
+		}
+	})
+}
+
+func TestRouteRegistration(t *testing.T) {
+	app := fiber.New()
+	handler := NewDomainHandler(&mockDomainService{})
+	handler.RegisterRoutes(app)
+
+	// Test each route individually
+	tests := []struct {
+		method string
+		path   string
+	}{
+		{"GET", "/api/v1/domains"},
+		{"GET", "/api/v1/domains/example.com"},
+		{"POST", "/api/v1/domains"},
+		{"PUT", "/api/v1/domains/example.com"},
+		{"DELETE", "/api/v1/domains/example.com"},
+	}
+
+	// Get the app's route stack
+	stack := app.Stack()
+	if len(stack) == 0 {
+		t.Fatal("No routes registered")
+	}
+
+	// Create a map of registered routes for easy lookup
+	registeredRoutes := make(map[string]bool)
+	for _, routes := range stack {
+		for _, route := range routes {
+			// Convert route pattern to a test path by replacing :param with a value
+			testPath := route.Path
+			if route.Path == "/api/v1/domains/:domain" {
+				testPath = "/api/v1/domains/example.com"
+			}
+			key := route.Method + " " + testPath
+			registeredRoutes[key] = true
+		}
+	}
+
+	// Verify each test route exists
+	for _, tt := range tests {
+		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
+			key := tt.method + " " + tt.path
+			if !registeredRoutes[key] {
+				t.Errorf("Route %s %s not found in registered routes", tt.method, tt.path)
+			}
+		})
+	}
+}
+
+// mockDomainService is a mock implementation of the DomainService interface that always returns errors
+type mockDomainService struct{}
+
+func (m *mockDomainService) ListDomains() ([]model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
+func (m *mockDomainService) GetDomain(domain string) (*model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
+func (m *mockDomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
+func (m *mockDomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
+func (m *mockDomainService) DeleteDomain(domain string) error {
+	return fmt.Errorf("mock error")
+}
+
+func (m *mockDomainService) Close() error {
+	return nil
+}
+
+func TestServiceErrors(t *testing.T) {
+	app := fiber.New()
+
+	// Create a mock service that always returns errors
+	service := &mockDomainService{}
+	handler := NewDomainHandler(service)
+	handler.RegisterRoutes(app)
+
+	// Test ListDomains with service error
+	t.Run("ListDomains", func(t *testing.T) {
+		resp := httptest.NewRequest("GET", "/api/v1/domains", http.NoBody)
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		if result.StatusCode != fiber.StatusInternalServerError {
+			t.Errorf("Expected status %d, got %d", fiber.StatusInternalServerError, result.StatusCode)
+		}
+	})
+
+	// Test CreateDomain with service error
+	t.Run("CreateDomain", func(t *testing.T) {
+		req := model.CreateDomainRequest{
+			Domain: "example.com",
+		}
+		body, _ := json.Marshal(req)
+		resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+		resp.Header.Set("Content-Type", "application/json")
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		if result.StatusCode != fiber.StatusBadRequest {
+			t.Errorf("Expected status %d, got %d", fiber.StatusBadRequest, result.StatusCode)
 		}
 	})
 }

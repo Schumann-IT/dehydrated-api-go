@@ -6,7 +6,7 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
 
-// ConfigHandler handles HTTP requests for domain operations
+// ConfigHandler handles HTTP requests for config operations
 type ConfigHandler struct {
 	service *service.DomainService
 }
@@ -18,11 +18,10 @@ func NewConfigHandler(service *service.DomainService) *ConfigHandler {
 	}
 }
 
-// RegisterRoutes registers all domain-related routes
+// RegisterRoutes registers all config-related routes
 func (h *ConfigHandler) RegisterRoutes(app *fiber.App) {
 	g := app.Group("/api/v1/config")
 	g.Get("/dehydrated", h.GetDehydratedConfig)
-	//domains.Get("/api", h.GetDomain)
 }
 
 // GetDehydratedConfig handles GET /api/v1/config/dehydrated

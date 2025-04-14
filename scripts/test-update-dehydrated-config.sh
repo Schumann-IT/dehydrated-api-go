@@ -3,6 +3,7 @@
 # Test script for update-dehydrated-config.sh
 
 DEBUG=${1:-false}
+WORKSPACE=${WORKSPACE:-$(pwd)/}
 
 RESULT_CODE=0
 

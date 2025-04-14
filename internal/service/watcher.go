@@ -73,16 +73,14 @@ func (fw *FileWatcher) watch() {
 				lastEvent, exists := fw.debounceMap[event.Name]
 				now := time.Now()
 				fw.debounceMap[event.Name] = now
+				shouldHandle := !exists || now.Sub(lastEvent) >= debounceInterval
 				fw.mutex.Unlock()
 
-				// Debounce events that occur too quickly
-				if exists && now.Sub(lastEvent) < debounceInterval {
-					continue
-				}
-
-				// Handle the change
-				if err := fw.onChange(); err != nil {
-					log.Printf("Error handling file change: %v", err)
+				// Handle the change if not debounced
+				if shouldHandle {
+					if err := fw.onChange(); err != nil {
+						log.Printf("Error handling file change: %v", err)
+					}
 				}
 			}
 

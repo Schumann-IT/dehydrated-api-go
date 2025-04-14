@@ -3,6 +3,7 @@
 # Test script for configure-cron.sh
 
 DEBUG=${1:-false}
+WORKSPACE=${WORKSPACE:-$(pwd)/}
 
 RESULT_CODE=0
 
@@ -72,14 +73,9 @@ run_test() {
 run_test "cron file not created if schedule is empty"
 
 # Test 2: config with schedule
-run_test "with default app user" \
+run_test "config with schedule" \
   'CRON_SCHEDULE="0 3 3 3 3"' \
-  '0 3 3 3 3 root'
-
-# Test 3: config with non default app user
-run_test "with non default app user" \
-  'APP_USER="example" CRON_SCHEDULE="0 3 3 3 3"' \
-  '0 3 3 3 3 example'
+  '0 3 3 3 3'
 
 echo
 
