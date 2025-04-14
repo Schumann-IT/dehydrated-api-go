@@ -22,18 +22,18 @@ func TestDomainHandler(t *testing.T) {
 	// Create a new Fiber app
 	app := fiber.New()
 
-	// Create domain service
-	service, err := service.NewDomainService(service.DomainServiceConfig{
+	// Create domain s
+	s, err := service.NewDomainService(service.DomainServiceConfig{
 		DehydratedBaseDir: tmpDir,
 		EnableWatcher:     false,
 	})
 	if err != nil {
-		t.Fatalf("Failed to create domain service: %v", err)
+		t.Fatalf("Failed to create domain s: %v", err)
 	}
-	defer service.Close()
+	defer s.Close()
 
 	// Create a new domain handler
-	handler := NewDomainHandler(service)
+	handler := NewDomainHandler(s)
 
 	// Register routes
 	app.Post("/api/v1/domains", handler.CreateDomain)
@@ -285,12 +285,12 @@ func (m *mockDomainService) Close() error {
 func TestServiceErrors(t *testing.T) {
 	app := fiber.New()
 
-	// Create a mock service that always returns errors
-	service := &mockDomainService{}
-	handler := NewDomainHandler(service)
+	// Create a mock s that always returns errors
+	s := &mockDomainService{}
+	handler := NewDomainHandler(s)
 	handler.RegisterRoutes(app)
 
-	// Test ListDomains with service error
+	// Test ListDomains with s error
 	t.Run("ListDomains", func(t *testing.T) {
 		resp := httptest.NewRequest("GET", "/api/v1/domains", http.NoBody)
 		result, err := app.Test(resp)
@@ -302,7 +302,7 @@ func TestServiceErrors(t *testing.T) {
 		}
 	})
 
-	// Test CreateDomain with service error
+	// Test CreateDomain with s error
 	t.Run("CreateDomain", func(t *testing.T) {
 		req := model.CreateDomainRequest{
 			Domain: "example.com",
