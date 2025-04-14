@@ -49,8 +49,11 @@ func main() {
 	if *showVersion {
 		fmt.Printf("dehydrated-api-go version %s (commit: %s, built: %s)\n", Version, Commit, BuildTime)
 		if *verbose {
-			fmt.Printf("Server Config: %s", sc.String())
-			fmt.Printf("Dehydrated Config: %s", sc.String())
+			fmt.Println("Server Config:")
+			fmt.Printf("%s", sc.String())
+			fmt.Println("")
+			fmt.Println("Dehydrated Config")
+			fmt.Printf("%s", dc.String())
 		}
 		os.Exit(0)
 	}

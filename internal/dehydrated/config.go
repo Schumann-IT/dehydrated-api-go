@@ -3,9 +3,10 @@
 package dehydrated
 
 import (
-	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -335,10 +336,15 @@ func (c *Config) resolvePaths() {
 }
 
 func (c *Config) String() string {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return err.Error()
+	var lines []string
+
+	t := reflect.TypeOf(*c)
+	for i := 0; i < t.NumField(); i++ {
+		value := reflect.ValueOf(*c).Field(i)
+		if value.String() != "" {
+			lines = append(lines, fmt.Sprintf("%s=%v", strings.ToUpper(t.Field(i).Name), reflect.ValueOf(*c).Field(i).Interface()))
+		}
 	}
 
-	return string(b)
+	return strings.Join(lines, "\n")
 }

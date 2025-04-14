@@ -78,11 +78,7 @@ func NewServer(cfg *Config, dcfg *dehydrated.Config) *Server {
 	// Create domain handler
 	domainHandler := handler.NewDomainHandler(domainService)
 	domainHandler.RegisterRoutes(app)
-
-	// Create config handler
-	configHandler := handler.NewConfigHandler(domainService)
-	configHandler.RegisterRoutes(app)
-
+	
 	// Create server instance
 	server := &Server{
 		app:      app,
