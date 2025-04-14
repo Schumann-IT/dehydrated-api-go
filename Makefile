@@ -36,7 +36,7 @@ build: generate ## Build the binary
 
 test: test-app test-scripts
 
-test-app: generate
+test-app: generate-test
 	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 
@@ -65,12 +65,16 @@ lint: ## Run linter
 generate: ## Generate code using go generate
 	$(GOCMD) generate ./...
 
+# Generate code for tests using go generate
+generate-test: ## Generate code for tests using go generate
+	$(GOCMD) generate -tags test ./...
+
 # Release with goreleaser
 release: ## Create a release with goreleaser
 	$(GORELEASER_BIN) release --snapshot --rm-dist
 
 # Development setup
-dev-setup: deps generate lint
+dev-setup: deps generate-test lint
 
 # Docker targets
 docker-build: ## Build Docker image
