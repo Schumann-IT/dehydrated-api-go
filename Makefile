@@ -24,8 +24,6 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.Bu
 
 # Tools
 GOLANGCI_LINT_BIN=/opt/homebrew/bin/golangci-lint
-MOCKGEN_VERSION=v1.6.0
-MOCKGEN_BIN=$(shell go env GOPATH)/bin/mockgen
 PROTOC_GEN_GO_BIN=/opt/homebrew/bin/protoc-gen-go
 PROTOC_GEN_GO_GRPC_BIN=/opt/homebrew/bin/protoc-gen-go-grpc
 
@@ -52,39 +50,23 @@ clean: ## Clean build artifacts
 	rm -f $(BINARY_NAME)
 	rm -f $(BINARY_UNIX)
 	rm -f $(COVERAGE_FILE)
-
-run: build ## Build and run the binary
-	./$(BINARY_NAME)
+	rm -f proto/plugin/*.pb.go
 
 deps: ## Download dependencies
 	$(GOMOD) download
 	$(GOMOD) tidy
 	$(GOGET) -v -t -d ./...
 
-# Development tools installation
-install-tools:
-	@echo "Installing development tools..."
-	@go install github.com/golang/mock/mockgen@$(MOCKGEN_VERSION)
-
 # Linting
 lint: ## Run linter
 	$(GOLANGCI_LINT_BIN) run
-
-# Generate mocks
-mock: ## Generate mocks
-	$(MOCKGEN_BIN) -source=internal/plugin/interface/plugin.go -destination=internal/plugin/interface/mock_plugin.go
-	$(MOCKGEN_BIN) -source=internal/model/domain.go -destination=internal/model/mock_domain.go
-
-# Generate code using go generate
-generate: ## Generate code using go generate
-	$(GOCMD) generate ./...
 
 # Release with goreleaser
 release: ## Create a release with goreleaser
 	$(GORELEASER_BIN) release --snapshot --rm-dist
 
 # Development setup
-dev-setup: install-tools deps generate mock lint
+dev-setup: deps proto lint
 
 # Docker targets
 docker-build: ## Build Docker image
@@ -111,7 +93,6 @@ docker-clean: ## Remove Docker container and image
 # Generate protobuf files
 proto: ## Generate protobuf files
 	@echo "Generating protobuf files..."
-	@rm -f proto/plugin/*.pb.go
 	@cd proto/plugin && protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin.proto
 
 # Show help
