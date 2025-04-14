@@ -1,0 +1,4 @@
+// Package plugin provides the Protocol Buffers definitions for the plugin service.
+package plugin
+
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative plugin.proto
