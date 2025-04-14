@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"net/http"
 	"os"
 	"os/exec"
@@ -85,8 +86,14 @@ plugins:
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	require.NoError(t, err)
 
+	// load server config
+	sc := NewConfig().Load(configPath)
+
+	// load dehydrated config
+	dc := dehydrated.NewConfig().WithBaseDir(sc.DehydratedBaseDir).Load()
+
 	// Start server
-	s := NewServer(configPath)
+	s := NewServer(sc, dc)
 	defer s.Shutdown()
 
 	// Give the server time to start
@@ -113,8 +120,14 @@ enableWatcher: false
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	require.NoError(t, err)
 
+	// load server config
+	sc := NewConfig().Load(configPath)
+
+	// load dehydrated config
+	dc := dehydrated.NewConfig().WithBaseDir(sc.DehydratedBaseDir).Load()
+
 	// Start server - it should log an error but not panic
-	s := NewServer(configPath)
+	s := NewServer(sc, dc)
 	defer s.Shutdown()
 
 	// Give the server time to start and log the error
@@ -211,8 +224,14 @@ plugins:
 				t.Logf("  - %s", file.Name())
 			}
 
+			// load server config
+			sc := NewConfig().Load(configPath)
+
+			// load dehydrated config
+			dc := dehydrated.NewConfig().WithBaseDir(sc.DehydratedBaseDir).Load()
+
 			// Start server with dynamic port
-			s := NewServer(configPath)
+			s := NewServer(sc, dc)
 			defer s.Shutdown()
 
 			// Give the server time to start

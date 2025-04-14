@@ -3,6 +3,7 @@
 package dehydrated
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -331,4 +332,13 @@ func (c *Config) resolvePaths() {
 	if c.OpensslConfig != "" {
 		c.OpensslConfig = c.ensureAbs(c.OpensslConfig)
 	}
+}
+
+func (c *Config) String() string {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(b)
 }

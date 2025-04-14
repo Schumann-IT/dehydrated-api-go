@@ -270,7 +270,7 @@ func TestGetNonExistentPlugin(t *testing.T) {
 	// Try to get non-existent p
 	p, err := reg.GetPlugin("non-existent")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "p non-existent not found")
+	assert.Contains(t, err.Error(), "plugin non-existent not found")
 	assert.Nil(t, p)
 }
 
@@ -299,7 +299,7 @@ func TestCloseRegistry(t *testing.T) {
 	// Verify p is removed
 	p, err := reg.GetPlugin("openssl")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "p openssl not found")
+	assert.Contains(t, err.Error(), "plugin openssl not found")
 	assert.Nil(t, p)
 }
 
@@ -309,5 +309,12 @@ func mustGetPluginPath(t *testing.T) string {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
 
-	return filepath.Join(dir, "testdata", "test-plugin", "test-plugin")
+	p := filepath.Join(dir, "..", "grpc", "testdata", "test-plugin", "test-plugin")
+
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		t.Fatalf("Failed to get abs path for %s: %v", p, err)
+	}
+
+	return abs
 }

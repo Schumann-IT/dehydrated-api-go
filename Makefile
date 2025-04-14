@@ -50,7 +50,8 @@ clean: ## Clean build artifacts
 	rm -f $(BINARY_NAME)
 	rm -f $(COVERAGE_FILE)
 	rm -f proto/plugin/*.pb.go
-	rm -f internal/plugin/registry/testdata/test-plugin/test-plugin
+	rm -f internal/plugin/grpc/testdata/test-plugin/test-plugin
+	rm -rf dist
 
 deps: ## Download dependencies
 	$(GOMOD) download
@@ -71,7 +72,7 @@ generate-test: ## Generate code for tests using go generate
 
 # Release with goreleaser
 release: ## Create a release with goreleaser
-	$(GORELEASER_BIN) release --snapshot --rm-dist
+	$(GORELEASER_BIN) release --snapshot --clean
 
 # Development setup
 dev-setup: deps generate-test lint

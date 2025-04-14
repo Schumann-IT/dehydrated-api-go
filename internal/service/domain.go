@@ -15,15 +15,6 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 )
 
-// DomainServiceConfig holds configuration options for the DomainService.
-// It specifies paths, settings, and plugin configurations needed to initialize the service.
-type DomainServiceConfig struct {
-	DehydratedBaseDir    string                         // Base directory for dehydrated client files
-	DehydratedConfigFile string                         // Path to dehydrated configuration file
-	EnableWatcher        bool                           // Whether to enable file change monitoring
-	PluginConfig         map[string]plugin.PluginConfig // Configuration for enabled plugins
-}
-
 // DomainService handles domain-related business logic and operations.
 // It manages domain entries, integrates with plugins, and provides thread-safe access to domain data.
 type DomainService struct {
@@ -37,56 +28,48 @@ type DomainService struct {
 // NewDomainService creates a new DomainService instance with the provided configuration.
 // It initializes the dehydrated client, sets up the plugin registry, and optionally
 // enables file watching for automatic updates.
-func NewDomainService(config DomainServiceConfig) (*DomainService, error) {
-	cfg := dehydrated.NewConfig().WithBaseDir(config.DehydratedBaseDir)
-	if config.DehydratedConfigFile != "" {
-		cfg = cfg.WithConfigFile(config.DehydratedConfigFile)
-	}
-	cfg.Load()
-
-	// Create plugin Registry
-	reg, err := registry.NewRegistry(config.PluginConfig, cfg)
-	if err != nil {
-		return nil, err
-	}
-
+func NewDomainService(domainsFile string) *DomainService {
 	// Ensure the domains file exists
-	if _, err := os.Stat(cfg.DomainsFile); os.IsNotExist(err) {
+	if _, err := os.Stat(domainsFile); err != nil {
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(cfg.DomainsFile), 0755); err != nil {
-			return nil, fmt.Errorf("failed to create directory: %w", err)
+		if err := os.MkdirAll(filepath.Dir(domainsFile), 0755); err != nil {
+			panic(err)
 		}
 		// Create an empty domains file
-		if err := os.WriteFile(cfg.DomainsFile, []byte{}, 0644); err != nil {
-			return nil, fmt.Errorf("failed to create domains file: %w", err)
+		if err := os.WriteFile(domainsFile, []byte{}, 0644); err != nil {
+			panic(err)
 		}
 	}
 
 	s := &DomainService{
-		domainsFile: cfg.DomainsFile,
-		Registry:    reg,
+		domainsFile: domainsFile,
 	}
 
-	// Initialize the cache
-	if err := s.reloadCache(); err != nil {
-		return nil, fmt.Errorf("failed to load initial cache: %w", err)
-	}
-
-	// Set up file watcher if enabled
-	if config.EnableWatcher {
-		watcher, err := NewFileWatcher(cfg.DomainsFile, s.reloadCache)
-		if err != nil {
-			return nil, fmt.Errorf("failed to set up file watcher: %w", err)
-		}
-		s.watcher = watcher
-	}
-
-	return s, nil
+	return s
 }
 
-// reloadCache reloads the domain entries from the file into the cache.
+func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig, cfg *dehydrated.Config) *DomainService {
+	reg, err := registry.NewRegistry(plugins, cfg)
+	if err != nil {
+		panic(err)
+	}
+	s.Registry = reg
+	return s
+}
+
+func (s *DomainService) WithFileWatcher() *DomainService {
+	watcher, err := NewFileWatcher(s.domainsFile, s.Reload)
+	if err != nil {
+		panic(err)
+	}
+	s.watcher = watcher
+
+	return s
+}
+
+// Reload reloads the domain entries from the file into the cache.
 // This method is called during initialization and when file changes are detected.
-func (s *DomainService) reloadCache() error {
+func (s *DomainService) Reload() error {
 	entries, err := ReadDomainsFile(s.domainsFile)
 	if err != nil {
 		return fmt.Errorf("failed to read domains file: %w", err)
@@ -164,6 +147,10 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
 // It calls each plugin's GetMetadata method and merges the results into the entry.
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+	if s.Registry == nil {
+		return nil
+	}
+
 	ctx := context.Background()
 	for name, p := range s.Registry.GetPlugins() {
 		metadata, err := p.GetMetadata(ctx, *entry)

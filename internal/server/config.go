@@ -199,3 +199,12 @@ func (c *Config) Validate() error {
 func (c *Config) DomainsFile() string {
 	return filepath.Join(c.DehydratedBaseDir, "domains.txt")
 }
+
+func (c *Config) String() string {
+	b, err := yaml.Marshal(c)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(b)
+}

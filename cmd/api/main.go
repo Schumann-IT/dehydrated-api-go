@@ -4,6 +4,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,15 +16,47 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/server"
 )
 
+var (
+	// Version is set during build time
+	Version = "dev"
+	// Commit is set during build time
+	Commit = "unknown"
+	// BuildTime is set during build time
+	BuildTime = "unknown"
+)
+
 // main is the entry point for the dehydrated-api-go application.
 // It parses command line flags, initializes the server with the specified configuration,
 // and handles graceful shutdown when receiving interrupt signals.
 func main() {
 	// Parse command line flags
 	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
+	showVersion := flag.Bool("version", false, "Show version information")
+	verbose := flag.Bool("verbose", false, "Verbose output")
 	flag.Parse()
 
-	s := server.NewServer(*configPath)
+	// load server config
+	sc := server.NewConfig().Load(*configPath)
+
+	// load dehydrated config
+	dc := dehydrated.NewConfig().WithBaseDir(sc.DehydratedBaseDir)
+	if sc.DehydratedConfigFile != "" {
+		dc = dc.WithConfigFile(sc.DehydratedConfigFile)
+	}
+	dc.Load()
+
+	// show version info
+	if *showVersion {
+		fmt.Printf("dehydrated-api-go version %s (commit: %s, built: %s)\n", Version, Commit, BuildTime)
+		if *verbose {
+			fmt.Printf("Server Config: %s", sc.String())
+			fmt.Printf("Dehydrated Config: %s", sc.String())
+		}
+		os.Exit(0)
+	}
+
+	// start the server
+	s := server.NewServer(sc, dc)
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)

@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"sync"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
@@ -24,21 +25,9 @@ type Server struct {
 	port     int            // Port number the server listens on
 }
 
-// NewServer creates a new server instance with the specified configuration file.
-// It initializes the server with default settings and loads configuration from the provided path.
-// The server is started in a goroutine and can be shut down gracefully using the Shutdown method.
-func NewServer(configPath string) *Server {
+// NewServer creates a new server instance with the specified configs.
+func NewServer(cfg *Config, dcfg *dehydrated.Config) *Server {
 	log := logger.L()
-	log.Debug("Using configuration file",
-		zap.String("config", configPath),
-	)
-
-	// Load configuration
-	cfg := NewConfig().Load(configPath)
-	log.Debug("Loading configuration",
-		zap.String("config_file", configPath),
-		zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
-	)
 
 	// Initialize logger with config
 	if err := logger.Init(cfg.Logging); err != nil {
@@ -62,16 +51,15 @@ func NewServer(configPath string) *Server {
 		zap.Bool("watcher_enabled", cfg.EnableWatcher),
 	)
 
-	domainService, err := service.NewDomainService(service.DomainServiceConfig{
-		DehydratedBaseDir:    cfg.DehydratedBaseDir,
-		DehydratedConfigFile: cfg.DehydratedConfigFile,
-		EnableWatcher:        cfg.EnableWatcher,
-		PluginConfig:         cfg.Plugins,
-	})
+	domainService := service.NewDomainService(dcfg.DomainsFile).WithPlugins(cfg.Plugins, dcfg)
+	if cfg.EnableWatcher {
+		domainService.WithFileWatcher()
+	}
+	err := domainService.Reload()
+
 	if err != nil {
-		log.Fatal("Failed to create domain service",
+		log.Fatal("Failed to load domains",
 			zap.Error(err),
-			zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
 		)
 		return nil
 	}
@@ -110,7 +98,6 @@ func NewServer(configPath string) *Server {
 		log.Info("Starting server",
 			zap.String("host", host),
 			zap.Int("port", cfg.Port),
-			zap.String("config", configPath),
 			zap.Bool("watcher_enabled", cfg.EnableWatcher),
 			zap.Int("enabled_plugins", len(cfg.Plugins)),
 		)

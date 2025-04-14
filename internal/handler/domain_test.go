@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,14 +25,11 @@ func TestDomainHandler(t *testing.T) {
 	// Create a new Fiber app
 	app := fiber.New()
 
-	// Create domain s
-	s, err := service.NewDomainService(service.DomainServiceConfig{
-		DehydratedBaseDir: tmpDir,
-		EnableWatcher:     false,
-	})
-	if err != nil {
-		t.Fatalf("Failed to create domain s: %v", err)
-	}
+	// load dehydrated config
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+	// Create domain service
+	s := service.NewDomainService(dc.DomainsFile)
 	defer s.Close()
 
 	// Create a new domain handler
