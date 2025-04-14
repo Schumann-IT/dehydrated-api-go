@@ -57,3 +57,6 @@ domains.txt
 coverage.html
 data/
 examples/config/*-test*
+
+internal/plugin/grpc/testdata/test-plugin/test-plugin
+proto/plugin/*.pb.go

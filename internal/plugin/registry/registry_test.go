@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -17,34 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func buildTestPlugin(t *testing.T) string {
-	// Get the current directory
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get current directory: %v", err)
-	}
-
-	// Build the test plugin
-	pluginPath := filepath.Join(dir, "testdata", "test-plugin")
-	cmd := exec.Command("go", "build", "-o", "test-plugin", "main.go")
-	cmd.Dir = pluginPath
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to build test plugin: %v", err)
-	}
-
-	return filepath.Join(pluginPath, "test-plugin")
-}
-
 func TestRegistry(t *testing.T) {
 	ctx := context.Background()
 
-	// Build the test plugin
-	pluginPath := buildTestPlugin(t)
-	defer os.Remove(pluginPath)
-
 	pc := plugin.PluginConfig{
 		Enabled: true,
-		Path:    pluginPath,
+		Path:    mustGetPluginPath(t),
 		Config:  map[string]any{"key": "value"},
 	}
 	registry, err := NewRegistry(map[string]plugin.PluginConfig{
@@ -97,13 +74,9 @@ func TestRegistry(t *testing.T) {
 func TestRegistryConcurrency(t *testing.T) {
 	ctx := context.Background()
 
-	// Build the test plugin
-	pluginPath := buildTestPlugin(t)
-	defer os.Remove(pluginPath)
-
 	pc := plugin.PluginConfig{
 		Enabled: true,
-		Path:    pluginPath,
+		Path:    mustGetPluginPath(t),
 		Config:  map[string]any{"key": "value"},
 	}
 	registry, err := NewRegistry(map[string]plugin.PluginConfig{}, &dehydrated.Config{})
@@ -237,23 +210,23 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 
 			require.NoError(t, err)
 
-			// Verify plugin is loaded
-			plugin, err := reg.GetPlugin(tt.pluginName)
+			// Verify p is loaded
+			p, err := reg.GetPlugin(tt.pluginName)
 			require.NoError(t, err)
-			assert.NotNil(t, plugin)
+			assert.NotNil(t, p)
 
-			// Test plugin functionality
+			// Test p functionality
 			ctx := context.Background()
-			err = plugin.Initialize(ctx, tt.pluginConfig.Config, cfg)
+			err = p.Initialize(ctx, tt.pluginConfig.Config, cfg)
 			require.NoError(t, err)
 
 			// Test GetMetadata
-			metadata, err := plugin.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"})
+			metadata, err := p.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"})
 			require.NoError(t, err)
 			assert.NotNil(t, metadata)
 
 			// Test Close
-			err = plugin.Close(ctx)
+			err = p.Close(ctx)
 			require.NoError(t, err)
 		})
 	}
@@ -294,11 +267,11 @@ func TestGetNonExistentPlugin(t *testing.T) {
 	reg, err := NewRegistry(map[string]plugin.PluginConfig{}, cfg)
 	require.NoError(t, err)
 
-	// Try to get non-existent plugin
-	plugin, err := reg.GetPlugin("non-existent")
+	// Try to get non-existent p
+	p, err := reg.GetPlugin("non-existent")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "plugin non-existent not found")
-	assert.Nil(t, plugin)
+	assert.Contains(t, err.Error(), "p non-existent not found")
+	assert.Nil(t, p)
 }
 
 func TestCloseRegistry(t *testing.T) {
@@ -323,9 +296,18 @@ func TestCloseRegistry(t *testing.T) {
 	err = reg.Close(ctx)
 	require.NoError(t, err)
 
-	// Verify plugin is removed
-	plugin, err := reg.GetPlugin("openssl")
+	// Verify p is removed
+	p, err := reg.GetPlugin("openssl")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "plugin openssl not found")
-	assert.Nil(t, plugin)
+	assert.Contains(t, err.Error(), "p openssl not found")
+	assert.Nil(t, p)
+}
+
+func mustGetPluginPath(t *testing.T) string {
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+
+	return filepath.Join(dir, "testdata", "test-plugin", "test-plugin")
 }

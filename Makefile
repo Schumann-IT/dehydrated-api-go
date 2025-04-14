@@ -50,6 +50,7 @@ clean: ## Clean build artifacts
 	rm -f $(BINARY_NAME)
 	rm -f $(COVERAGE_FILE)
 	rm -f proto/plugin/*.pb.go
+	rm -f internal/plugin/registry/testdata/test-plugin/test-plugin
 
 deps: ## Download dependencies
 	$(GOMOD) download
