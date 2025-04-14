@@ -1,6 +1,7 @@
 # Configuring External Plugins
 
-This document explains how to configure external plugins for the dehydrated-api-go application using the `EXTERNAL_PLUGINS` environment variable.
+This document explains how to configure external plugins for the dehydrated-api-go application using the
+`EXTERNAL_PLUGINS` environment variable.
 
 ## Format
 
@@ -117,29 +118,29 @@ docker run -d \
 ## Important Notes
 
 1. **JSON Format**: The value of `EXTERNAL_PLUGINS` must be valid JSON. Make sure to:
-   - Use double quotes for strings
-   - Use `true` or `false` (lowercase) for boolean values
-   - Escape special characters in paths if necessary
+    - Use double quotes for strings
+    - Use `true` or `false` (lowercase) for boolean values
+    - Escape special characters in paths if necessary
 
-2. **Plugin Paths**: 
-   - The `path` field is required for each plugin
-   - Paths should be absolute within the container
-   - Mount plugin scripts using volumes to make them available inside the container
-   - Ensure plugin scripts have executable permissions
+2. **Plugin Paths**:
+    - The `path` field is required for each plugin
+    - Paths should be absolute within the container
+    - Mount plugin scripts using volumes to make them available inside the container
+    - Ensure plugin scripts have executable permissions
 
 3. **Plugin Names**:
-   - Use lowercase names without spaces
-   - Names should be unique
-   - Avoid using special characters
+    - Use lowercase names without spaces
+    - Names should be unique
+    - Avoid using special characters
 
 4. **Default Values**:
-   - `enabled`: Defaults to `true` if not specified
-   - `config`: Defaults to empty map `{}` if not specified
-   - `path`: Must be specified (no default)
+    - `enabled`: Defaults to `true` if not specified
+    - `config`: Defaults to empty map `{}` if not specified
+    - `path`: Must be specified (no default)
 
 5. **Default Plugins**:
-   - The OpenSSL plugin is built-in and configured separately using `ENABLE_OPENSSL_PLUGIN`
-   - External plugins configuration doesn't affect built-in plugins
+    - The OpenSSL plugin is built-in and configured separately using `ENABLE_OPENSSL_PLUGIN`
+    - External plugins configuration doesn't affect built-in plugins
 
 ## Generated Configuration
 
@@ -169,4 +170,5 @@ plugins:
 2. **Missing Path**: If a plugin configuration doesn't include a path, it will be skipped with an error message.
 3. **Missing Plugin Files**: Ensure that plugin scripts are mounted correctly and have the right permissions.
 4. **Plugin Path**: Make sure the path in the configuration matches the actual mounted location in the container.
-5. **Config Values**: All config values are passed as strings to the plugin. Make sure your plugin handles type conversion if needed. 
+5. **Config Values**: All config values are passed as strings to the plugin. Make sure your plugin handles type
+   conversion if needed. 

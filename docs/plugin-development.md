@@ -1,17 +1,18 @@
 # Plugin Development Guide
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Plugin Types](#plugin-types)
-   - [Built-in Plugins](#built-in-plugins)
-   - [External Plugins](#external-plugins)
+    - [Built-in Plugins](#built-in-plugins)
+    - [External Plugins](#external-plugins)
 3. [Plugin Interface](#plugin-interface)
 4. [Plugin Lifecycle](#plugin-lifecycle)
 5. [Creating a New Plugin](#creating-a-new-plugin)
-   - [Basic Structure](#1-basic-structure)
-   - [Configuration](#2-configuration)
-   - [Error Handling](#3-error-handling)
-   - [Context Usage](#4-context-usage)
+    - [Basic Structure](#1-basic-structure)
+    - [Configuration](#2-configuration)
+    - [Error Handling](#3-error-handling)
+    - [Context Usage](#4-context-usage)
 6. [Best Practices](#best-practices)
 7. [Example Plugin Implementation](#example-plugin-implementation)
 8. [Testing Your Plugin](#testing-your-plugin)
@@ -22,20 +23,23 @@ This guide provides detailed information about developing plugins for the Dehydr
 
 ## Overview
 
-Plugins in Dehydrated API Go are used to extend the functionality of the service by providing additional metadata for domains. Each plugin can implement its own logic to gather and return domain-specific information.
+Plugins in Dehydrated API Go are used to extend the functionality of the service by providing additional metadata for
+domains. Each plugin can implement its own logic to gather and return domain-specific information.
 
 ## Plugin Types
 
-The service supports two types of plugins: built-in plugins and external plugins. Each type has its own advantages and use cases.
+The service supports two types of plugins: built-in plugins and external plugins. Each type has its own advantages and
+use cases.
 
 ### Built-in Plugins
 
-Built-in plugins are implemented directly in the service's codebase and are compiled as part of the main application. They are:
+Built-in plugins are implemented directly in the service's codebase and are compiled as part of the main application.
+They are:
 
 - Located in `internal/plugin/builtin/`
 - Currently includes:
-  - `timestamp`: Adds timestamp information to domain metadata
-  - `openssl`: Provides OpenSSL-related metadata
+    - `timestamp`: Adds timestamp information to domain metadata
+    - `openssl`: Provides OpenSSL-related metadata
 - No separate compilation or deployment required
 - Loaded automatically when specified in config without a path
 - Faster execution as they run in-process
@@ -43,6 +47,7 @@ Built-in plugins are implemented directly in the service's codebase and are comp
 - Limited to Go language implementation
 
 Example configuration for a built-in plugin:
+
 ```yaml
 plugins:
   timestamp:
@@ -64,6 +69,7 @@ External plugins are separate executables that communicate with the service via 
 - Better isolation and fault tolerance
 
 Example configuration for an external plugin:
+
 ```yaml
 plugins:
   external-plugin:
@@ -77,12 +83,14 @@ plugins:
 ### Choosing Between Plugin Types
 
 Choose a built-in plugin when:
+
 - The functionality is closely tied to the service
 - Performance is critical
 - You want to maintain the plugin in the main codebase
 - The implementation is relatively simple
 
 Choose an external plugin when:
+
 - You need to use a different programming language
 - The plugin needs to be updated independently
 - The plugin has complex dependencies
@@ -231,34 +239,34 @@ func (p *MyPlugin) GetMetadata(ctx context.Context, domain string) (map[string]i
 ## Best Practices
 
 1. **Configuration Validation**
-   - Always validate plugin configuration at initialization
-   - Provide clear error messages for invalid configurations
-   - Use type assertions safely when accessing configuration values
+    - Always validate plugin configuration at initialization
+    - Provide clear error messages for invalid configurations
+    - Use type assertions safely when accessing configuration values
 
 2. **Resource Management**
-   - Properly clean up resources in the `Close` method
-   - Use connection pools for external services
-   - Implement timeouts for external calls
-   - Handle context cancellation
+    - Properly clean up resources in the `Close` method
+    - Use connection pools for external services
+    - Implement timeouts for external calls
+    - Handle context cancellation
 
 3. **Error Handling**
-   - Use wrapped errors with `fmt.Errorf` and `%w`
-   - Provide meaningful error messages
-   - Handle context cancellation
-   - Log errors appropriately
+    - Use wrapped errors with `fmt.Errorf` and `%w`
+    - Provide meaningful error messages
+    - Handle context cancellation
+    - Log errors appropriately
 
 4. **Performance**
-   - Cache results when appropriate
-   - Use goroutines for concurrent operations
-   - Implement rate limiting for external API calls
-   - Use timeouts to prevent hanging operations
+    - Cache results when appropriate
+    - Use goroutines for concurrent operations
+    - Implement rate limiting for external API calls
+    - Use timeouts to prevent hanging operations
 
 5. **Testing**
-   - Write unit tests for your plugin
-   - Mock external dependencies
-   - Test error scenarios
-   - Test configuration validation
-   - Test resource cleanup
+    - Write unit tests for your plugin
+    - Mock external dependencies
+    - Test error scenarios
+    - Test configuration validation
+    - Test resource cleanup
 
 ## Example Plugin Implementation
 
@@ -405,11 +413,13 @@ func TestDNSPlugin(t *testing.T) {
 ## Deployment
 
 1. Build your plugin:
+
 ```bash
 go build -o my-plugin ./plugin/main.go
 ```
 
 2. Update the configuration:
+
 ```yaml
 plugins:
   my-plugin:
@@ -425,21 +435,21 @@ plugins:
 ## Troubleshooting
 
 1. **Plugin Not Loading**
-   - Check if the plugin path is absolute
-   - Verify the plugin is executable
-   - Check the service logs for errors
+    - Check if the plugin path is absolute
+    - Verify the plugin is executable
+    - Check the service logs for errors
 
 2. **Configuration Issues**
-   - Validate the plugin configuration format
-   - Check for required configuration values
-   - Verify configuration value types
+    - Validate the plugin configuration format
+    - Check for required configuration values
+    - Verify configuration value types
 
 3. **Performance Issues**
-   - Check for timeouts in external calls
-   - Monitor resource usage
-   - Implement caching if needed
+    - Check for timeouts in external calls
+    - Monitor resource usage
+    - Implement caching if needed
 
 4. **Error Handling**
-   - Check error messages in logs
-   - Verify error propagation
-   - Test error scenarios 
+    - Check error messages in logs
+    - Verify error propagation
+    - Test error scenarios 

@@ -1,6 +1,7 @@
 # Dehydrated API Go
 
-A REST API service for managing domains in the Dehydrated ACME client. This service provides a programmatic interface to manage SSL/TLS certificates through Dehydrated.
+A REST API service for managing domains in the Dehydrated ACME client. This service provides a programmatic interface to
+manage SSL/TLS certificates through Dehydrated.
 
 ## Features
 
@@ -25,17 +26,20 @@ A REST API service for managing domains in the Dehydrated ACME client. This serv
 ### From Source
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/schumann-it/dehydrated-api-go.git
 cd dehydrated-api-go
 ```
 
 2. Build the project:
+
 ```bash
 make build
 ```
 
 3. Create a configuration file (config.yaml):
+
 ```yaml
 port: 3000
 dehydrated_base_dir: "/path/to/dehydrated"
@@ -57,6 +61,7 @@ plugins:
 ```
 
 4. Run the service:
+
 ```bash
 make run
 ```
@@ -64,11 +69,13 @@ make run
 ### Using Docker
 
 1. Build the Docker image:
+
 ```bash
 make docker-build
 ```
 
 2. Run the container:
+
 ```bash
 make docker-run
 ```
@@ -105,16 +112,19 @@ See [external-plugins.md](docs/external-plugins.md) for detailed documentation.
 ## API Usage
 
 ### List Domains
+
 ```bash
 curl http://localhost:3000/api/v1/domains
 ```
 
 ### Get Domain
+
 ```bash
 curl http://localhost:3000/api/v1/domains/example.com
 ```
 
 ### Create Domain
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/domains \
   -H "Content-Type: application/json" \
@@ -128,6 +138,7 @@ curl -X POST http://localhost:3000/api/v1/domains \
 ```
 
 ### Update Domain
+
 ```bash
 curl -X PUT http://localhost:3000/api/v1/domains/example.com \
   -H "Content-Type: application/json" \
@@ -139,6 +150,7 @@ curl -X PUT http://localhost:3000/api/v1/domains/example.com \
 ```
 
 ### Delete Domain
+
 ```bash
 curl -X DELETE http://localhost:3000/api/v1/domains/example.com
 ```
@@ -203,6 +215,7 @@ Plugins are automatically loaded based on the configuration in `config.yaml`. Ea
 4. Any additional configuration needed by the plugin
 
 Example configuration:
+
 ```yaml
 plugins:
   example-plugin:

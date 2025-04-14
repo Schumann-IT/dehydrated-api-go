@@ -4,7 +4,8 @@ This guide explains how to configure the Dehydrated API Go service.
 
 ## Configuration File
 
-The service uses a YAML configuration file (default: `config.yaml`) to manage its settings. Here's a complete example with all available options:
+The service uses a YAML configuration file (default: `config.yaml`) to manage its settings. Here's a complete example
+with all available options:
 
 ```yaml
 # Server configuration
@@ -42,42 +43,43 @@ plugins:
 
 ### Server Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `port` | integer | 3000 | The port number the server will listen on |
+| Option | Type    | Default | Description                               |
+|--------|---------|---------|-------------------------------------------|
+| `port` | integer | 3000    | The port number the server will listen on |
 
 ### Dehydrated Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `dehydrated_base_dir` | string | "." | The base directory where Dehydrated is installed |
-| `enable_watcher` | boolean | false | Whether to enable file watching for domain changes |
+| Option                | Type    | Default | Description                                        |
+|-----------------------|---------|---------|----------------------------------------------------|
+| `dehydrated_base_dir` | string  | "."     | The base directory where Dehydrated is installed   |
+| `enable_watcher`      | boolean | false   | Whether to enable file watching for domain changes |
 
 ### Logging Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `logging.level` | string | "error" | Logging level (debug, info, warn, error) |
-| `logging.encoding` | string | "console" | Log format (json, console) |
-| `logging.output_path` | string | "" | Path to log file, empty for stdout |
+| Option                | Type   | Default   | Description                              |
+|-----------------------|--------|-----------|------------------------------------------|
+| `logging.level`       | string | "error"   | Logging level (debug, info, warn, error) |
+| `logging.encoding`    | string | "console" | Log format (json, console)               |
+| `logging.output_path` | string | ""        | Path to log file, empty for stdout       |
 
 ### Plugin Configuration
 
 The `plugins` section allows you to configure multiple plugins. Each plugin has the following options:
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `enabled` | boolean | Yes | Whether the plugin is enabled |
-| `path` | string | Yes | Absolute path to the plugin binary |
-| `config` | object | No | Plugin-specific configuration |
+| Option    | Type    | Required | Description                        |
+|-----------|---------|----------|------------------------------------|
+| `enabled` | boolean | Yes      | Whether the plugin is enabled      |
+| `path`    | string  | Yes      | Absolute path to the plugin binary |
+| `config`  | object  | No       | Plugin-specific configuration      |
 
 ## Environment Variables
 
-You can configure the logging level using the `LOG_LEVEL` environment variable. This takes precedence over the configuration file.
+You can configure the logging level using the `LOG_LEVEL` environment variable. This takes precedence over the
+configuration file.
 
-| Environment Variable | Description |
-|---------------------|-------------|
-| `LOG_LEVEL` | Logging level (debug, info, warn, error) |
+| Environment Variable | Description                              |
+|----------------------|------------------------------------------|
+| `LOG_LEVEL`          | Logging level (debug, info, warn, error) |
 
 ## Example Configurations
 
@@ -141,8 +143,8 @@ The service looks for the configuration file in the following locations (in orde
 
 The following command-line flags are available:
 
-| Flag | Description | Default |
-|------|-------------|---------|
+| Flag      | Description                | Default       |
+|-----------|----------------------------|---------------|
 | `-config` | Path to configuration file | "config.yaml" |
 
 ## Configuration Validation

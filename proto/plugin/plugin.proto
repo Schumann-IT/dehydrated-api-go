@@ -12,10 +12,10 @@ option go_package = "github.com/schumann-it/dehydrated-api-go/proto/plugin";
 service Plugin {
   // Initialize is called when the plugin is loaded
   rpc Initialize(InitializeRequest) returns (InitializeResponse) {}
-  
+
   // GetMetadata returns metadata for a domain entry
   rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse) {}
-  
+
   // Close is called when the plugin is being unloaded
   rpc Close(CloseRequest) returns (CloseResponse) {}
 }
