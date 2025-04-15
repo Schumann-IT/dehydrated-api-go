@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
@@ -344,4 +346,298 @@ plugins:
 			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		})
 	}
+}
+
+// TestServerInitialization tests the server initialization with various configurations.
+func TestServerInitialization(t *testing.T) {
+	t.Run("WithVersionInfo", func(t *testing.T) {
+		s := NewServer().WithVersionInfo("1.0.0", "abc123", "2024-01-01")
+		assert.Equal(t, "1.0.0", s.Version)
+		assert.Equal(t, "abc123", s.Commit)
+		assert.Equal(t, "2024-01-01", s.BuildTime)
+	})
+
+	t.Run("WithLogger", func(t *testing.T) {
+		// Create a temporary config file with logging configuration
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		configContent := `
+port: 8080
+logging:
+  level: debug
+  format: json
+`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		s := NewServer().WithConfig(configPath).WithLogger()
+		assert.NotNil(t, s.Logger)
+		assert.NotEqual(t, zap.NewNop(), s.Logger)
+	})
+
+	t.Run("WithInvalidConfig", func(t *testing.T) {
+		s := NewServer().WithConfig("non-existent-config.yaml")
+		assert.NotNil(t, s.Config)
+		// Should use default values when config file doesn't exist
+		assert.Equal(t, 3000, s.Config.Port)
+	})
+}
+
+// TestServerPrintFunctions tests the server's print functions.
+func TestServerPrintFunctions(t *testing.T) {
+	// Create a temporary config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	configContent := `
+port: 8080
+dehydratedBaseDir: /tmp/dehydrated
+enableWatcher: true
+plugins:
+  openssl:
+    enabled: true
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	s := NewServer().
+		WithVersionInfo("1.0.0", "abc123", "2024-01-01").
+		WithConfig(configPath)
+
+	// Test PrintVersion
+	t.Run("PrintVersion", func(t *testing.T) {
+		// Capture stdout
+		old := os.Stdout
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+
+		s.PrintVersion()
+
+		w.Close()
+		os.Stdout = old
+
+		var output string
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			output += scanner.Text() + "\n"
+		}
+		require.NoError(t, scanner.Err())
+
+		assert.Contains(t, output, "dehydrated-api-go version 1.0.0")
+		assert.Contains(t, output, "commit: abc123")
+		assert.Contains(t, output, "built: 2024-01-01")
+	})
+
+	// Test PrintServerConfig
+	t.Run("PrintServerConfig", func(t *testing.T) {
+		old := os.Stdout
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+
+		s.PrintServerConfig()
+
+		w.Close()
+		os.Stdout = old
+
+		var output string
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			output += scanner.Text() + "\n"
+		}
+		require.NoError(t, scanner.Err())
+
+		assert.Contains(t, output, "Resolved Server Config")
+		assert.Contains(t, output, "port: 8080")
+		assert.Contains(t, output, "dehydratedBaseDir: /tmp/dehydrated")
+	})
+
+	// Test PrintDehydratedConfig
+	t.Run("PrintDehydratedConfig", func(t *testing.T) {
+		// Initialize dehydrated config first
+		s.WithDomainService()
+
+		old := os.Stdout
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+
+		s.PrintDehydratedConfig()
+
+		w.Close()
+		os.Stdout = old
+
+		var output string
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			output += scanner.Text() + "\n"
+		}
+		require.NoError(t, scanner.Err())
+
+		assert.Contains(t, output, "Resolved Dehydrated Config")
+	})
+}
+
+// TestServerLifecycle tests the server's lifecycle management.
+func TestServerLifecycle(t *testing.T) {
+	t.Run("StartAndShutdown", func(t *testing.T) {
+		// Create a temporary config file
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		configContent := `
+port: 0
+dehydratedBaseDir: /tmp/dehydrated
+enableWatcher: false
+`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		s := NewServer().
+			WithConfig(configPath).
+			WithLogger()
+
+		// Start server
+		s.Start()
+
+		// Give the server time to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify server is running
+		assert.NotZero(t, s.GetPort())
+
+		// Shutdown server
+		s.Shutdown()
+
+		// Verify server is stopped
+		_, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
+		assert.Error(t, err)
+	})
+
+	t.Run("StartWithInvalidPort", func(t *testing.T) {
+		// Create a temporary config file with invalid port
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		configContent := `
+port: 0
+dehydratedBaseDir: /tmp/dehydrated
+enableWatcher: false
+`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		s := NewServer().
+			WithConfig(configPath).
+			WithLogger()
+
+		// Start server - should log error but not panic
+		s.Start()
+		defer s.Shutdown()
+
+		// Give the server time to start and log the error
+		time.Sleep(100 * time.Millisecond)
+	})
+}
+
+// TestDomainServiceIntegration tests the server's integration with the domain service.
+func TestDomainServiceIntegration(t *testing.T) {
+	t.Run("WithDomainService", func(t *testing.T) {
+		// Create a temporary config file
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		configContent := `
+port: 3000
+dehydratedBaseDir: /tmp/dehydrated
+enableWatcher: true
+plugins:
+  openssl:
+    enabled: true
+`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		s := NewServer().
+			WithConfig(configPath).
+			WithLogger().
+			WithDomainService()
+
+		// Start server
+		s.Start()
+		defer s.Shutdown()
+
+		// Give the server time to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify domain service is initialized
+		assert.NotNil(t, s.domainService)
+
+		// Test domain operations
+		client := &http.Client{}
+		baseURL := fmt.Sprintf("http://localhost:%d/api/v1", s.GetPort())
+
+		// Delete any existing domains first
+		resp, err := http.Get(baseURL + "/domains")
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var existingDomains model.DomainsResponse
+		err = json.NewDecoder(resp.Body).Decode(&existingDomains)
+		require.NoError(t, err)
+		resp.Body.Close()
+
+		for _, domain := range existingDomains.Data {
+			req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), nil)
+			require.NoError(t, err)
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+			resp.Body.Close()
+		}
+
+		// Create a domain
+		createReq, err := http.NewRequest("POST", baseURL+"/domains", strings.NewReader(`{"domain": "test.example.com"}`))
+		require.NoError(t, err)
+		createReq.Header.Set("Content-Type", "application/json")
+		resp, err = client.Do(createReq)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+		// Get domains
+		resp, err = http.Get(baseURL + "/domains")
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var domainsResp model.DomainsResponse
+		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
+		require.NoError(t, err)
+		assert.True(t, domainsResp.Success)
+		assert.Len(t, domainsResp.Data, 1)
+		assert.Equal(t, "test.example.com", domainsResp.Data[0].Domain)
+	})
+
+	t.Run("WithInvalidDomainService", func(t *testing.T) {
+		// Create a temporary config file with invalid plugin configuration
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		configContent := `
+port: 0
+dehydratedBaseDir: /tmp/dehydrated
+enableWatcher: true
+plugins:
+  invalid:
+    enabled: true
+`
+		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		s := NewServer().
+			WithConfig(configPath).
+			WithLogger()
+
+		// Start server - should log error but not panic
+		s.Start()
+		defer s.Shutdown()
+
+		// Give the server time to start and log the error
+		time.Sleep(100 * time.Millisecond)
+	})
 }

@@ -4,14 +4,15 @@ package server
 
 import (
 	"fmt"
+	"os"
+	"sync"
+
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"go.uber.org/zap"
-	"os"
-	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
 )
@@ -140,6 +141,7 @@ func (s *Server) Start() {
 			zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 			zap.Int("enabled_plugins", len(s.Config.Plugins)),
 		)
+
 		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, s.Config.Port)); err != nil {
 			s.Logger.Error("Server error",
 				zap.Error(err),
@@ -157,7 +159,9 @@ func (s *Server) Start() {
 		// Graceful shutdown
 		s.Logger.Info("Starting graceful shutdown")
 
-		s.domainService.Close()
+		if s.domainService != nil {
+			s.domainService.Close()
+		}
 
 		if err := s.app.Shutdown(); err != nil {
 			s.Logger.Error("Error during shutdown",
@@ -182,7 +186,7 @@ func (s *Server) Shutdown() {
 // GetPort returns the port number that the server is listening on.
 // This is useful for testing and monitoring purposes.
 func (s *Server) GetPort() int {
-	return s.port
+	return s.Config.Port
 }
 
 func (s *Server) PrintInfo(v, i bool) {

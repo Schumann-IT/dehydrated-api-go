@@ -268,11 +268,7 @@ func TestConcurrentOperations(t *testing.T) {
 	// load dehydrated config
 	dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
 
-	l, _ := logger.NewLogger(&logger.Config{
-		Level:      "debug",
-		Encoding:   "console",
-		OutputPath: "",
-	})
+	l, _ := logger.NewLogger(nil)
 	service := NewDomainService(dc.DomainsFile).WithLogger(l)
 	defer service.Close()
 
