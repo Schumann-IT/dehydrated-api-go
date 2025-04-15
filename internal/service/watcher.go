@@ -43,12 +43,7 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 	}
 
 	// Watch both the file and its parent directory
-	if err := watcher.Add(filePath); err != nil {
-		watcher.Close()
-		return nil, err
-	}
-
-	if err := watcher.Add(filepath.Dir(filePath)); err != nil {
+	if err = watcher.Add(filePath); err != nil {
 		watcher.Close()
 		return nil, err
 	}
