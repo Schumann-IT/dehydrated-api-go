@@ -29,6 +29,7 @@ func TestFileWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
+	watcher.Watch()
 	defer watcher.Close()
 
 	// Test file modification

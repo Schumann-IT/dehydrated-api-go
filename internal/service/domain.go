@@ -82,6 +82,7 @@ func (s *DomainService) WithFileWatcher() *DomainService {
 	}
 	watcher.WithLogger(s.logger)
 	s.watcher = watcher
+	s.watcher.Watch()
 
 	s.logger.Info("File watcher is now enabled")
 

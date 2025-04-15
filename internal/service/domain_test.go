@@ -1,12 +1,13 @@
 package service
 
 import (
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 

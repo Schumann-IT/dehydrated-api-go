@@ -3,10 +3,11 @@
 package service
 
 import (
-	"go.uber.org/zap"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -20,7 +21,7 @@ type FileWatcher struct {
 	mutex       sync.Mutex           // Mutex for thread-safe access to debounce map
 	debounceMap map[string]time.Time // Map for tracking last event time per file
 	done        chan struct{}        // Channel for signaling shutdown
-	logger      *zap.Logger
+	logger      *zap.Logger          // Logger for the file watcher
 }
 
 // NewFileWatcher creates a new FileWatcher instance for the specified file.
@@ -52,14 +53,16 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 		return nil, err
 	}
 
-	go fw.watch()
-
 	return fw, nil
 }
 
 func (fw *FileWatcher) WithLogger(l *zap.Logger) *FileWatcher {
 	fw.logger = l
 	return fw
+}
+
+func (fw *FileWatcher) Watch() {
+	go fw.watch()
 }
 
 // watch monitors the file for changes and triggers the callback when appropriate.
@@ -85,6 +88,7 @@ func (fw *FileWatcher) watch() {
 			// Check if the event is a write, create, or remove event
 			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove) != 0 {
 				fw.logger.Info("Write event detected", zap.String("event", event.Name))
+
 				fw.mutex.Lock()
 				lastEvent, exists := fw.debounceMap[event.Name]
 				now := time.Now()
@@ -95,28 +99,25 @@ func (fw *FileWatcher) watch() {
 				// Handle the change if not debounced
 				if shouldHandle {
 					fw.logger.Info("Calling onChange callback", zap.String("event", event.Name))
+
 					if err := fw.onChange(); err != nil {
 						fw.logger.Error("Callback onChange failed", zap.String("event", event.Name), zap.Error(err))
 					}
 				}
 			}
-
 		case err, ok := <-fw.watcher.Errors:
 			if !ok {
 				return
 			}
-			fw.logger.Error("Error watching file", zap.String("file", fw.filePath), zap.Error(err))
-
+			fw.logger.Error("Watcher error", zap.Error(err))
 		case <-fw.done:
 			return
 		}
 	}
 }
 
-// Close stops watching the file and cleans up resources.
-// It signals the watch goroutine to exit and closes the underlying watcher.
+// Close stops the file watcher and releases associated resources.
 func (fw *FileWatcher) Close() error {
-	fw.logger.Info("Closing file watcher")
 	close(fw.done)
 	return fw.watcher.Close()
 }
