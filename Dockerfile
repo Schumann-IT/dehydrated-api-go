@@ -1,9 +1,23 @@
-FROM alpine:3.19 AS downloader
+FROM golang:1.23-alpine AS builder
 
-ARG GOOS="linux"
-ARG GOARCH="arm64"
-ARG ARCH="arm64"
-ARG VERSION="v0.0.9"
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 go build -o /build/dehydrated-api-go ./cmd/api
+
+FROM alpine:3.19 AS downloader
 
 WORKDIR /build
 
@@ -13,11 +27,6 @@ RUN mkdir -p /downloads
 
 # download dehydrated
 RUN curl -o /downloads/dehydrated https://raw.githubusercontent.com/dehydrated-io/dehydrated/refs/heads/master/dehydrated
-
-# download dehydrated-api
-RUN curl -L -o /build/dehydrated-api-go_${GOOS}_${ARCH}.tar.gz https://github.com/Schumann-IT/dehydrated-api-go/releases/download/${VERSION}/dehydrated-api-go_${GOOS}_${ARCH}.tar.gz
-RUN tar -zxf /build/dehydrated-api-go_${GOOS}_${ARCH}.tar.gz
-RUN cp /build/dehydrated-api-go /downloads/dehydrated-api-go
 
 FROM alpine:3.19
 
@@ -58,7 +67,7 @@ RUN mkdir -p /app/scripts \
 
 # copy binaries
 COPY --from=downloader /downloads/dehydrated /app/scripts/
-COPY --from=downloader /downloads/dehydrated-api-go /app/
+COPY --from=builder /build/dehydrated-api-go /app/
 
 # install default configs
 COPY examples/config/config.yaml /app/config/
