@@ -59,5 +59,4 @@ data/
 examples/config/*-test*
 
 internal/plugin/grpc/testdata/test-plugin/test-plugin
-proto/plugin/*.pb.go
 dehydrated-api-go
