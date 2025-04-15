@@ -21,11 +21,7 @@ func setupAzureDnsHook(baseDir string, t *testing.T) string {
 	// Create azure-dns hook
 	hookFile := filepath.Join(baseDir, "hook.sh")
 	hookData := []byte(fmt.Sprintf(`
-#!/usr/bin/env bash
-
-#
-# How to deploy a DNS challenge using Azure
-#
+#!/bin/bash
 
 # Debug Logging level
 DEBUG=4
@@ -42,12 +38,11 @@ DNS_ZONE="%s"
 
 # Supporting functions
 function log {
-    if tty >/dev/null 2>&1; then
-        if [ $DEBUG -ge $2 ]; then
-            echo "$1" > /dev/tty
-        fi
+    if [ $DEBUG -ge $2 ]; then
+        echo "$1" >> %s/azure-hook.log
     fi
 }
+
 function login_azure {
     # Azure DNS Connection Variables
     # You should create an SPN in Azure first and authorize it to make changes to Azure DNS
@@ -166,7 +161,7 @@ esac
 
 exit 0
 
-`, os.Getenv("AZURE_TENANT"), os.Getenv("AZURE_CLIENT_ID"), os.Getenv("AZURE_CLIENT_SECRET"), os.Getenv("SUBSCRIPTION"), os.Getenv("RESOURCE_GROUP"), os.Getenv("DNS_ZONE")))
+`, os.Getenv("AZURE_TENANT"), os.Getenv("AZURE_CLIENT_ID"), os.Getenv("AZURE_CLIENT_SECRET"), os.Getenv("SUBSCRIPTION"), os.Getenv("RESOURCE_GROUP"), os.Getenv("DNS_ZONE"), baseDir))
 	if err := os.WriteFile(hookFile, hookData, 0755); err != nil {
 		t.Fatalf("Failed to write hook file: %v", err)
 	}
