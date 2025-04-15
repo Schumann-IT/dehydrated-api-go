@@ -43,15 +43,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            arch: x86_64
-          - goos: linux
-            goarch: arm64
-            arch: arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +54,9 @@ jobs:
         run: |
           echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
           echo "version=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -94,11 +88,8 @@ jobs:
         with:
           push: ${{ steps.vars.outputs.version != '' }}
           build-args: |
-            GOOS=${{ matrix.goos }}
-            GOARCH=${{ matrix.goarch }}
-            ARCH=${{ matrix.arch }}
             VERSION=${{ steps.vars.outputs.tag }}
-          platforms: ${{ matrix.goos }}/${{ matrix.goarch }}
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
