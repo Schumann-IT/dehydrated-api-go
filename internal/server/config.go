@@ -56,7 +56,6 @@ func NewConfig() *Config {
 		DehydratedConfigFile: "config",
 		Plugins:              make(map[string]plugin.PluginConfig),
 		EnableWatcher:        false,
-		Logging:              logger.DefaultConfig(),
 	}
 }
 
@@ -117,7 +116,7 @@ func (c *Config) Load(path string) *Config {
 	// Merge logging configuration
 	if fc.Logging != nil {
 		if c.Logging == nil {
-			c.Logging = logger.DefaultConfig()
+			c.Logging = &logger.Config{}
 		}
 		if fc.Logging.Level != "" {
 			c.Logging.Level = fc.Logging.Level

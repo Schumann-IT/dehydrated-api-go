@@ -3,8 +3,7 @@
 package service
 
 import (
-	"fmt"
-	"log"
+	"go.uber.org/zap"
 	"path/filepath"
 	"sync"
 	"time"
@@ -21,6 +20,7 @@ type FileWatcher struct {
 	mutex       sync.Mutex           // Mutex for thread-safe access to debounce map
 	debounceMap map[string]time.Time // Map for tracking last event time per file
 	done        chan struct{}        // Channel for signaling shutdown
+	logger      *zap.Logger
 }
 
 // NewFileWatcher creates a new FileWatcher instance for the specified file.
@@ -29,7 +29,7 @@ type FileWatcher struct {
 func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create watcher: %w", err)
+		return nil, err
 	}
 
 	fw := &FileWatcher{
@@ -38,17 +38,18 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 		onChange:    onChange,
 		debounceMap: make(map[string]time.Time),
 		done:        make(chan struct{}),
+		logger:      zap.NewNop(),
 	}
 
 	// Watch both the file and its parent directory
 	if err := watcher.Add(filePath); err != nil {
 		watcher.Close()
-		return nil, fmt.Errorf("failed to watch file %s: %w", filePath, err)
+		return nil, err
 	}
 
 	if err := watcher.Add(filepath.Dir(filePath)); err != nil {
 		watcher.Close()
-		return nil, fmt.Errorf("failed to watch directory %s: %w", filepath.Dir(filePath), err)
+		return nil, err
 	}
 
 	go fw.watch()
@@ -56,11 +57,18 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 	return fw, nil
 }
 
+func (fw *FileWatcher) WithLogger(l *zap.Logger) *FileWatcher {
+	fw.logger = l
+	return fw
+}
+
 // watch monitors the file for changes and triggers the callback when appropriate.
 // It implements debouncing to prevent multiple rapid callbacks for the same file change.
 // The method runs in a goroutine and continues until the watcher is closed.
 func (fw *FileWatcher) watch() {
 	const debounceInterval = 100 * time.Millisecond
+
+	fw.logger.Info("Starting file watcher", zap.Any("debounce interval", debounceInterval))
 
 	for {
 		select {
@@ -76,6 +84,7 @@ func (fw *FileWatcher) watch() {
 
 			// Check if the event is a write, create, or remove event
 			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove) != 0 {
+				fw.logger.Info("Write event detected", zap.String("event", event.Name))
 				fw.mutex.Lock()
 				lastEvent, exists := fw.debounceMap[event.Name]
 				now := time.Now()
@@ -85,8 +94,9 @@ func (fw *FileWatcher) watch() {
 
 				// Handle the change if not debounced
 				if shouldHandle {
+					fw.logger.Info("Calling onChange callback", zap.String("event", event.Name))
 					if err := fw.onChange(); err != nil {
-						log.Printf("Error handling file change: %v", err)
+						fw.logger.Error("Callback onChange failed", zap.String("event", event.Name), zap.Error(err))
 					}
 				}
 			}
@@ -95,7 +105,7 @@ func (fw *FileWatcher) watch() {
 			if !ok {
 				return
 			}
-			log.Printf("Error watching file: %v", err)
+			fw.logger.Error("Error watching file", zap.String("file", fw.filePath), zap.Error(err))
 
 		case <-fw.done:
 			return
@@ -106,6 +116,7 @@ func (fw *FileWatcher) watch() {
 // Close stops watching the file and cleans up resources.
 // It signals the watch goroutine to exit and closes the underlying watcher.
 func (fw *FileWatcher) Close() error {
+	fw.logger.Info("Closing file watcher")
 	close(fw.done)
 	return fw.watcher.Close()
 }

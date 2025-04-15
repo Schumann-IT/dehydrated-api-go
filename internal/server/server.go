@@ -4,104 +4,147 @@ package server
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	"sync"
-
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
-
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
+	"go.uber.org/zap"
+	"os"
+	"sync"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
+)
+
+// ANSI escape codes for text formatting
+const (
+	bold  = "\033[1m"
+	reset = "\033[0m"
 )
 
 // Server represents a running server instance that manages the HTTP server lifecycle.
 // It handles server startup, shutdown, and maintains the application state.
 type Server struct {
+	Version   string
+	Commit    string
+	BuildTime string
+
 	app      *fiber.App     // The Fiber web framework instance
 	shutdown chan struct{}  // Channel for signaling shutdown
 	wg       sync.WaitGroup // WaitGroup for managing goroutines
 	port     int            // Port number the server listens on
+
+	Config           *Config
+	Logger           *zap.Logger
+	dehydratedConfig *dehydrated.Config
+	domainService    *service.DomainService
 }
 
-// NewServer creates a new server instance with the specified configs.
-func NewServer(cfg *Config, dcfg *dehydrated.Config) *Server {
-	log := logger.L()
-
-	// Initialize logger with config
-	if err := logger.Init(cfg.Logging); err != nil {
-		fmt.Printf("Failed to initialize logger: %v\n", err)
-		return nil
+// NewServer creates a new server instance.
+func NewServer() *Server {
+	server := &Server{
+		app:      fiber.New(),
+		shutdown: make(chan struct{}),
+		Logger:   zap.NewNop(),
 	}
-	defer logger.Sync()
 
-	log = logger.L()
+	return server
+}
 
-	log.Info("Logger initialized",
-		zap.String("level", cfg.Logging.Level),
-		zap.String("encoding", cfg.Logging.Encoding),
-		zap.String("output", cfg.Logging.OutputPath),
-	)
+func (s *Server) WithVersionInfo(v, c, b string) *Server {
+	s.Version = v
+	s.Commit = c
+	s.BuildTime = b
+
+	return s
+}
+
+func (s *Server) WithConfig(path string) *Server {
+	s.Config = NewConfig().Load(path)
+
+	return s
+}
+
+func (s *Server) WithLogger() *Server {
+	if s.Config != nil {
+		// Initialize logger with config
+		l, _ := logger.NewLogger(s.Config.Logging)
+		s.Logger = l
+	}
+
+	s.app.Use(fiberzap.New(fiberzap.Config{
+		Logger: s.Logger,
+	}))
+
+	return s
+}
+
+func (s *Server) WithDomainService() *Server {
+	cfg := dehydrated.NewConfig().WithBaseDir(s.Config.DehydratedBaseDir)
+	if s.Config.DehydratedConfigFile != "" {
+		cfg = cfg.WithConfigFile(s.Config.DehydratedConfigFile)
+	}
+	cfg.Load()
+
+	s.dehydratedConfig = cfg
 
 	// Create domain service
-	log.Debug("Creating domain service",
-		zap.String("dehydrated_dir", cfg.DehydratedBaseDir),
-		zap.String("dehydrated_config_file", cfg.DehydratedConfigFile),
-		zap.Bool("watcher_enabled", cfg.EnableWatcher),
+	s.Logger.Debug("Creating domain service",
+		zap.String("dehydrated_dir", s.Config.DehydratedBaseDir),
+		zap.String("dehydrated_config_file", s.Config.DehydratedConfigFile),
+		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	domainService := service.NewDomainService(dcfg.DomainsFile).WithPlugins(cfg.Plugins, dcfg)
-	if cfg.EnableWatcher {
+	domainService := service.NewDomainService(s.dehydratedConfig.DomainsFile).
+		WithPlugins(s.Config.Plugins, s.dehydratedConfig)
+
+	if s.Logger != nil {
+		domainService.WithLogger(s.Logger)
+	}
+
+	if s.Config.EnableWatcher {
 		domainService.WithFileWatcher()
 	}
+
 	err := domainService.Reload()
 
 	if err != nil {
-		log.Fatal("Failed to load domains",
+		s.Logger.Fatal("Failed to load domains",
 			zap.Error(err),
 		)
-		return nil
+		return s
 	}
 
-	log.Info("Domain service created successfully",
-		zap.Int("enabled_plugins", len(cfg.Plugins)),
+	s.Logger.Info("Domain service created successfully",
+		zap.Int("enabled_plugins", len(s.Config.Plugins)),
 	)
 
-	// Create fiber app
-	app := fiber.New()
-
-	app.Use(fiberzap.New(fiberzap.Config{
-		Logger: log,
-	}))
+	s.domainService = domainService
 
 	// Create domain handler
-	domainHandler := handler.NewDomainHandler(domainService)
-	domainHandler.RegisterRoutes(app)
-	
-	// Create server instance
-	server := &Server{
-		app:      app,
-		shutdown: make(chan struct{}),
-		port:     cfg.Port,
-	}
+	h := handler.NewDomainHandler(s.domainService)
+	h.RegisterRoutes(s.app)
 
+	return s
+}
+
+func (s *Server) Start() {
 	// Start server in a goroutine
-	server.wg.Add(1)
+	s.wg.Add(1)
 	go func() {
-		defer server.wg.Done()
+		defer s.wg.Done()
 		host := "0.0.0.0" // Listen on all interfaces
-		log.Info("Starting server",
+		s.Logger.Info("Starting server",
 			zap.String("host", host),
-			zap.Int("port", cfg.Port),
-			zap.Bool("watcher_enabled", cfg.EnableWatcher),
-			zap.Int("enabled_plugins", len(cfg.Plugins)),
+			zap.Int("port", s.Config.Port),
+			zap.Bool("watcher_enabled", s.Config.EnableWatcher),
+			zap.Int("enabled_plugins", len(s.Config.Plugins)),
 		)
-		if err := app.Listen(fmt.Sprintf("%s:%d", host, cfg.Port)); err != nil {
-			log.Error("Server error",
+		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, s.Config.Port)); err != nil {
+			s.Logger.Error("Server error",
 				zap.Error(err),
 				zap.String("host", host),
-				zap.Int("port", cfg.Port),
+				zap.Int("port", s.Config.Port),
 			)
 		}
 	}()
@@ -109,23 +152,23 @@ func NewServer(cfg *Config, dcfg *dehydrated.Config) *Server {
 	// Handle shutdown in a separate goroutine
 	go func() {
 		// Wait for shutdown signal
-		<-server.shutdown
+		<-s.shutdown
 
 		// Graceful shutdown
-		log.Info("Starting graceful shutdown")
+		s.Logger.Info("Starting graceful shutdown")
 
-		domainService.Close()
+		s.domainService.Close()
 
-		if err := app.Shutdown(); err != nil {
-			log.Error("Error during shutdown",
+		if err := s.app.Shutdown(); err != nil {
+			s.Logger.Error("Error during shutdown",
 				zap.Error(err),
 			)
 		} else {
-			log.Info("Server shutdown completed successfully")
+			s.Logger.Info("Server shutdown completed successfully")
 		}
-	}()
 
-	return server
+		s.Logger.Sync()
+	}()
 }
 
 // Shutdown gracefully shuts down the server and its associated resources.
@@ -140,4 +183,33 @@ func (s *Server) Shutdown() {
 // This is useful for testing and monitoring purposes.
 func (s *Server) GetPort() int {
 	return s.port
+}
+
+func (s *Server) PrintInfo(v, i bool) {
+	if v {
+		s.PrintVersion()
+	}
+
+	if i {
+		s.PrintServerConfig()
+		s.PrintDehydratedConfig()
+	}
+
+	if v || i {
+		os.Exit(0)
+	}
+}
+
+func (s *Server) PrintVersion() {
+	fmt.Printf("dehydrated-api-go version %s (commit: %s, built: %s)\n", s.Version, s.Commit, s.BuildTime)
+}
+
+func (s *Server) PrintServerConfig() {
+	fmt.Printf("%sResolved Server Config:%s\n", bold, reset)
+	fmt.Printf("%s\n", s.Config.String())
+}
+
+func (s *Server) PrintDehydratedConfig() {
+	fmt.Printf("%sResolved Dehydrated Config:%s\n", bold, reset)
+	fmt.Printf("%s\n", s.dehydratedConfig.String())
 }

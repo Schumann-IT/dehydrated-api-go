@@ -4,7 +4,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"sync"
@@ -23,6 +25,7 @@ type DomainService struct {
 	cache       []model.DomainEntry // In-memory cache of domain entries
 	mutex       sync.RWMutex        // Mutex for thread-safe access to the cache
 	Registry    *registry.Registry  // Plugin registry for metadata enrichment
+	logger      *zap.Logger
 }
 
 // NewDomainService creates a new DomainService instance with the provided configuration.
@@ -42,27 +45,45 @@ func NewDomainService(domainsFile string) *DomainService {
 	}
 
 	s := &DomainService{
+		logger:      zap.NewNop(),
 		domainsFile: domainsFile,
 	}
 
 	return s
 }
 
+func (s *DomainService) WithLogger(l *zap.Logger) *DomainService {
+	s.logger = l
+	return s
+}
+
 func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig, cfg *dehydrated.Config) *DomainService {
+	s.logger.Info("Initializing plugins")
+
 	reg, err := registry.NewRegistry(plugins, cfg)
 	if err != nil {
+		s.logger.Error("Failed to initialize plugin registry", zap.Error(err))
 		panic(err)
 	}
 	s.Registry = reg
+
+	s.logger.Info("Plugins initialized", zap.Int("count", len(plugins)))
+
 	return s
 }
 
 func (s *DomainService) WithFileWatcher() *DomainService {
+	s.logger.Info("Enabling file watcher")
+
 	watcher, err := NewFileWatcher(s.domainsFile, s.Reload)
 	if err != nil {
+		s.logger.Error("Failed to set up file watcher", zap.Error(err))
 		panic(err)
 	}
+	watcher.WithLogger(s.logger)
 	s.watcher = watcher
+
+	s.logger.Info("File watcher is now enabled")
 
 	return s
 }
@@ -70,14 +91,19 @@ func (s *DomainService) WithFileWatcher() *DomainService {
 // Reload reloads the domain entries from the file into the cache.
 // This method is called during initialization and when file changes are detected.
 func (s *DomainService) Reload() error {
+	s.logger.Info("Reloading domains file")
+
 	entries, err := ReadDomainsFile(s.domainsFile)
 	if err != nil {
-		return fmt.Errorf("failed to read domains file: %w", err)
+		s.logger.Error("Failed to read domains file", zap.Error(err))
+		return err
 	}
 
 	s.mutex.Lock()
 	s.cache = entries
 	s.mutex.Unlock()
+
+	s.logger.Info("Entries reloaded", zap.Int("count", len(entries)))
 
 	return nil
 }
@@ -85,29 +111,30 @@ func (s *DomainService) Reload() error {
 // Close cleans up resources used by the DomainService.
 // It stops the file watcher and closes all plugin connections.
 func (s *DomainService) Close() error {
-	var errs []error
+	s.logger.Info("Closing domain service")
 
 	if s.watcher != nil {
 		if err := s.watcher.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to close watcher: %w", err))
+			s.logger.Error("Failed to  close watcher", zap.Error(err))
 		}
 	}
 
 	if s.Registry != nil {
 		if err := s.Registry.Close(context.Background()); err != nil {
-			errs = append(errs, fmt.Errorf("failed to close plugin Registry: %w", err))
+			s.logger.Error("Failed to close plugin Registry", zap.Error(err))
 		}
 	}
 
-	if len(errs) > 0 {
-		return fmt.Errorf("errors closing domain service: %v", errs)
-	}
+	s.logger.Sync()
+
 	return nil
 }
 
 // CreateDomain adds a new domain entry to the domains file.
 // It validates the entry, checks for duplicates, and updates both the cache and file.
 func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
+	s.logger.Info("Creating domain", zap.Any("domain", req))
+
 	entry := model.DomainEntry{
 		Domain:           req.Domain,
 		AlternativeNames: req.AlternativeNames,
@@ -118,7 +145,8 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 
 	// Validate the domain entry
 	if !model.IsValidDomainEntry(entry) {
-		return nil, fmt.Errorf("invalid domain entry: %v", entry)
+		s.logger.Error("Invalid domain entry", zap.Any("entry", entry))
+		return nil, errors.New("invalid domain entry")
 	}
 
 	s.mutex.Lock()
@@ -127,18 +155,22 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	// Check if domain already exists
 	for _, existing := range s.cache {
 		if existing.Domain == entry.Domain {
-			return nil, fmt.Errorf("domain already exists: %s", entry.Domain)
+			s.logger.Error("Domain already exists", zap.Any("entry", entry))
+			return nil, errors.New("domain exists")
 		}
 	}
 
 	// Add the new entry
 	s.cache = append(s.cache, entry)
 
+	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
+
 	// Write back to file
 	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
 		// Revert cache on error
 		s.cache = s.cache[:len(s.cache)-1]
-		return nil, fmt.Errorf("failed to write domains file: %w", err)
+		s.logger.Error("Failed to write domains file", zap.Error(err))
+		return nil, err
 	}
 
 	return &entry, nil
@@ -168,6 +200,8 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 // GetDomain retrieves a domain entry by its domain name.
 // It returns a copy of the entry with metadata enriched from plugins.
 func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
+	s.logger.Info("Load domain", zap.String("domain", domain))
+
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -175,18 +209,24 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 		if entry.Domain == domain {
 			entryCopy := entry
 			if err := s.enrichMetadata(&entryCopy); err != nil {
-				return nil, fmt.Errorf("failed to enrich metadata: %w", err)
+				s.logger.Error("failed to enrich metadata", zap.Error(err))
+				return nil, err
 			}
+			s.logger.Info("Found domain", zap.Any("domain", &entryCopy))
 			return &entryCopy, nil
 		}
 	}
 
-	return nil, fmt.Errorf("domain not found: %s", domain)
+	s.logger.Error("Domain not found", zap.String("domain", domain))
+
+	return nil, errors.New("domain not found")
 }
 
 // ListDomains returns all domain entries with their metadata enriched from plugins.
 // It returns a copy of the cached entries to prevent modification of the cache.
 func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
+	s.logger.Info("Load domains")
+
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -195,9 +235,12 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 	for i, entry := range s.cache {
 		entries[i] = entry
 		if err := s.enrichMetadata(&entries[i]); err != nil {
-			return nil, fmt.Errorf("failed to enrich metadata: %w", err)
+			s.logger.Error("failed to enrich metadata", zap.String("domain", entries[i].Domain), zap.Error(err))
+			return nil, err
 		}
 	}
+
+	s.logger.Info("Loaded domains", zap.Int("count", len(entries)))
 
 	return entries, nil
 }
@@ -205,6 +248,8 @@ func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
 // UpdateDomain updates an existing domain entry with new information.
 // It validates the updated entry and writes the changes to both cache and file.
 func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
+	s.logger.Info("Update domain", zap.String("domain", domain), zap.Any("req", req))
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -223,7 +268,8 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 			// Validate the updated entry
 			if !model.IsValidDomainEntry(updatedEntry) {
-				return nil, fmt.Errorf("invalid domain entry: %v", updatedEntry)
+				s.logger.Error("Invalid domain entry", zap.Any("entry", updatedEntry))
+				return nil, errors.New("invalid domain entry")
 			}
 
 			s.cache[i] = updatedEntry
@@ -233,13 +279,18 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	}
 
 	if !found {
-		return nil, fmt.Errorf("domain not found: %s", domain)
+		s.logger.Error("Domain not found", zap.String("domain", domain))
+		return nil, errors.New("domain not found")
 	}
 
 	// Write back to file
+	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
 	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
-		return nil, fmt.Errorf("failed to write domains file: %w", err)
+		s.logger.Error("Failed to write domains file", zap.Error(err))
+		return nil, err
 	}
+
+	s.logger.Info("Updated domain", zap.String("domain", domain))
 
 	return &updatedEntry, nil
 }
@@ -247,6 +298,8 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 // DeleteDomain removes a domain entry from both the cache and the domains file.
 // It returns an error if the domain is not found.
 func (s *DomainService) DeleteDomain(domain string) error {
+	s.logger.Info("Delete domain", zap.String("domain", domain))
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -261,15 +314,21 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("domain not found: %s", domain)
+		s.logger.Error("Domain not found", zap.String("domain", domain))
+		return errors.New("domain not found")
 	}
 
 	// Write back to file
+	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
 	if err := WriteDomainsFile(s.domainsFile, newEntries); err != nil {
-		return fmt.Errorf("failed to write domains file: %w", err)
+		s.logger.Error("Failed to write domains file", zap.Error(err))
+		return err
 	}
 
 	// Update cache only after successful write
 	s.cache = newEntries
+
+	s.logger.Info("Deleted domain", zap.String("domain", domain))
+
 	return nil
 }

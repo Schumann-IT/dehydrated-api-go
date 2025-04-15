@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/gofiber/fiber/v2/log"
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
@@ -34,6 +35,10 @@ func NewRegistry(pluginConfig map[string]plugin.PluginConfig, cfg *dehydrated.Co
 	}
 
 	for name, pc := range pluginConfig {
+		if !pc.Enabled {
+			log.Info("skipping disabled plugin: ", name)
+			continue
+		}
 		if err := r.LoadPlugin(name, pc); err != nil {
 			return nil, fmt.Errorf("failed to load plugin %s: %w", name, err)
 		}
