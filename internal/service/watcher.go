@@ -71,7 +71,10 @@ func (fw *FileWatcher) Watch() {
 func (fw *FileWatcher) watch() {
 	const debounceInterval = 100 * time.Millisecond
 
-	fw.logger.Info("Starting file watcher", zap.Any("debounce interval", debounceInterval))
+	fw.logger.Info("Starting file watcher",
+		zap.String("file", fw.filePath),
+		zap.String("dir", filepath.Dir(fw.filePath)),
+		zap.Duration("debounce", debounceInterval))
 
 	for {
 		select {
@@ -80,29 +83,52 @@ func (fw *FileWatcher) watch() {
 				return
 			}
 
+			// Normalize paths for comparison
+			eventPath := filepath.Clean(event.Name)
+			watchPath := filepath.Clean(fw.filePath)
+
 			// Check if the event is related to our file
-			if event.Name != fw.filePath && filepath.Base(event.Name) != filepath.Base(fw.filePath) {
+			if eventPath != watchPath {
+				fw.logger.Debug("Ignoring event for different file",
+					zap.String("event_path", eventPath),
+					zap.String("watch_path", watchPath))
 				continue
 			}
 
+			// Log all events for debugging
+			fw.logger.Info("File event detected",
+				zap.String("operation", event.Op.String()),
+				zap.String("file", event.Name))
+
 			// Check if the event is a write, create, or remove event
 			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove) != 0 {
-				fw.logger.Info("Write event detected", zap.String("event", event.Name))
-
 				fw.mutex.Lock()
 				lastEvent, exists := fw.debounceMap[event.Name]
 				now := time.Now()
+
+				// Always trigger callback for Remove and Create events
+				shouldHandle := event.Op&(fsnotify.Create|fsnotify.Remove) != 0 ||
+					!exists || now.Sub(lastEvent) >= debounceInterval
+
 				fw.debounceMap[event.Name] = now
-				shouldHandle := !exists || now.Sub(lastEvent) >= debounceInterval
 				fw.mutex.Unlock()
 
-				// Handle the change if not debounced
+				// Handle the change if not debounced or if it's a critical event
 				if shouldHandle {
-					fw.logger.Info("Calling onChange callback", zap.String("event", event.Name))
+					fw.logger.Info("Triggering onChange callback",
+						zap.String("operation", event.Op.String()),
+						zap.String("file", event.Name))
 
 					if err := fw.onChange(); err != nil {
-						fw.logger.Error("Callback onChange failed", zap.String("event", event.Name), zap.Error(err))
+						fw.logger.Error("Callback onChange failed",
+							zap.String("operation", event.Op.String()),
+							zap.String("file", event.Name),
+							zap.Error(err))
 					}
+				} else {
+					fw.logger.Debug("Debouncing event",
+						zap.String("operation", event.Op.String()),
+						zap.String("file", event.Name))
 				}
 			}
 		case err, ok := <-fw.watcher.Errors:

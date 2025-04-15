@@ -213,7 +213,6 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 				s.logger.Error("failed to enrich metadata", zap.Error(err))
 				return nil, err
 			}
-			s.logger.Info("Found domain", zap.Any("domain", &entryCopy))
 			return &entryCopy, nil
 		}
 	}

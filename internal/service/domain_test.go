@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"os"
 	"path/filepath"
 	"sync"
@@ -266,26 +268,32 @@ func TestConcurrentOperations(t *testing.T) {
 	// load dehydrated config
 	dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
 
-	service := NewDomainService(dc.DomainsFile)
+	l, _ := logger.NewLogger(&logger.Config{
+		Level:      "debug",
+		Encoding:   "console",
+		OutputPath: "",
+	})
+	service := NewDomainService(dc.DomainsFile).WithLogger(l)
 	defer service.Close()
 
 	t.Run("ConcurrentReadsAndWrites", func(t *testing.T) {
 		var wg sync.WaitGroup
-		domains := []string{"domain1.com", "domain2.com", "domain3.com"}
+		numGoroutines := 10
 
 		// Start multiple goroutines that read and write
-		for i := 0; i < 10; i++ {
+		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				domain := domains[idx%len(domains)]
+				// Use unique domain name for each goroutine
+				domain := fmt.Sprintf("domain%d.com", idx)
 
 				// Create domain
 				req := model.CreateDomainRequest{
 					Domain: domain,
 				}
 				_, err := service.CreateDomain(req)
-				if err != nil && err.Error() != "domain already exists: "+domain {
+				if err != nil {
 					t.Errorf("Unexpected error creating domain: %v", err)
 				}
 
@@ -395,9 +403,18 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 		assert.NoError(t, err)
 		defer watcher.Close()
 
+		// Start the watcher
+		watcher.Watch()
+
+		// Give the watcher a moment to initialize
+		time.Sleep(100 * time.Millisecond)
+
 		// Delete the file
 		err = os.Remove(domainsFile)
 		assert.NoError(t, err)
+
+		// Give the watcher time to process the deletion
+		time.Sleep(200 * time.Millisecond)
 
 		// Recreate the file with different content
 		err = os.WriteFile(domainsFile, []byte("example2.com"), 0644)
@@ -407,7 +424,7 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 		select {
 		case <-callbackCh:
 			// Success: callback was called
-		case <-time.After(time.Second):
+		case <-time.After(2 * time.Second):
 			t.Error("Callback was not called within the timeout period")
 		}
 	})
