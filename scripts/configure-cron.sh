@@ -12,10 +12,8 @@ if [ -z "$CRON_SCHEDULE" ]; then
   exit 0
 fi
 
-LOG_FILE="${BASE_DIR}/cron.log"
-
 # cron dir
 mkdir -p ${CRON_DIR}
 
 # Create the cron job
-echo "${CRON_SCHEDULE} /app/scripts/renew-certs.sh >> ${LOG_FILE} 2>&1" > ${CRON_DIR}/renew-certs
+echo "${CRON_SCHEDULE} /app/scripts/renew-certs.sh" > ${CRON_DIR}/renew-certs

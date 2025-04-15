@@ -49,10 +49,6 @@ func NewServer() *Server {
 		Logger:   zap.NewNop(),
 	}
 
-	// Create domain handler
-	h := handler.NewHealthHandler()
-	h.RegisterRoutes(server.app)
-
 	return server
 }
 
@@ -134,6 +130,10 @@ func (s *Server) WithDomainService() *Server {
 }
 
 func (s *Server) Start() {
+	// Create health handler
+	h := handler.NewHealthHandler()
+	h.RegisterRoutes(s.app)
+
 	// Start server in a goroutine
 	s.wg.Add(1)
 	go func() {
