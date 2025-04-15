@@ -37,6 +37,9 @@ type Config struct {
 
 	// Logging configuration
 	Logging *logger.Config `yaml:"logging"` // Configuration for the application logger
+
+	err          error
+	parsedConfig *Config
 }
 
 // NewConfig creates a new Config instance with default values.
@@ -64,61 +67,72 @@ func (c *Config) WithBaseDir(dir string) *Config {
 	return c
 }
 
+func (c *Config) parse(path string) *Config {
+	fc := &Config{}
+
+	if _, err := os.Stat(path); err == nil {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			fc.err = err
+			return fc
+		}
+
+		err = yaml.Unmarshal(data, fc)
+		if err != nil {
+			fc.err = err
+			return fc
+		}
+	}
+
+	c.parsedConfig = fc
+
+	return fc
+}
+
 // Load loads configuration from a YAML file and merges it with defaults.
 // If the file doesn't exist or has invalid content, the default configuration is returned.
 // The method merges non-zero values from the file with the existing configuration.
 func (c *Config) Load(path string) *Config {
 	absConfigPath, _ := filepath.Abs(path)
-
-	// Create a temporary config to hold file contents
-	fileConfig := &Config{
-		Plugins: make(map[string]plugin.PluginConfig),
+	fc := c.parse(absConfigPath)
+	if fc.err != nil {
+		c.err = fc.err
+		return c
 	}
 
-	// Load configuration from file if it exists
-	if _, err := os.Stat(absConfigPath); err == nil {
-		data, err := os.ReadFile(absConfigPath)
-		if err != nil {
-			return c
-		}
+	// Merge non-zero values from file config
+	if fc.Port != 0 {
+		c.Port = fc.Port
+	}
+	if fc.DehydratedBaseDir != "" {
+		c.DehydratedBaseDir = fc.DehydratedBaseDir
+	}
+	if fc.DehydratedConfigFile != "" {
+		c.DehydratedConfigFile = fc.DehydratedConfigFile
+	}
+	if fc.EnableWatcher {
+		c.EnableWatcher = true
+	}
 
-		err = yaml.Unmarshal(data, fileConfig)
-		if err != nil {
-			return c
+	// Merge logging configuration
+	if fc.Logging != nil {
+		if c.Logging == nil {
+			c.Logging = logger.DefaultConfig()
 		}
+		if fc.Logging.Level != "" {
+			c.Logging.Level = fc.Logging.Level
+		}
+		if fc.Logging.Encoding != "" {
+			c.Logging.Encoding = fc.Logging.Encoding
+		}
+		if fc.Logging.OutputPath != "" {
+			c.Logging.OutputPath = fc.Logging.OutputPath
+		}
+	}
 
-		// Merge non-zero values from file config
-		if fileConfig.Port != 0 {
-			c.Port = fileConfig.Port
-		}
-		if fileConfig.DehydratedBaseDir != "" {
-			c.DehydratedBaseDir = fileConfig.DehydratedBaseDir
-		}
-		if fileConfig.DehydratedConfigFile != "" {
-			c.DehydratedConfigFile = fileConfig.DehydratedConfigFile
-		}
-		if fileConfig.EnableWatcher {
-			c.EnableWatcher = true
-		}
-
-		// Merge logging configuration
-		if fileConfig.Logging != nil {
-			if c.Logging == nil {
-				c.Logging = logger.DefaultConfig()
-			}
-			if fileConfig.Logging.Level != "" {
-				c.Logging.Level = fileConfig.Logging.Level
-			}
-			if fileConfig.Logging.Encoding != "" {
-				c.Logging.Encoding = fileConfig.Logging.Encoding
-			}
-			if fileConfig.Logging.OutputPath != "" {
-				c.Logging.OutputPath = fileConfig.Logging.OutputPath
-			}
-		}
-
+	if fc.Plugins != nil {
 		// Merge plugin configurations
-		for name, p := range fileConfig.Plugins {
+		for name, p := range fc.Plugins {
 			// If plugin doesn't exist in defaults, create it
 			if _, exists := c.Plugins[name]; !exists {
 				c.Plugins[name] = plugin.PluginConfig{
@@ -145,7 +159,6 @@ func (c *Config) Load(path string) *Config {
 					existingPlugin.Config[k] = v
 				}
 			}
-
 			// Update the plugin in the main config
 			c.Plugins[name] = existingPlugin
 		}

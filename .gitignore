@@ -58,5 +58,6 @@ coverage.html
 data/
 examples/config/*-test*
 
-internal/plugin/registry/testdata/test-plugin/test-plugin
+internal/plugin/grpc/testdata/test-plugin/test-plugin
 proto/plugin/*.pb.go
+dehydrated-api-go

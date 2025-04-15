@@ -304,6 +304,7 @@ func TestConfigLoad(t *testing.T) {
 		name           string
 		configContent  string
 		expectedConfig *Config
+		expectError    bool
 		setupFiles     func(dir string) error
 	}{
 		{
@@ -323,6 +324,7 @@ logging:
   encoding: json
   outputPath: /test/log
 `,
+			expectError: false,
 			expectedConfig: &Config{
 				Port:              8080,
 				DehydratedBaseDir: "/test/dir",
@@ -351,6 +353,7 @@ plugins:
   test:
     enabled: true
 `,
+			expectError: false,
 			expectedConfig: &Config{
 				Port:              8080,
 				DehydratedBaseDir: ".",
@@ -366,6 +369,7 @@ plugins:
 		{
 			name:          "load non-existent file",
 			configContent: "",
+			expectError:   false,
 			expectedConfig: &Config{
 				Port:              3000,
 				DehydratedBaseDir: ".",
@@ -378,6 +382,7 @@ plugins:
 			configContent: `
 port: not-a-number
 `,
+			expectError: true,
 			expectedConfig: &Config{
 				Port:              3000,
 				DehydratedBaseDir: ".",
@@ -404,6 +409,17 @@ port: not-a-number
 
 			cfg := NewConfig()
 			cfg.Load(configPath)
+			if cfg.err != nil {
+				if tt.expectError {
+					assert.Error(t, cfg.err)
+				} else {
+					t.Fatalf("Unexpected error: %v", cfg.err)
+				}
+				return
+			}
+			if !filepath.IsAbs(cfg.parsedConfig.DehydratedBaseDir) {
+				tt.expectedConfig.DehydratedBaseDir = filepath.Join(tmpDir, tt.expectedConfig.DehydratedBaseDir)
+			}
 
 			// Compare configurations
 			if tt.expectedConfig != nil {
