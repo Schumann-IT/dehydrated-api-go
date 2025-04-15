@@ -27,9 +27,9 @@ GORELEASER_BIN=/opt/homebrew/bin/goreleaser
 PROTOC_GEN_GO_BIN=/opt/homebrew/bin/protoc-gen-go
 PROTOC_GEN_GO_GRPC_BIN=/opt/homebrew/bin/protoc-gen-go-grpc
 
-.PHONY: all build test clean run deps lint generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean proto
+.PHONY: all build test clean run lint generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean proto
 
-all: deps test build ## Run deps, test, and build
+all: test build ## Run test, and build
 
 build: generate ## Build the binary
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
@@ -53,11 +53,6 @@ clean: ## Clean build artifacts
 	rm -f internal/plugin/grpc/testdata/test-plugin/test-plugin
 	rm -rf dist
 
-deps: ## Download dependencies
-	$(GOMOD) download
-	$(GOMOD) tidy
-	$(GOGET) -v -t -d ./...
-
 # Linting
 lint: ## Run linter
 	$(GOLANGCI_LINT_BIN) run
@@ -75,7 +70,7 @@ release: ## Create a release with goreleaser
 	$(GORELEASER_BIN) release --snapshot --clean
 
 # Development setup
-dev-setup: deps generate-test lint
+dev-setup: generate-test lint
 
 # Docker targets
 docker-build: ## Build Docker image
