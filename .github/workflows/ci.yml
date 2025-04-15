@@ -23,6 +23,9 @@ jobs:
           go-version: '1.23'
           cache: true
 
+      - name: Build test plugin
+        run: go build -o internal/plugin/grpc/testdata/test-plugin/test-plugin internal/plugin/grpc/testdata/test-plugin/main.go
+
       - name: Run tests
         run: make test-app
 
