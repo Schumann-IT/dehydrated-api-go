@@ -12,7 +12,7 @@ if [ -n "$CRON_SCHEDULE" ]; then
 fi
 
 # Check if API is responding
-if ! curl -f http://localhost:${PORT}/api/v1/domains >/dev/null 2>&1; then
+if ! curl -f http://localhost:${PORT}/api/v1/health >/dev/null 2>&1; then
   echo "API health check failed"
   exit 1
 fi

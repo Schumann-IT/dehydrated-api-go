@@ -49,6 +49,10 @@ func NewServer() *Server {
 		Logger:   zap.NewNop(),
 	}
 
+	// Create domain handler
+	h := handler.NewHealthHandler()
+	h.RegisterRoutes(server.app)
+
 	return server
 }
 
