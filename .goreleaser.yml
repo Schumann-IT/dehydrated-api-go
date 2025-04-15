@@ -4,7 +4,6 @@ project_name: dehydrated-api-go
 
 before:
   hooks:
-    - go generate ./...
     - go mod tidy
 
 builds:
