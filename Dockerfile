@@ -3,7 +3,7 @@ FROM alpine:3.19 AS downloader
 ARG GOOS="linux"
 ARG GOARCH="arm64"
 ARG ARCH="arm64"
-ARG VERSION="v0.0.8"
+ARG VERSION="v0.0.9"
 
 WORKDIR /build
 
