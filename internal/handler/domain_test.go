@@ -3,8 +3,8 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -211,7 +211,7 @@ func TestDomainHandler(t *testing.T) {
 // It ensures that the handler correctly sets up all required endpoints.
 func TestRouteRegistration(t *testing.T) {
 	app := fiber.New()
-	handler := NewDomainHandler(&mockDomainService{})
+	handler := NewDomainHandler(&serviceinterface.MockErrDomainService{})
 	handler.RegisterRoutes(app)
 
 	// Test each route individually
@@ -257,47 +257,13 @@ func TestRouteRegistration(t *testing.T) {
 	}
 }
 
-// mockDomainService implements the DomainService interface for testing.
-// It provides a simple in-memory implementation of domain operations.
-type mockDomainService struct{}
-
-// ListDomains returns an empty list of domains for testing.
-func (m *mockDomainService) ListDomains() ([]model.DomainEntry, error) {
-	return nil, fmt.Errorf("mock error")
-}
-
-// GetDomain returns a mock domain entry for testing.
-func (m *mockDomainService) GetDomain(domain string) (*model.DomainEntry, error) {
-	return nil, fmt.Errorf("mock error")
-}
-
-// CreateDomain creates a mock domain entry for testing.
-func (m *mockDomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
-	return nil, fmt.Errorf("mock error")
-}
-
-// UpdateDomain updates a mock domain entry for testing.
-func (m *mockDomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
-	return nil, fmt.Errorf("mock error")
-}
-
-// DeleteDomain simulates deleting a domain entry for testing.
-func (m *mockDomainService) DeleteDomain(domain string) error {
-	return fmt.Errorf("mock error")
-}
-
-// Close performs cleanup for the mock service.
-func (m *mockDomainService) Close() error {
-	return nil
-}
-
 // TestServiceErrors verifies that the handler properly handles service errors.
 // It tests error responses for various error conditions that may occur during domain operations.
 func TestServiceErrors(t *testing.T) {
 	app := fiber.New()
 
 	// Create a mock s that always returns errors
-	s := &mockDomainService{}
+	s := &serviceinterface.MockErrDomainService{}
 	handler := NewDomainHandler(s)
 	handler.RegisterRoutes(app)
 

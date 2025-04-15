@@ -5,37 +5,16 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 )
-
-// DomainService defines the interface for domain operations.
-// It provides methods for managing domain entries in the dehydrated configuration.
-type DomainService interface {
-	// ListDomains returns all configured domain entries.
-	ListDomains() ([]model.DomainEntry, error)
-
-	// GetDomain retrieves a specific domain entry by its domain name.
-	GetDomain(domain string) (*model.DomainEntry, error)
-
-	// CreateDomain creates a new domain entry with the given configuration.
-	CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error)
-
-	// UpdateDomain updates an existing domain entry with the given configuration.
-	UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error)
-
-	// DeleteDomain removes a domain entry by its domain name.
-	DeleteDomain(domain string) error
-
-	// Close performs any necessary cleanup when the service is no longer needed.
-	Close() error
-}
 
 // DomainHandler handles HTTP requests for domain operations
 type DomainHandler struct {
-	service DomainService
+	service serviceinterface.DomainService
 }
 
 // NewDomainHandler creates a new DomainHandler instance
-func NewDomainHandler(service DomainService) *DomainHandler {
+func NewDomainHandler(service serviceinterface.DomainService) *DomainHandler {
 	return &DomainHandler{
 		service: service,
 	}

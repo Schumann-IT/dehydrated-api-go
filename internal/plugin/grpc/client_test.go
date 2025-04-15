@@ -12,8 +12,6 @@ import (
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
-
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -137,7 +135,7 @@ func TestConvertToStructValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := plugininterface.ConvertToStructValue(tt.input)
+			result, err := convertToStructValue(tt.input)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

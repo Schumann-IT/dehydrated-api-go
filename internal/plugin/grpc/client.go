@@ -12,13 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"google.golang.org/grpc"
 )
 
 // Client represents a gRPC plugin client.
@@ -43,7 +41,7 @@ func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehyd
 	}
 
 	// Convert config to structpb.Value to validate it
-	_, err := plugininterface.ConvertToStructValue(config)
+	_, err := convertToStructValue(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert config: %w", err)
 	}
@@ -108,23 +106,6 @@ connected:
 	}
 
 	return client, nil
-}
-
-// convertToStructValue converts a map[string]any to map[string]*structpb.Value
-func convertToStructValue(config map[string]any) (map[string]*structpb.Value, error) {
-	if config == nil {
-		return nil, nil
-	}
-
-	result := make(map[string]*structpb.Value)
-	for k, v := range config {
-		value, err := structpb.NewValue(v)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert value for key %s: %w", k, err)
-		}
-		result[k] = value
-	}
-	return result, nil
 }
 
 // Initialize initializes the plugin with the provided configuration.
