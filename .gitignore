@@ -58,5 +58,4 @@ coverage.html
 data/
 examples/config/*-test*
 
-internal/plugin/grpc/testdata/test-plugin/test-plugin
 dehydrated-api-go
