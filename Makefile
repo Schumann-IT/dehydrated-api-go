@@ -36,7 +36,7 @@ build: generate ## Build the binary
 
 test: test-app test-scripts
 
-test-app: generate-test
+test-app:
 	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 
