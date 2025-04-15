@@ -102,8 +102,5 @@ ENV EXTERNAL_PLUGINS=""
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD /app/scripts/healthcheck.sh
 
-# Expose the API port
-EXPOSE ${PORT}
-
 # Set the entrypoint to the startup script
 ENTRYPOINT ["/app/scripts/start-api.sh"]
