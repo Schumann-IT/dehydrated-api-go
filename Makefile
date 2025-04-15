@@ -31,7 +31,7 @@ PROTOC_GEN_GO_GRPC_BIN=/opt/homebrew/bin/protoc-gen-go-grpc
 
 all: test build ## Run test, and build
 
-build: generate ## Build the binary
+build: ## Build the binary
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
 
 test: test-app test-scripts
