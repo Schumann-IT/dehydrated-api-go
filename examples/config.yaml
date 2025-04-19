@@ -1,6 +1,6 @@
 port: 3000
-dehydratedBaseDir: /data/dehydrated
-enableWatcher: false
+dehydratedBaseDir: ./data
+enableWatcher: true
 plugins:
   openssl:
     enabled: true

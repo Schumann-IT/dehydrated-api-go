@@ -34,6 +34,9 @@ all: test build ## Run test, and build
 build: ## Build the binary
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
 
+run: build ## Run the binary with example config
+	./$(BINARY_NAME) -config examples/config.yaml
+
 test: test-app test-scripts
 
 test-app:

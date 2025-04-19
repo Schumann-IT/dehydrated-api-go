@@ -26,6 +26,10 @@ CONFIG_FILE=${CONFIG_FILE:-/app/config/config.yaml}
 # the dehydrated base dir, variable for testing
 BASE_DIR=${BASE_DIR:-/data/dehydrated}
 
+if ! [ -f $CONFIG_FILE ]; then
+  touch $CONFIG_FILE
+fi
+
 # set dehydrated base dir
 echo "Setting dehydratedBaseDir to $BASE_DIR"
 yq -i ".dehydratedBaseDir = \"$BASE_DIR\"" "$CONFIG_FILE"
@@ -63,6 +67,25 @@ if [ -n "$EXTERNAL_PLUGINS" ]; then
   rm -f "$TEMP_PLUGINS_FILE"
   
   echo "External plugins configuration processed successfully"
+fi
+
+# Process logging config if provided
+if [ -n "$LOGGING" ]; then
+  echo "Processing logging configuration..."
+
+  # Create a temporary file for the plugins configuration
+  TEMP_LOGGING_FILE=$(mktemp)
+
+  # Parse logging config
+  echo $LOGGING | yq -P '.' > TEMP_LOGGING_FILE
+
+  # Merge the plugins configuration into the main config
+  yq -i ".logging = load(\"$TEMP_LOGGING_FILE\")" "$CONFIG_FILE"
+
+  # Clean up temporary files
+  rm -f "$TEMP_LOGGING_FILE"
+
+  echo "Logging configuration processed successfully"
 fi
 
 echo "Configuration file updated at $CONFIG_FILE"

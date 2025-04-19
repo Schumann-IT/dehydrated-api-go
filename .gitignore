@@ -55,8 +55,7 @@ debug/
 # Local development files
 domains.txt
 coverage.html
-data/
-examples/config/*-test*
+examples/data/
 
 internal/plugin/grpc/testdata/test-plugin/test-plugin
 dehydrated-api-go

@@ -98,23 +98,42 @@ Choose an external plugin when:
 
 ## Plugin Interface
 
-The core interface that all plugins must implement is:
+All plugins must implement the following interface:
 
 ```go
 type Plugin interface {
-    // GetMetadata retrieves metadata for a domain
-    GetMetadata(ctx context.Context, domain string) (map[string]interface{}, error)
-    
-    // Close cleans up plugin resources
+    // Initialize is called when the plugin is loaded.
+    // It sets up the plugin with the provided configuration.
+    // The context can be used for cancellation and timeout control.
+    // Returns an error if initialization fails.
+    Initialize(ctx context.Context, config map[string]any) error
+
+    // GetMetadata returns metadata for a domain entry.
+    // This method is called to retrieve plugin-specific information about a domain.
+    // The dehydratedConfig parameter provides access to the dehydrated configuration
+    // for the specific domain being processed.
+    // The context can be used for cancellation and timeout control.
+    // Returns a map of metadata key-value pairs and an error if the operation fails.
+    GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
+
+    // Close is called when the plugin is being unloaded.
+    // It performs any necessary cleanup operations.
+    // The context can be used for cancellation and timeout control.
+    // Returns an error if cleanup fails.
     Close(ctx context.Context) error
 }
 ```
 
 ## Plugin Lifecycle
 
-1. **Initialization**: The plugin is loaded and configured when the service starts
-2. **Metadata Retrieval**: The plugin's `GetMetadata` method is called when domain information is requested
-3. **Cleanup**: The plugin's `Close` method is called when the service shuts down
+1. **Initialization**: When the plugin is loaded, the `Initialize` method is called with the plugin's configuration. This is where you should set up any resources needed by the plugin.
+
+2. **Metadata Retrieval**: The `GetMetadata` method is called whenever metadata is needed for a domain. This method receives:
+   - The domain entry being processed
+   - The dehydrated configuration specific to the domain
+   - A context for cancellation and timeout control
+
+3. **Cleanup**: When the plugin is being unloaded, the `Close` method is called to perform any necessary cleanup.
 
 ## Creating a New Plugin
 
