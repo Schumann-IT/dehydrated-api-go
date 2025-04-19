@@ -20,33 +20,33 @@ import (
 // DomainService handles domain-related business logic and operations.
 // It manages domain entries, integrates with plugins, and provides thread-safe access to domain data.
 type DomainService struct {
-	domainsFile string              // Path to the domains.txt file
-	watcher     *FileWatcher        // File watcher for monitoring changes
-	cache       []model.DomainEntry // In-memory cache of domain entries
-	mutex       sync.RWMutex        // Mutex for thread-safe access to the cache
-	Registry    *registry.Registry  // Plugin registry for metadata enrichment
-	logger      *zap.Logger
+	DehydratedConfig *dehydrated.Config  // Path to the domains.txt file
+	watcher          *FileWatcher        // File watcher for monitoring changes
+	cache            []model.DomainEntry // In-memory cache of domain entries
+	mutex            sync.RWMutex        // Mutex for thread-safe access to the cache
+	Registry         *registry.Registry  // Plugin registry for metadata enrichment
+	logger           *zap.Logger
 }
 
 // NewDomainService creates a new DomainService instance with the provided configuration.
 // It initializes the dehydrated client, sets up the plugin registry, and optionally
 // enables file watching for automatic updates.
-func NewDomainService(domainsFile string) *DomainService {
+func NewDomainService(cfg *dehydrated.Config) *DomainService {
 	// Ensure the domains file exists
-	if _, err := os.Stat(domainsFile); err != nil {
+	if _, err := os.Stat(cfg.DomainsFile); err != nil {
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(domainsFile), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(cfg.DomainsFile), 0755); err != nil {
 			panic(err)
 		}
 		// Create an empty domains file
-		if err := os.WriteFile(domainsFile, []byte{}, 0644); err != nil {
+		if err := os.WriteFile(cfg.DomainsFile, []byte{}, 0644); err != nil {
 			panic(err)
 		}
 	}
 
 	s := &DomainService{
-		logger:      zap.NewNop(),
-		domainsFile: domainsFile,
+		logger:           zap.NewNop(),
+		DehydratedConfig: cfg,
 	}
 
 	return s
@@ -57,10 +57,10 @@ func (s *DomainService) WithLogger(l *zap.Logger) *DomainService {
 	return s
 }
 
-func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig, cfg *dehydrated.Config) *DomainService {
+func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig) *DomainService {
 	s.logger.Info("Initializing plugins")
 
-	reg, err := registry.NewRegistry(plugins, cfg)
+	reg, err := registry.NewRegistry(plugins)
 	if err != nil {
 		s.logger.Error("Failed to initialize plugin registry", zap.Error(err))
 		panic(err)
@@ -75,7 +75,7 @@ func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig, cfg 
 func (s *DomainService) WithFileWatcher() *DomainService {
 	s.logger.Info("Enabling file watcher")
 
-	watcher, err := NewFileWatcher(s.domainsFile, s.Reload)
+	watcher, err := NewFileWatcher(s.DehydratedConfig.DomainsFile, s.Reload)
 	if err != nil {
 		s.logger.Error("Failed to set up file watcher", zap.Error(err))
 		panic(err)
@@ -94,7 +94,7 @@ func (s *DomainService) WithFileWatcher() *DomainService {
 func (s *DomainService) Reload() error {
 	s.logger.Info("Reloading domains file")
 
-	entries, err := ReadDomainsFile(s.domainsFile)
+	entries, err := ReadDomainsFile(s.DehydratedConfig.DomainsFile)
 	if err != nil {
 		s.logger.Error("Failed to read domains file", zap.Error(err))
 		return err
@@ -167,7 +167,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
 
 	// Write back to file
-	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, s.cache); err != nil {
 		// Revert cache on error
 		s.cache = s.cache[:len(s.cache)-1]
 		s.logger.Error("Failed to write domains file", zap.Error(err))
@@ -186,7 +186,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 
 	ctx := context.Background()
 	for name, p := range s.Registry.GetPlugins() {
-		metadata, err := p.GetMetadata(ctx, *entry)
+		metadata, err := p.GetMetadata(ctx, *entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
 		if err != nil {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
@@ -285,7 +285,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 	// Write back to file
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
-	if err := WriteDomainsFile(s.domainsFile, s.cache); err != nil {
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, s.cache); err != nil {
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 
 	// Write back to file
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
-	if err := WriteDomainsFile(s.domainsFile, newEntries); err != nil {
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, newEntries); err != nil {
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return err
 	}

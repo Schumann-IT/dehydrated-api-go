@@ -94,8 +94,15 @@ message DehydratedConfig {
 message InitializeRequest {
   // Plugin-specific configuration as a map of values
   map<string, google.protobuf.Value> config = 1;
-  // Dehydrated configuration for ACME client operation
-  DehydratedConfig dehydrated_config = 2;
+}
+
+message DomainEntry {
+  string domain = 1;           // Primary domain name
+  repeated string alternative_names = 2; // Alternative domain names
+  string alias = 3;            // Certificate alias
+  bool enabled = 4;            // Whether the domain is enabled
+  string comment = 5;          // Domain comment
+  map<string, google.protobuf.Value> metadata = 6; // Existing metadata
 }
 
 // InitializeResponse is empty as no data is needed.
@@ -106,12 +113,12 @@ message InitializeResponse {}
 // It includes all fields from the domain entry that the plugin can use
 // to generate or retrieve metadata.
 message GetMetadataRequest {
-  string domain = 1;           // Primary domain name
-  repeated string alternative_names = 2; // Alternative domain names
-  string alias = 3;            // Certificate alias
-  bool enabled = 4;            // Whether the domain is enabled
-  string comment = 5;          // Domain comment
-  map<string, google.protobuf.Value> metadata = 6; // Existing metadata
+  // The domain object
+  DomainEntry domain_entry = 1;
+
+  // Dehydrated configuration for ACME client operation
+  DehydratedConfig dehydrated_config = 2;
+
 }
 
 // GetMetadataResponse contains the metadata for the domain entry.

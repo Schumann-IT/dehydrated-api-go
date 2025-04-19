@@ -43,7 +43,7 @@ func TestDomainService(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-			service := NewDomainService(dc.DomainsFile)
+			service := NewDomainService(dc)
 			defer service.Close()
 
 			// Test CreateDomain
@@ -128,11 +128,11 @@ func TestNewDomainService(t *testing.T) {
 	// Test with valid config
 	t.Run("ValidConfig", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-		service := NewDomainService(dc.DomainsFile).WithFileWatcher()
+		service := NewDomainService(dc).WithFileWatcher()
 		defer service.Close()
 
-		if service.domainsFile != domainsFile {
-			t.Errorf("Expected domains file %s, got %s", domainsFile, service.domainsFile)
+		if service.DehydratedConfig.DomainsFile != domainsFile {
+			t.Errorf("Expected domains file %s, got %s", domainsFile, service.DehydratedConfig.DomainsFile)
 		}
 		if service.watcher == nil {
 			t.Error("Expected watcher to be initialized")
@@ -143,7 +143,11 @@ func TestNewDomainService(t *testing.T) {
 	t.Run("InvalidPath", func(t *testing.T) {
 		invalidPath := filepath.Join(tmpDir, "nonexistent", "domains.txt")
 
-		service := NewDomainService(invalidPath)
+		dc := &dehydrated.Config{
+			DomainsFile: invalidPath,
+		}
+
+		service := NewDomainService(dc)
 		defer service.Close()
 
 		// Verify that the directory and file were created
@@ -155,7 +159,7 @@ func TestNewDomainService(t *testing.T) {
 	// Test without watcher
 	t.Run("WithoutWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-		service := NewDomainService(dc.DomainsFile)
+		service := NewDomainService(dc)
 		defer service.Close()
 
 		if service.watcher != nil {
@@ -186,7 +190,7 @@ func TestDomainServiceErrors(t *testing.T) {
 			}
 		}()
 
-		service := NewDomainService(dc.DomainsFile).WithPlugins(pluginConfig, dc)
+		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		service.Close()
 	})
 
@@ -196,13 +200,17 @@ func TestDomainServiceErrors(t *testing.T) {
 		err := os.MkdirAll(readOnlyDir, 0444)
 		assert.NoError(t, err)
 
+		dc := &dehydrated.Config{
+			DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+		}
+
 		defer func() {
 			if r := recover(); r == nil {
 				t.Errorf("The function did not panic as expected")
 			}
 		}()
 
-		_ = NewDomainService(filepath.Join(readOnlyDir, "domains.txt"))
+		_ = NewDomainService(dc)
 	})
 }
 
@@ -220,7 +228,7 @@ func TestMetadataEnrichment(t *testing.T) {
 		}
 
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-		service := NewDomainService(dc.DomainsFile).WithPlugins(pluginConfig, dc)
+		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		defer service.Close()
 
 		// Create a domain
@@ -254,7 +262,7 @@ func TestMetadataEnrichment(t *testing.T) {
 			}
 		}()
 
-		service := NewDomainService(dc.DomainsFile).WithPlugins(pluginConfig, dc)
+		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		service.Close()
 	})
 }
@@ -269,7 +277,7 @@ func TestConcurrentOperations(t *testing.T) {
 	dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
 
 	l, _ := logger.NewLogger(nil)
-	service := NewDomainService(dc.DomainsFile).WithLogger(l)
+	service := NewDomainService(dc).WithLogger(l)
 	defer service.Close()
 
 	t.Run("ConcurrentReadsAndWrites", func(t *testing.T) {
@@ -321,7 +329,7 @@ func TestEdgeCases(t *testing.T) {
 		// load dehydrated config
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
 
-		service := NewDomainService(dc.DomainsFile)
+		service := NewDomainService(dc)
 		defer service.Close()
 
 		entries, err := service.ListDomains()
@@ -346,7 +354,7 @@ func TestEdgeCases(t *testing.T) {
 			}
 		}()
 
-		service := NewDomainService(dc.DomainsFile).WithPlugins(pluginConfig, dc)
+		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		service.Close()
 	})
 
@@ -356,6 +364,9 @@ func TestEdgeCases(t *testing.T) {
 		err := os.MkdirAll(readOnlyDir, 0444)
 		assert.NoError(t, err)
 
+		dc := &dehydrated.Config{
+			DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+		}
 		defer func() {
 			if r := recover(); r == nil {
 				t.Errorf("The function did not panic as expected")
@@ -363,7 +374,7 @@ func TestEdgeCases(t *testing.T) {
 		}()
 
 		// Service creation should fail due to read-only directory
-		_ = NewDomainService(filepath.Join(readOnlyDir, "domains.txt"))
+		_ = NewDomainService(dc)
 	})
 }
 
@@ -433,7 +444,7 @@ func TestDomainServiceCleanup(t *testing.T) {
 
 	t.Run("CleanupWithWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
-		service := NewDomainService(dc.DomainsFile).WithFileWatcher()
+		service := NewDomainService(dc).WithFileWatcher()
 		assert.NotNil(t, service.watcher)
 
 		// Wait a bit for the watcher to initialize
@@ -447,7 +458,7 @@ func TestDomainServiceCleanup(t *testing.T) {
 
 	t.Run("CleanupWithoutWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
-		service := NewDomainService(dc.DomainsFile)
+		service := NewDomainService(dc)
 		assert.Nil(t, service.watcher)
 
 		err := service.Close()
@@ -463,7 +474,7 @@ func TestDomainServiceOperations(t *testing.T) {
 
 	t.Run("UpdateNonExistentDomain", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
-		service := NewDomainService(dc.DomainsFile)
+		service := NewDomainService(dc)
 		defer service.Close()
 
 		req := model.UpdateDomainRequest{
@@ -475,7 +486,7 @@ func TestDomainServiceOperations(t *testing.T) {
 
 	t.Run("DeleteNonExistentDomain", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
-		service := NewDomainService(dc.DomainsFile)
+		service := NewDomainService(dc)
 		defer service.Close()
 
 		err := service.DeleteDomain("nonexistent.com")
@@ -491,7 +502,7 @@ func TestDomainServiceOperations(t *testing.T) {
 		}
 
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
-		service := NewDomainService(dc.DomainsFile).WithPlugins(pluginConfig, dc)
+		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		defer service.Close()
 
 		// Create a domain with metadata

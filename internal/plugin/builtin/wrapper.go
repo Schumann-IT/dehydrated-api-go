@@ -14,7 +14,7 @@ type wrapper struct {
 	server pb.PluginServer
 }
 
-func (w *wrapper) Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error {
+func (w *wrapper) Initialize(ctx context.Context, config map[string]any) error {
 	// Convert Config to map[string]*structpb.Value
 	configMap := make(map[string]*structpb.Value)
 	for k, v := range config {
@@ -25,25 +25,19 @@ func (w *wrapper) Initialize(ctx context.Context, config map[string]any, dehydra
 		configMap[k] = value
 	}
 
-	// Convert dehydrated Config
-	dehydratedConfigProto := &pb.DehydratedConfig{
-		BaseDir:       dehydratedConfig.BaseDir,
-		CertDir:       dehydratedConfig.CertDir,
-		DomainsDir:    dehydratedConfig.DomainsDir,
-		ChallengeType: dehydratedConfig.ChallengeType,
-		Ca:            dehydratedConfig.Ca,
-	}
-
 	req := &pb.InitializeRequest{
-		Config:           configMap,
-		DehydratedConfig: dehydratedConfigProto,
+		Config: configMap,
 	}
 	_, err := w.server.Initialize(ctx, req)
 	return err
 }
 
-func (w *wrapper) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
-	req := entry.ToProto()
+func (w *wrapper) GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
+	req := &pb.GetMetadataRequest{
+		DomainEntry:      entry.ToProto(),
+		DehydratedConfig: dehydratedConfig.ToProto(),
+	}
+
 	resp, err := w.server.GetMetadata(ctx, req)
 	if err != nil {
 		return nil, err

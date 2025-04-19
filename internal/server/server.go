@@ -35,10 +35,9 @@ type Server struct {
 	wg       sync.WaitGroup // WaitGroup for managing goroutines
 	port     int            // Port number the server listens on
 
-	Config           *Config
-	Logger           *zap.Logger
-	dehydratedConfig *dehydrated.Config
-	domainService    *service.DomainService
+	Config        *Config
+	Logger        *zap.Logger
+	domainService *service.DomainService
 }
 
 // NewServer creates a new server instance.
@@ -81,13 +80,7 @@ func (s *Server) WithLogger() *Server {
 }
 
 func (s *Server) WithDomainService() *Server {
-	cfg := dehydrated.NewConfig().WithBaseDir(s.Config.DehydratedBaseDir)
-	if s.Config.DehydratedConfigFile != "" {
-		cfg = cfg.WithConfigFile(s.Config.DehydratedConfigFile)
-	}
-	cfg.Load()
-
-	s.dehydratedConfig = cfg
+	cfg := dehydrated.NewConfig().WithBaseDir(s.Config.DehydratedBaseDir).Load()
 
 	// Create domain service
 	s.Logger.Debug("Creating domain service",
@@ -96,8 +89,8 @@ func (s *Server) WithDomainService() *Server {
 		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	domainService := service.NewDomainService(s.dehydratedConfig.DomainsFile).
-		WithPlugins(s.Config.Plugins, s.dehydratedConfig)
+	domainService := service.NewDomainService(cfg).
+		WithPlugins(s.Config.Plugins)
 
 	if s.Logger != nil {
 		domainService.WithLogger(s.Logger)
@@ -219,5 +212,5 @@ func (s *Server) PrintServerConfig() {
 
 func (s *Server) PrintDehydratedConfig() {
 	fmt.Printf("%sResolved Dehydrated Config:%s\n", bold, reset)
-	fmt.Printf("%s\n", s.dehydratedConfig.String())
+	fmt.Printf("%s\n", s.domainService.DehydratedConfig.String())
 }

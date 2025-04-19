@@ -38,12 +38,12 @@ test: test-app test-scripts
 
 test-app:
 	$(GOTEST) -v -race -coverprofile=$(COVERAGE_FILE) ./...
+
+test-app-cover: test-app
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 
 test-scripts:
-	./scripts/test-update-api-config.sh
-	./scripts/test-update-dehydrated-config.sh
-	./scripts/test-configure-cron.sh
+	./scripts/test-update-config.sh
 
 clean: ## Clean build artifacts
 	$(GOCLEAN)

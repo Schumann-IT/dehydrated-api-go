@@ -35,11 +35,7 @@ type Client struct {
 // It sets up a temporary directory for the socket file and starts the plugin process.
 // The pluginPath parameter specifies the path to the plugin executable.
 // Returns a new Client instance and an error if initialization fails.
-func NewClient(pluginPath string, config map[string]any, dehydratedConfig *dehydrated.Config) (*Client, error) {
-	if dehydratedConfig == nil {
-		return nil, fmt.Errorf("dehydrated config is nil")
-	}
-
+func NewClient(pluginPath string, config map[string]any) (*Client, error) {
 	// Convert config to structpb.Value to validate it
 	_, err := convertToStructValue(config)
 	if err != nil {
@@ -100,7 +96,7 @@ connected:
 	}
 
 	// Initialize the plugin
-	if err := client.Initialize(context.Background(), config, dehydratedConfig); err != nil {
+	if err := client.Initialize(context.Background(), config); err != nil {
 		client.Close(context.Background())
 		return nil, err
 	}
@@ -112,7 +108,7 @@ connected:
 // It converts the configuration to protobuf format and sends it to the plugin.
 // The context can be used for cancellation and timeout control.
 // Returns an error if initialization fails.
-func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error {
+func (c *Client) Initialize(ctx context.Context, config map[string]any) error {
 	c.mu.RLock()
 	if c.client == nil {
 		c.mu.RUnlock()
@@ -126,56 +122,8 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 		return fmt.Errorf("failed to convert config: %w", err)
 	}
 
-	// Convert dehydrated config to proto format
-	dehydratedConfigProto := &pb.DehydratedConfig{
-		User:               dehydratedConfig.User,
-		Group:              dehydratedConfig.Group,
-		BaseDir:            dehydratedConfig.BaseDir,
-		CertDir:            dehydratedConfig.CertDir,
-		DomainsDir:         dehydratedConfig.DomainsDir,
-		AccountsDir:        dehydratedConfig.AccountsDir,
-		ChallengesDir:      dehydratedConfig.ChallengesDir,
-		ChainCache:         dehydratedConfig.ChainCache,
-		DomainsFile:        dehydratedConfig.DomainsFile,
-		ConfigFile:         dehydratedConfig.ConfigFile,
-		HookScript:         dehydratedConfig.HookScript,
-		LockFile:           dehydratedConfig.LockFile,
-		OpensslConfig:      dehydratedConfig.OpensslConfig,
-		Openssl:            dehydratedConfig.Openssl,
-		KeySize:            int32(dehydratedConfig.KeySize),
-		Ca:                 dehydratedConfig.Ca,
-		OldCa:              dehydratedConfig.OldCa,
-		AcceptTerms:        dehydratedConfig.AcceptTerms,
-		Ipv4:               dehydratedConfig.Ipv4,
-		Ipv6:               dehydratedConfig.Ipv6,
-		PreferredChain:     dehydratedConfig.PreferredChain,
-		Api:                dehydratedConfig.Api,
-		KeyAlgo:            dehydratedConfig.KeyAlgo,
-		RenewDays:          int32(dehydratedConfig.RenewDays),
-		ForceRenew:         dehydratedConfig.ForceRenew,
-		ForceValidation:    dehydratedConfig.ForceValidation,
-		PrivateKeyRenew:    dehydratedConfig.PrivateKeyRenew,
-		PrivateKeyRollover: dehydratedConfig.PrivateKeyRollover,
-		ChallengeType:      dehydratedConfig.ChallengeType,
-		WellKnownDir:       dehydratedConfig.WellKnownDir,
-		AlpnDir:            dehydratedConfig.AlpnDir,
-		HookChain:          dehydratedConfig.HookChain,
-		OcspMustStaple:     dehydratedConfig.OcspMustStaple,
-		OcspFetch:          dehydratedConfig.OcspFetch,
-		OcspDays:           int32(dehydratedConfig.OcspDays),
-		NoLock:             dehydratedConfig.NoLock,
-		KeepGoing:          dehydratedConfig.KeepGoing,
-		FullChain:          dehydratedConfig.FullChain,
-		Ocsp:               dehydratedConfig.Ocsp,
-		AutoCleanup:        dehydratedConfig.AutoCleanup,
-		ContactEmail:       dehydratedConfig.ContactEmail,
-		CurlOpts:           dehydratedConfig.CurlOpts,
-		ConfigD:            dehydratedConfig.ConfigD,
-	}
-
 	req := &pb.InitializeRequest{
-		Config:           configValues,
-		DehydratedConfig: dehydratedConfigProto,
+		Config: configValues,
 	}
 
 	_, err = c.client.Initialize(ctx, req)
@@ -189,7 +137,7 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any, dehydrat
 // It converts the domain entry to protobuf format and sends it to the plugin.
 // The context can be used for cancellation and timeout control.
 // Returns a map of metadata key-value pairs and an error if the operation fails.
-func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error) {
+func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
 	c.mu.RLock()
 	if c.client == nil {
 		c.mu.RUnlock()
@@ -197,7 +145,11 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry) (map[
 	}
 	c.mu.RUnlock()
 
-	req := entry.ToProto()
+	req := &pb.GetMetadataRequest{
+		DomainEntry:      entry.ToProto(),
+		DehydratedConfig: dehydratedConfig.ToProto(),
+	}
+
 	resp, err := c.client.GetMetadata(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)

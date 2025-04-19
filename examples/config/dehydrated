@@ -1,5 +1,0 @@
-BASEDIR=/data/dehydrated
-CERTDIR=/data/dehydrated/certs
-DOMAINS_TXT=/data/dehydrated/domains.txt
-CA=letsencrypt
-ACCEPT_TERMS=yes

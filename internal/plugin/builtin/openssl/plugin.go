@@ -24,10 +24,9 @@ import (
 // based on configuration settings.
 type Plugin struct {
 	pb.UnimplementedPluginServer
-	dehydratedConfig *pb.DehydratedConfig
-	cert             bool // whether to analyze cert.pem
-	chain            bool // whether to analyze chain.pem
-	fullchain        bool // whether to analyze fullchain.pem
+	cert      bool // whether to analyze cert.pem
+	chain     bool // whether to analyze chain.pem
+	fullchain bool // whether to analyze fullchain.pem
 }
 
 // CertificateInfo represents the information extracted from a certificate file.
@@ -73,7 +72,6 @@ func (p *Plugin) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb
 			p.fullchain = v.BoolValue
 		}
 	}
-	p.dehydratedConfig = req.DehydratedConfig
 	return &pb.InitializeResponse{}, nil
 }
 
@@ -84,7 +82,11 @@ func (p *Plugin) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*
 	metadata := make(map[string]*structpb.Value)
 
 	// Get the domain's certificate directory
-	domainDir := filepath.Join(p.dehydratedConfig.CertDir, req.Domain)
+	domainPath := req.DomainEntry.Domain
+	if req.DomainEntry.Alias != "" {
+		domainPath = req.DomainEntry.Alias
+	}
+	domainDir := filepath.Join(req.DehydratedConfig.CertDir, domainPath)
 	if _, err := os.Stat(domainDir); os.IsNotExist(err) {
 		return &pb.GetMetadataResponse{Metadata: metadata}, nil
 	}

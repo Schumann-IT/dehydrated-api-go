@@ -28,11 +28,13 @@ func TestDomainEntry_ToProto(t *testing.T) {
 				},
 			},
 			expected: &pb.GetMetadataRequest{
-				Domain:           "example.com",
-				AlternativeNames: []string{"www.example.com"},
-				Alias:            "alias",
-				Enabled:          true,
-				Comment:          "test comment",
+				DomainEntry: &pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{"www.example.com"},
+					Alias:            "alias",
+					Enabled:          true,
+					Comment:          "test comment",
+				},
 			},
 		},
 		{
@@ -41,7 +43,9 @@ func TestDomainEntry_ToProto(t *testing.T) {
 				Domain: "example.com",
 			},
 			expected: &pb.GetMetadataRequest{
-				Domain: "example.com",
+				DomainEntry: &pb.DomainEntry{
+					Domain: "example.com",
+				},
 			},
 		},
 		{
@@ -53,7 +57,9 @@ func TestDomainEntry_ToProto(t *testing.T) {
 				},
 			},
 			expected: &pb.GetMetadataRequest{
-				Domain: "example.com",
+				DomainEntry: &pb.DomainEntry{
+					Domain: "example.com",
+				},
 			},
 		},
 	}
@@ -61,11 +67,11 @@ func TestDomainEntry_ToProto(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.entry.ToProto()
-			assert.Equal(t, tt.expected.Domain, result.Domain)
-			assert.Equal(t, tt.expected.AlternativeNames, result.AlternativeNames)
-			assert.Equal(t, tt.expected.Alias, result.Alias)
-			assert.Equal(t, tt.expected.Enabled, result.Enabled)
-			assert.Equal(t, tt.expected.Comment, result.Comment)
+			assert.Equal(t, tt.expected.DomainEntry.Domain, result.Domain)
+			assert.Equal(t, tt.expected.DomainEntry.AlternativeNames, result.AlternativeNames)
+			assert.Equal(t, tt.expected.DomainEntry.Alias, result.Alias)
+			assert.Equal(t, tt.expected.DomainEntry.Enabled, result.Enabled)
+			assert.Equal(t, tt.expected.DomainEntry.Comment, result.Comment)
 
 			// For metadata, we need to check the values separately since they're converted
 			if tt.entry.Metadata != nil {

@@ -7,7 +7,7 @@ WORKSPACE=${WORKSPACE:-$(pwd)/}
 
 RESULT_CODE=0
 
-chmod +x ${WORKSPACE}scripts/update-api-config.sh
+chmod +x ${WORKSPACE}scripts/update-config.sh
 
 # Function to create a test environment
 setup_test_env() {
@@ -40,7 +40,7 @@ run_test() {
   # Run the script with environment variables
   (
     cd "$test_dir"
-    CONFIG_FILE="$test_dir/config.yaml" BASE_DIR="$test_dir" eval "$env_vars ${WORKSPACE}scripts/update-api-config.sh"
+    CONFIG_FILE="$test_dir/config.yaml" BASE_DIR="$test_dir" eval "$env_vars ${WORKSPACE}scripts/update-config.sh"
   )
 
   # Check if the output matches expected

@@ -225,7 +225,7 @@ func TestInitialize(t *testing.T) {
 			}
 
 			// Test initialization
-			err := client.Initialize(context.Background(), tt.config, tt.dehydratedConfig)
+			err := client.Initialize(context.Background(), tt.config)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -312,7 +312,7 @@ func TestGetMetadata(t *testing.T) {
 			}
 
 			// Test metadata retrieval
-			metadata, err := client.GetMetadata(context.Background(), tt.domain)
+			metadata, err := client.GetMetadata(context.Background(), tt.domain, &dehydrated.Config{})
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -379,7 +379,7 @@ func TestNewClient(t *testing.T) {
 			}
 
 			// Test initialization
-			err = client.Initialize(context.Background(), tt.config, tt.dehydratedConfig)
+			err = client.Initialize(context.Background(), tt.config)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -427,10 +427,10 @@ func TestClientLifecycle(t *testing.T) {
 			},
 			actions: func(t *testing.T, c *Client) {
 				ctx := context.Background()
-				err := c.Initialize(ctx, map[string]any{"test": "value"}, &dehydrated.Config{})
+				err := c.Initialize(ctx, map[string]any{"test": "value"})
 				assert.NoError(t, err)
 
-				_, err = c.GetMetadata(ctx, model.DomainEntry{Domain: "test.com"})
+				_, err = c.GetMetadata(ctx, model.DomainEntry{Domain: "test.com"}, &dehydrated.Config{})
 				assert.NoError(t, err)
 
 				err = c.Close(ctx)
@@ -467,14 +467,14 @@ func TestClientLifecycle(t *testing.T) {
 				numGoroutines := 10
 
 				// Initialize once before concurrent operations
-				err := c.Initialize(ctx, map[string]any{"test": "value"}, &dehydrated.Config{})
+				err := c.Initialize(ctx, map[string]any{"test": "value"})
 				assert.NoError(t, err)
 
 				for i := 0; i < numGoroutines; i++ {
 					wg.Add(1)
 					go func(id int) {
 						defer wg.Done()
-						_, err := c.GetMetadata(ctx, model.DomainEntry{Domain: fmt.Sprintf("test%d.com", id)})
+						_, err := c.GetMetadata(ctx, model.DomainEntry{Domain: fmt.Sprintf("test%d.com", id)}, &dehydrated.Config{})
 						assert.NoError(t, err)
 					}(i)
 				}
@@ -510,7 +510,7 @@ func TestClientLifecycle(t *testing.T) {
 			},
 			actions: func(t *testing.T, c *Client) {
 				ctx := context.Background()
-				err := c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+				err := c.Initialize(ctx, map[string]any{})
 				assert.Error(t, err)
 			},
 			wantErr: true,
@@ -608,7 +608,7 @@ func TestMetadataEdgeCases(t *testing.T) {
 				client: pb.NewPluginClient(conn),
 			}
 
-			metadata, err := client.GetMetadata(context.Background(), tt.domain)
+			metadata, err := client.GetMetadata(context.Background(), tt.domain, &dehydrated.Config{})
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -631,7 +631,7 @@ func TestContextHandling(t *testing.T) {
 			ctxTimeout: 1 * time.Millisecond,
 			operation: func(ctx context.Context, c *Client) error {
 				time.Sleep(10 * time.Millisecond) // Force timeout
-				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(ctx, map[string]any{})
 			},
 			wantTimeout: true,
 		},
@@ -650,7 +650,7 @@ func TestContextHandling(t *testing.T) {
 
 				// Add a delay to ensure the operation is cancelled
 				time.Sleep(10 * time.Millisecond)
-				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(ctx, map[string]any{})
 			},
 			wantTimeout: true,
 		},
@@ -658,7 +658,7 @@ func TestContextHandling(t *testing.T) {
 			name:       "normal completion",
 			ctxTimeout: 1 * time.Second,
 			operation: func(ctx context.Context, c *Client) error {
-				return c.Initialize(ctx, map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(ctx, map[string]any{})
 			},
 			wantTimeout: false,
 		},
@@ -756,19 +756,11 @@ func TestNewClientErrors(t *testing.T) {
 			wantErr:          true,
 			errorContains:    "failed to convert config",
 		},
-		{
-			name:             "nil dehydrated config",
-			pluginPath:       "/nonexistent/plugin",
-			config:           map[string]any{},
-			dehydratedConfig: nil,
-			wantErr:          true,
-			errorContains:    "dehydrated config is nil",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.pluginPath, tt.config, tt.dehydratedConfig)
+			client, err := NewClient(tt.pluginPath, tt.config)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errorContains != "" {
@@ -816,7 +808,7 @@ func TestClientErrorHandling(t *testing.T) {
 			operation: func(c *Client) error {
 				// Close the connection to simulate connection loss
 				c.conn.Close()
-				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(context.Background(), map[string]any{})
 			},
 			wantErr: true,
 		},
@@ -846,7 +838,7 @@ func TestClientErrorHandling(t *testing.T) {
 				}
 			},
 			operation: func(c *Client) error {
-				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(context.Background(), map[string]any{})
 			},
 			wantErr: true,
 		},
@@ -857,7 +849,7 @@ func TestClientErrorHandling(t *testing.T) {
 				return &Client{}, mock, cleanup
 			},
 			operation: func(c *Client) error {
-				return c.Initialize(context.Background(), map[string]any{}, &dehydrated.Config{})
+				return c.Initialize(context.Background(), map[string]any{})
 			},
 			wantErr: true,
 		},
@@ -1014,7 +1006,7 @@ func TestConcurrentAccess(t *testing.T) {
 			config := map[string]any{
 				"id": id,
 			}
-			if err := client.Initialize(ctx, config, &dehydrated.Config{}); err != nil {
+			if err := client.Initialize(ctx, config); err != nil {
 				errors <- err
 			}
 		}(i)
@@ -1041,7 +1033,7 @@ func TestConcurrentAccess(t *testing.T) {
 			domain := model.DomainEntry{
 				Domain: fmt.Sprintf("test%d.com", id),
 			}
-			if _, err := client.GetMetadata(ctx, domain); err != nil {
+			if _, err := client.GetMetadata(ctx, domain, &dehydrated.Config{}); err != nil {
 				metadataErrors <- err
 			}
 		}(i)

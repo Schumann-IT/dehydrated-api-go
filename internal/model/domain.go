@@ -32,10 +32,19 @@ type DomainEntry struct {
 	Metadata map[string]any `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata,proto3"`
 }
 
+func (e *DomainEntry) PathName() string {
+	n := e.Domain
+	if e.Alias != "" {
+		n = e.Alias
+	}
+
+	return n
+}
+
 // ToProto converts the DomainEntry to a protobuf GetMetadataRequest.
 // It handles the conversion of metadata values to protobuf struct values.
 // Returns a new GetMetadataRequest with all fields populated from the DomainEntry.
-func (e *DomainEntry) ToProto() *pb.GetMetadataRequest {
+func (e *DomainEntry) ToProto() *pb.DomainEntry {
 	metadata := make(map[string]*structpb.Value)
 	for k, v := range e.Metadata {
 		value, err := structpb.NewValue(v)
@@ -44,7 +53,7 @@ func (e *DomainEntry) ToProto() *pb.GetMetadataRequest {
 		}
 	}
 
-	return &pb.GetMetadataRequest{
+	return &pb.DomainEntry{
 		Domain:           e.Domain,
 		AlternativeNames: e.AlternativeNames,
 		Alias:            e.Alias,

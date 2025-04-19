@@ -11,7 +11,7 @@ import (
 
 // TestDomainEntryProtoConsistency ensures that DomainEntry struct matches the GetMetadataRequest proto definition
 func TestDomainEntryProtoConsistency(t *testing.T) {
-	protoType := reflect.TypeOf(plugin.GetMetadataRequest{})
+	protoType := reflect.TypeOf(plugin.DomainEntry{})
 	modelType := reflect.TypeOf(DomainEntry{})
 
 	// Check that all proto fields exist in model with correct types

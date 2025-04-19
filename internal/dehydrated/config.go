@@ -4,6 +4,7 @@ package dehydrated
 
 import (
 	"fmt"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -178,8 +179,15 @@ func (c *Config) load() {
 		return
 	}
 
+	c.parse(c.ConfigFile)
+
+	// Resolve relative paths
+	c.resolvePaths()
+}
+
+func (c *Config) parse(path string) {
 	// Read config file
-	data, err := os.ReadFile(c.ConfigFile)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
@@ -297,9 +305,6 @@ func (c *Config) load() {
 			c.ChainCache = value
 		}
 	}
-
-	// Resolve relative paths
-	c.resolvePaths()
 }
 
 // ensureAbs converts a relative path to an absolute path.
@@ -347,4 +352,77 @@ func (c *Config) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (c *Config) DomainSpecificConfig(path string) *Config {
+	cfgFile := filepath.Join(c.CertDir, path, "config")
+	if _, err := os.Stat(cfgFile); err != nil {
+		return c
+	}
+
+	domainSpecificConfig := &Config{}
+	domainSpecificConfig.parse(cfgFile)
+
+	cfg := *c
+	if domainSpecificConfig.KeyAlgo != "" {
+		cfg.KeyAlgo = domainSpecificConfig.KeyAlgo
+	}
+	if domainSpecificConfig.KeySize > 0 {
+		cfg.KeySize = domainSpecificConfig.KeySize
+	}
+	if domainSpecificConfig.ChallengeType != "" {
+		cfg.ChallengeType = domainSpecificConfig.ChallengeType
+	}
+
+	return &cfg
+}
+
+func (c *Config) ToProto() *pb.DehydratedConfig {
+	// Convert dehydrated config to proto format
+	return &pb.DehydratedConfig{
+		User:               c.User,
+		Group:              c.Group,
+		BaseDir:            c.BaseDir,
+		CertDir:            c.CertDir,
+		DomainsDir:         c.DomainsDir,
+		AccountsDir:        c.AccountsDir,
+		ChallengesDir:      c.ChallengesDir,
+		ChainCache:         c.ChainCache,
+		DomainsFile:        c.DomainsFile,
+		ConfigFile:         c.ConfigFile,
+		HookScript:         c.HookScript,
+		LockFile:           c.LockFile,
+		OpensslConfig:      c.OpensslConfig,
+		Openssl:            c.Openssl,
+		KeySize:            c.KeySize,
+		Ca:                 c.Ca,
+		OldCa:              c.OldCa,
+		AcceptTerms:        c.AcceptTerms,
+		Ipv4:               c.Ipv4,
+		Ipv6:               c.Ipv6,
+		PreferredChain:     c.PreferredChain,
+		Api:                c.Api,
+		KeyAlgo:            c.KeyAlgo,
+		RenewDays:          c.RenewDays,
+		ForceRenew:         c.ForceRenew,
+		ForceValidation:    c.ForceValidation,
+		PrivateKeyRenew:    c.PrivateKeyRenew,
+		PrivateKeyRollover: c.PrivateKeyRollover,
+		ChallengeType:      c.ChallengeType,
+		WellKnownDir:       c.WellKnownDir,
+		AlpnDir:            c.AlpnDir,
+		HookChain:          c.HookChain,
+		OcspMustStaple:     c.OcspMustStaple,
+		OcspFetch:          c.OcspFetch,
+		OcspDays:           c.OcspDays,
+		NoLock:             c.NoLock,
+		KeepGoing:          c.KeepGoing,
+		FullChain:          c.FullChain,
+		Ocsp:               c.Ocsp,
+		AutoCleanup:        c.AutoCleanup,
+		ContactEmail:       c.ContactEmail,
+		CurlOpts:           c.CurlOpts,
+		ConfigD:            c.ConfigD,
+	}
+
 }

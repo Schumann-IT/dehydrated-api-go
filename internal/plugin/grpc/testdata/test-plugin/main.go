@@ -21,7 +21,7 @@ func (s *server) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb
 }
 
 func (s *server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
-	log.Printf("GetMetadata called for domain: %s", req.Domain)
+	log.Printf("GetMetadata called for domain: %s", req.DomainEntry.Domain)
 
 	// Create metadata with different value types
 	metadata := make(map[string]*structpb.Value)

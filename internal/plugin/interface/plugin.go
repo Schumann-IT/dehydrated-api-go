@@ -22,13 +22,13 @@ type Plugin interface {
 	// It sets up the plugin with the provided configuration and dehydrated settings.
 	// The context can be used for cancellation and timeout control.
 	// Returns an error if initialization fails.
-	Initialize(ctx context.Context, config map[string]any, dehydratedConfig *dehydrated.Config) error
+	Initialize(ctx context.Context, config map[string]any) error
 
 	// GetMetadata returns metadata for a domain entry.
 	// This method is called to retrieve plugin-specific information about a domain.
 	// The context can be used for cancellation and timeout control.
 	// Returns a map of metadata key-value pairs and an error if the operation fails.
-	GetMetadata(ctx context.Context, entry model.DomainEntry) (map[string]any, error)
+	GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
 
 	// Close is called when the plugin is being unloaded.
 	// It performs any necessary cleanup operations.

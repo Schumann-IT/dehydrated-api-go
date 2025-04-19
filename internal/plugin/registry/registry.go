@@ -9,7 +9,6 @@ import (
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/grpc"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 )
@@ -18,16 +17,14 @@ import (
 type Registry struct {
 	mu        sync.RWMutex
 	plugins   map[string]plugininterface.Plugin
-	Config    *dehydrated.Config
 	closeOnce sync.Once
 	closed    bool
 }
 
 // NewRegistry creates a new plugin registry
-func NewRegistry(pluginConfig map[string]plugin.PluginConfig, cfg *dehydrated.Config) (*Registry, error) {
+func NewRegistry(pluginConfig map[string]plugin.PluginConfig) (*Registry, error) {
 	r := &Registry{
 		plugins: make(map[string]plugininterface.Plugin),
-		Config:  cfg,
 	}
 
 	for name, pc := range pluginConfig {
@@ -71,7 +68,7 @@ func (r *Registry) LoadPlugin(name string, cfg plugin.PluginConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to load built-in plugin %s: %w", name, err)
 		}
-		err = p.Initialize(context.Background(), configMap, r.Config)
+		err = p.Initialize(context.Background(), configMap)
 		if err != nil {
 			return fmt.Errorf("failed to initialize built-in plugin %s: %w", name, err)
 		}
@@ -80,7 +77,7 @@ func (r *Registry) LoadPlugin(name string, cfg plugin.PluginConfig) error {
 	}
 
 	// Create new gRPC client
-	client, err := grpc.NewClient(cfg.Path, configMap, r.Config)
+	client, err := grpc.NewClient(cfg.Path, configMap)
 	if err != nil {
 		return fmt.Errorf("failed to create plugin client: %w", err)
 	}

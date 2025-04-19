@@ -26,7 +26,7 @@ func TestRegistry(t *testing.T) {
 	}
 	registry, err := NewRegistry(map[string]plugin.PluginConfig{
 		"test": pc,
-	}, &dehydrated.Config{})
+	})
 	if err != nil {
 		t.Errorf("LoadPlugin failed: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestRegistryConcurrency(t *testing.T) {
 		Path:    mustGetPluginPath(t),
 		Config:  map[string]any{"key": "value"},
 	}
-	registry, err := NewRegistry(map[string]plugin.PluginConfig{}, &dehydrated.Config{})
+	registry, err := NewRegistry(map[string]plugin.PluginConfig{})
 	require.NoError(t, err)
 
 	// Test concurrent plugin loading
@@ -201,7 +201,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 			// Create new registry
 			reg, err := NewRegistry(map[string]plugin.PluginConfig{
 				tt.pluginName: tt.pluginConfig,
-			}, cfg)
+			})
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -217,11 +217,11 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 
 			// Test p functionality
 			ctx := context.Background()
-			err = p.Initialize(ctx, tt.pluginConfig.Config, cfg)
+			err = p.Initialize(ctx, tt.pluginConfig.Config)
 			require.NoError(t, err)
 
 			// Test GetMetadata
-			metadata, err := p.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"})
+			metadata, err := p.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"}, cfg)
 			require.NoError(t, err)
 			assert.NotNil(t, metadata)
 
@@ -233,20 +233,12 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 }
 
 func TestLoadPluginTwice(t *testing.T) {
-	cfg := &dehydrated.Config{
-		BaseDir:       "/test/base",
-		CertDir:       "/test/certs",
-		DomainsDir:    "/test/domains",
-		ChallengeType: "dns-01",
-		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
-	}
-
 	reg, err := NewRegistry(map[string]plugin.PluginConfig{
 		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
 		},
-	}, cfg)
+	})
 	require.NoError(t, err)
 
 	// Try to load same plugin again
@@ -256,15 +248,7 @@ func TestLoadPluginTwice(t *testing.T) {
 }
 
 func TestGetNonExistentPlugin(t *testing.T) {
-	cfg := &dehydrated.Config{
-		BaseDir:       "/test/base",
-		CertDir:       "/test/certs",
-		DomainsDir:    "/test/domains",
-		ChallengeType: "dns-01",
-		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
-	}
-
-	reg, err := NewRegistry(map[string]plugin.PluginConfig{}, cfg)
+	reg, err := NewRegistry(map[string]plugin.PluginConfig{})
 	require.NoError(t, err)
 
 	// Try to get non-existent p
@@ -275,20 +259,12 @@ func TestGetNonExistentPlugin(t *testing.T) {
 }
 
 func TestCloseRegistry(t *testing.T) {
-	cfg := &dehydrated.Config{
-		BaseDir:       "/test/base",
-		CertDir:       "/test/certs",
-		DomainsDir:    "/test/domains",
-		ChallengeType: "dns-01",
-		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
-	}
-
 	reg, err := NewRegistry(map[string]plugin.PluginConfig{
 		"openssl": {
 			Enabled: true,
 			Config:  map[string]any{},
 		},
-	}, cfg)
+	})
 	require.NoError(t, err)
 
 	// Close registry

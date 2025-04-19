@@ -29,7 +29,7 @@ func TestDomainHandler(t *testing.T) {
 	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 
 	// Create domain service
-	s := service.NewDomainService(dc.DomainsFile)
+	s := service.NewDomainService(dc)
 	defer s.Close()
 
 	// Create a new domain handler

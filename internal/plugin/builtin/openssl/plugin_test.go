@@ -20,17 +20,17 @@ func TestAnalyzeRSACertificate(t *testing.T) {
 	plugin := New()
 
 	// Initialize the plugin with test configuration
-	dehydratedConfig := &pb.DehydratedConfig{
-		CertDir: "testdata/certs",
-	}
-	_, err := plugin.Initialize(context.Background(), &pb.InitializeRequest{
-		DehydratedConfig: dehydratedConfig,
-	})
+	_, err := plugin.Initialize(context.Background(), &pb.InitializeRequest{})
 	require.NoError(t, err)
 
 	// Test GetMetadata with the example domain
 	req := &pb.GetMetadataRequest{
-		Domain: "rsa.example.com",
+		DomainEntry: &pb.DomainEntry{
+			Domain: "rsa.example.com",
+		},
+		DehydratedConfig: &pb.DehydratedConfig{
+			CertDir: "testdata/certs",
+		},
 	}
 	resp, err := plugin.GetMetadata(context.Background(), req)
 	require.NoError(t, err)
@@ -66,17 +66,17 @@ func TestAnalyzeECCertificate(t *testing.T) {
 	plugin := New()
 
 	// Initialize the plugin with test configuration
-	dehydratedConfig := &pb.DehydratedConfig{
-		CertDir: "testdata/certs",
-	}
-	_, err := plugin.Initialize(context.Background(), &pb.InitializeRequest{
-		DehydratedConfig: dehydratedConfig,
-	})
+	_, err := plugin.Initialize(context.Background(), &pb.InitializeRequest{})
 	require.NoError(t, err)
 
 	// Test GetMetadata with the example domain
 	req := &pb.GetMetadataRequest{
-		Domain: "ec.example.com",
+		DomainEntry: &pb.DomainEntry{
+			Domain: "ec.example.com",
+		},
+		DehydratedConfig: &pb.DehydratedConfig{
+			CertDir: "testdata/certs",
+		},
 	}
 	resp, err := plugin.GetMetadata(context.Background(), req)
 	require.NoError(t, err)
