@@ -110,7 +110,6 @@ message DomainEntry {
   string alias = 3;            // Certificate alias for reference.
   bool enabled = 4;            // Whether the domain is enabled for certificate issuance.
   string comment = 5;          // Domain comment for documentation.
-  map<string, google.protobuf.Value> metadata = 6; // Existing metadata from other plugins.
 }
 
 // InitializeResponse is empty as no data is needed.

@@ -2,6 +2,7 @@ package plugininterface
 
 import (
 	"context"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"testing"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
@@ -109,7 +110,9 @@ func TestMockPlugin(t *testing.T) {
 
 	// Test GetMetadata
 	domain := model.DomainEntry{
-		Domain: "example.com",
+		DomainEntry: pb.DomainEntry{
+			Domain: "example.com",
+		},
 	}
 	metadata, err := plugin.GetMetadata(domain)
 	if err != nil {

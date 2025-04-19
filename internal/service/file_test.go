@@ -1,6 +1,7 @@
 package service
 
 import (
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,23 +19,29 @@ func TestFileOperations(t *testing.T) {
 	// Test data
 	testEntries := []model.DomainEntry{
 		{
-			Domain:           "example.com",
-			AlternativeNames: []string{"www.example.com"},
-			Enabled:          true,
-			Comment:          "Test comment",
+			DomainEntry: pb.DomainEntry{
+				Domain:           "example.com",
+				AlternativeNames: []string{"www.example.com"},
+				Enabled:          true,
+				Comment:          "Test comment",
+			},
 		},
 		{
-			Domain:           "example.org",
-			AlternativeNames: []string{"www.example.org"},
-			Enabled:          false,
-			Comment:          "Disabled domain",
+			DomainEntry: pb.DomainEntry{
+				Domain:           "example.org",
+				AlternativeNames: []string{"www.example.org"},
+				Enabled:          false,
+				Comment:          "Disabled domain",
+			},
 		},
 		{
-			Domain:           "example.net",
-			AlternativeNames: []string{"www.example.net"},
-			Alias:            "certalias",
-			Enabled:          true,
-			Comment:          "With alias",
+			DomainEntry: pb.DomainEntry{
+				Domain:           "example.net",
+				AlternativeNames: []string{"www.example.net"},
+				Alias:            "certalias",
+				Enabled:          true,
+				Comment:          "With alias",
+			},
 		},
 	}
 
@@ -154,16 +161,16 @@ func TestComplexDomainsFile(t *testing.T) {
 
 	// Complex test entries matching the original test
 	complexEntries := []model.DomainEntry{
-		{Domain: "example.org", AlternativeNames: []string{"www.example.org"}, Enabled: true},
-		{Domain: "example.com", AlternativeNames: []string{"www.example.com", "wiki.example.com"}, Enabled: true},
-		{Domain: "example.net", AlternativeNames: []string{"www.example.net"}, Alias: "certalias", Enabled: true},
-		{Domain: "*.service.example.com", Alias: "service_example_com", Enabled: true},
-		{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org", Enabled: true},
-		{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org_rsa", Enabled: true},
-		{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org_ecdsa", Enabled: true},
-		{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: true},
-		{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: false},
-		{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: false},
+		{DomainEntry: pb.DomainEntry{Domain: "example.org", AlternativeNames: []string{"www.example.org"}, Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "example.com", AlternativeNames: []string{"www.example.com", "wiki.example.com"}, Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "example.net", AlternativeNames: []string{"www.example.net"}, Alias: "certalias", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "*.service.example.com", Alias: "service_example_com", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org_rsa", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "*.service.example.org", AlternativeNames: []string{"service.example.org"}, Alias: "star_service_example_org_ecdsa", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: false}},
+		{DomainEntry: pb.DomainEntry{Domain: "service.example.net", AlternativeNames: []string{"*.service.example.net"}, Enabled: false}},
 	}
 
 	// Write the complex entries

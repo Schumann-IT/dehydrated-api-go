@@ -4,26 +4,12 @@ package model
 
 import (
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // DomainEntry represents a domain configuration entry in the dehydrated system.
 // It contains all the necessary information for managing a domain's SSL certificate.
 type DomainEntry struct {
-	// Domain is the primary domain name for the certificate.
-	Domain string `json:"domain" protobuf:"bytes,1,opt,name=domain,proto3"`
-
-	// AlternativeNames is a list of additional domain names to be included in the certificate.
-	AlternativeNames []string `json:"alternative_names,omitempty" protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3"`
-
-	// Alias is an optional alternative identifier for the domain.
-	Alias string `json:"alias,omitempty" protobuf:"bytes,3,opt,name=alias,proto3"`
-
-	// Enabled indicates whether the domain is currently active for certificate management.
-	Enabled bool `json:"enabled" protobuf:"varint,4,opt,name=enabled,proto3"`
-
-	// Comment is an optional description or note about the domain entry.
-	Comment string `json:"comment,omitempty" protobuf:"bytes,5,opt,name=comment,proto3"`
+	pb.DomainEntry
 
 	// Metadata contains additional information about the domain entry.
 	// During runtime, this is stored as map[string]any for flexibility.
@@ -39,28 +25,6 @@ func (e *DomainEntry) PathName() string {
 	}
 
 	return n
-}
-
-// ToProto converts the DomainEntry to a protobuf DomainEntry.
-// It handles the conversion of metadata values to protobuf struct values.
-// Returns a new GetMetadataRequest with all fields populated from the DomainEntry.
-func (e *DomainEntry) ToProto() *pb.DomainEntry {
-	metadata := make(map[string]*structpb.Value)
-	for k, v := range e.Metadata {
-		value, err := structpb.NewValue(v)
-		if err == nil {
-			metadata[k] = value
-		}
-	}
-
-	return &pb.DomainEntry{
-		Domain:           e.Domain,
-		AlternativeNames: e.AlternativeNames,
-		Alias:            e.Alias,
-		Enabled:          e.Enabled,
-		Comment:          e.Comment,
-		Metadata:         metadata,
-	}
 }
 
 // FromProto creates a DomainEntry from a protobuf GetMetadataResponse.

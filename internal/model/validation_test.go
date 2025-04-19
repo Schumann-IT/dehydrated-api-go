@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"testing"
+)
 
 // TestIsValidDomain tests the domain validation function with various domain names.
 // It verifies that the validation correctly identifies valid and invalid domain names,
@@ -52,28 +55,36 @@ func TestIsValidDomainEntry(t *testing.T) {
 		{
 			name: "Valid entry with valid domain",
 			entry: DomainEntry{
-				Domain: "example.com",
+				DomainEntry: pb.DomainEntry{
+					Domain: "example.com",
+				},
 			},
 			expected: true,
 		},
 		{
 			name: "Valid entry with wildcard domain",
 			entry: DomainEntry{
-				Domain: "*.example.com",
+				DomainEntry: pb.DomainEntry{
+					Domain: "*.example.com",
+				},
 			},
 			expected: true,
 		},
 		{
 			name: "Invalid entry with invalid domain",
 			entry: DomainEntry{
-				Domain: "invalid@domain.com",
+				DomainEntry: pb.DomainEntry{
+					Domain: "invalid@domain.com",
+				},
 			},
 			expected: false,
 		},
 		{
 			name: "Invalid entry with empty domain",
 			entry: DomainEntry{
-				Domain: "",
+				DomainEntry: pb.DomainEntry{
+					Domain: "",
+				},
 			},
 			expected: false,
 		},

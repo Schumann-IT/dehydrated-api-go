@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -137,11 +138,13 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 	s.logger.Info("Creating domain", zap.Any("domain", req))
 
 	entry := model.DomainEntry{
-		Domain:           req.Domain,
-		AlternativeNames: req.AlternativeNames,
-		Alias:            req.Alias,
-		Enabled:          req.Enabled,
-		Comment:          req.Comment,
+		DomainEntry: pb.DomainEntry{
+			Domain:           req.Domain,
+			AlternativeNames: req.AlternativeNames,
+			Alias:            req.Alias,
+			Enabled:          req.Enabled,
+			Comment:          req.Comment,
+		},
 	}
 
 	// Validate the domain entry
@@ -186,7 +189,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 
 	ctx := context.Background()
 	for name, p := range s.Registry.GetPlugins() {
-		metadata, err := p.GetMetadata(ctx, *entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
+		metadata, err := p.GetMetadata(ctx, entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
 		if err != nil {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
@@ -259,11 +262,13 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	for i, existing := range s.cache {
 		if existing.Domain == domain {
 			updatedEntry = model.DomainEntry{
-				Domain:           domain,
-				AlternativeNames: req.AlternativeNames,
-				Alias:            req.Alias,
-				Enabled:          req.Enabled,
-				Comment:          req.Comment,
+				DomainEntry: pb.DomainEntry{
+					Domain:           domain,
+					AlternativeNames: req.AlternativeNames,
+					Alias:            req.Alias,
+					Enabled:          req.Enabled,
+					Comment:          req.Comment,
+				},
 			}
 
 			// Validate the updated entry

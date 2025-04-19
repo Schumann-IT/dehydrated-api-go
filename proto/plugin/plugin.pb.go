@@ -465,13 +465,12 @@ func (x *InitializeRequest) GetConfig() map[string]*structpb.Value {
 // DomainEntry represents a domain configuration in the dehydrated system.
 // It contains all information about a domain, including its names and metadata.
 type DomainEntry struct {
-	state            protoimpl.MessageState     `protogen:"open.v1"`
-	Domain           string                     `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`                                                                               // Primary domain name (e.g., "example.com").
-	AlternativeNames []string                   `protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3" json:"alternative_names,omitempty"`                                   // Alternative domain names (e.g., "www.example.com").
-	Alias            string                     `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`                                                                                 // Certificate alias for reference.
-	Enabled          bool                       `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                            // Whether the domain is enabled for certificate issuance.
-	Comment          string                     `protobuf:"bytes,5,opt,name=comment,proto3" json:"comment,omitempty"`                                                                             // Domain comment for documentation.
-	Metadata         map[string]*structpb.Value `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Existing metadata from other plugins.
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Domain           string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`                                             // Primary domain name (e.g., "example.com").
+	AlternativeNames []string               `protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3" json:"alternative_names,omitempty"` // Alternative domain names (e.g., "www.example.com").
+	Alias            string                 `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`                                               // Certificate alias for reference.
+	Enabled          bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`                                          // Whether the domain is enabled for certificate issuance.
+	Comment          string                 `protobuf:"bytes,5,opt,name=comment,proto3" json:"comment,omitempty"`                                           // Domain comment for documentation.
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -539,13 +538,6 @@ func (x *DomainEntry) GetComment() string {
 		return x.Comment
 	}
 	return ""
-}
-
-func (x *DomainEntry) GetMetadata() map[string]*structpb.Value {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
 }
 
 // InitializeResponse is empty as no data is needed.
@@ -834,17 +826,13 @@ const file_proto_plugin_plugin_proto_rawDesc = "" +
 	"\x06config\x18\x01 \x03(\v2%.plugin.InitializeRequest.ConfigEntryR\x06config\x1aQ\n" +
 	"\vConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xb0\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\x9c\x01\n" +
 	"\vDomainEntry\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12+\n" +
 	"\x11alternative_names\x18\x02 \x03(\tR\x10alternativeNames\x12\x14\n" +
 	"\x05alias\x18\x03 \x01(\tR\x05alias\x12\x18\n" +
 	"\aenabled\x18\x04 \x01(\bR\aenabled\x12\x18\n" +
-	"\acomment\x18\x05 \x01(\tR\acomment\x12=\n" +
-	"\bmetadata\x18\x06 \x03(\v2!.plugin.DomainEntry.MetadataEntryR\bmetadata\x1aS\n" +
-	"\rMetadataEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\x14\n" +
+	"\acomment\x18\x05 \x01(\tR\acomment\"\x14\n" +
 	"\x12InitializeResponse\"\x93\x01\n" +
 	"\x12GetMetadataRequest\x126\n" +
 	"\fdomain_entry\x18\x01 \x01(\v2\x13.plugin.DomainEntryR\vdomainEntry\x12E\n" +
@@ -874,7 +862,7 @@ func file_proto_plugin_plugin_proto_rawDescGZIP() []byte {
 	return file_proto_plugin_plugin_proto_rawDescData
 }
 
-var file_proto_plugin_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_plugin_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_plugin_plugin_proto_goTypes = []any{
 	(*DehydratedConfig)(nil),    // 0: plugin.DehydratedConfig
 	(*InitializeRequest)(nil),   // 1: plugin.InitializeRequest
@@ -885,30 +873,27 @@ var file_proto_plugin_plugin_proto_goTypes = []any{
 	(*CloseRequest)(nil),        // 6: plugin.CloseRequest
 	(*CloseResponse)(nil),       // 7: plugin.CloseResponse
 	nil,                         // 8: plugin.InitializeRequest.ConfigEntry
-	nil,                         // 9: plugin.DomainEntry.MetadataEntry
-	nil,                         // 10: plugin.GetMetadataResponse.MetadataEntry
-	(*structpb.Value)(nil),      // 11: google.protobuf.Value
+	nil,                         // 9: plugin.GetMetadataResponse.MetadataEntry
+	(*structpb.Value)(nil),      // 10: google.protobuf.Value
 }
 var file_proto_plugin_plugin_proto_depIdxs = []int32{
 	8,  // 0: plugin.InitializeRequest.config:type_name -> plugin.InitializeRequest.ConfigEntry
-	9,  // 1: plugin.DomainEntry.metadata:type_name -> plugin.DomainEntry.MetadataEntry
-	2,  // 2: plugin.GetMetadataRequest.domain_entry:type_name -> plugin.DomainEntry
-	0,  // 3: plugin.GetMetadataRequest.dehydrated_config:type_name -> plugin.DehydratedConfig
-	10, // 4: plugin.GetMetadataResponse.metadata:type_name -> plugin.GetMetadataResponse.MetadataEntry
-	11, // 5: plugin.InitializeRequest.ConfigEntry.value:type_name -> google.protobuf.Value
-	11, // 6: plugin.DomainEntry.MetadataEntry.value:type_name -> google.protobuf.Value
-	11, // 7: plugin.GetMetadataResponse.MetadataEntry.value:type_name -> google.protobuf.Value
-	1,  // 8: plugin.Plugin.Initialize:input_type -> plugin.InitializeRequest
-	4,  // 9: plugin.Plugin.GetMetadata:input_type -> plugin.GetMetadataRequest
-	6,  // 10: plugin.Plugin.Close:input_type -> plugin.CloseRequest
-	3,  // 11: plugin.Plugin.Initialize:output_type -> plugin.InitializeResponse
-	5,  // 12: plugin.Plugin.GetMetadata:output_type -> plugin.GetMetadataResponse
-	7,  // 13: plugin.Plugin.Close:output_type -> plugin.CloseResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 1: plugin.GetMetadataRequest.domain_entry:type_name -> plugin.DomainEntry
+	0,  // 2: plugin.GetMetadataRequest.dehydrated_config:type_name -> plugin.DehydratedConfig
+	9,  // 3: plugin.GetMetadataResponse.metadata:type_name -> plugin.GetMetadataResponse.MetadataEntry
+	10, // 4: plugin.InitializeRequest.ConfigEntry.value:type_name -> google.protobuf.Value
+	10, // 5: plugin.GetMetadataResponse.MetadataEntry.value:type_name -> google.protobuf.Value
+	1,  // 6: plugin.Plugin.Initialize:input_type -> plugin.InitializeRequest
+	4,  // 7: plugin.Plugin.GetMetadata:input_type -> plugin.GetMetadataRequest
+	6,  // 8: plugin.Plugin.Close:input_type -> plugin.CloseRequest
+	3,  // 9: plugin.Plugin.Initialize:output_type -> plugin.InitializeResponse
+	5,  // 10: plugin.Plugin.GetMetadata:output_type -> plugin.GetMetadataResponse
+	7,  // 11: plugin.Plugin.Close:output_type -> plugin.CloseResponse
+	9,  // [9:12] is the sub-list for method output_type
+	6,  // [6:9] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_proto_plugin_plugin_proto_init() }
@@ -922,7 +907,7 @@ func file_proto_plugin_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_plugin_plugin_proto_rawDesc), len(file_proto_plugin_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

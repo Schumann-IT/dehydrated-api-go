@@ -2,6 +2,7 @@ package service
 
 import (
 	"bufio"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"strings"
 
@@ -64,11 +65,13 @@ func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 		}
 
 		entry := model.DomainEntry{
-			Domain:           fields[0],
-			AlternativeNames: fields[1:],
-			Alias:            alias,
-			Enabled:          enabled,
-			Comment:          comment,
+			DomainEntry: pb.DomainEntry{
+				Domain:           fields[0],
+				AlternativeNames: fields[1:],
+				Alias:            alias,
+				Enabled:          enabled,
+				Comment:          comment,
+			},
 		}
 
 		// Only add valid domain entries

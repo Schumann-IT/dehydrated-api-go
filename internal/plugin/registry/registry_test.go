@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"testing"
@@ -159,11 +160,13 @@ func TestRegistryConcurrency(t *testing.T) {
 func TestLoadBuiltinPlugin(t *testing.T) {
 	// Create test Config
 	cfg := &dehydrated.Config{
-		BaseDir:       "/test/base",
-		CertDir:       "/test/certs",
-		DomainsDir:    "/test/domains",
-		ChallengeType: "dns-01",
-		Ca:            "https://acme-v02.api.letsencrypt.org/directory",
+		DehydratedConfig: pb.DehydratedConfig{
+			BaseDir:       "/test/base",
+			CertDir:       "/test/certs",
+			DomainsDir:    "/test/domains",
+			ChallengeType: "dns-01",
+			Ca:            "https://acme-v02.api.letsencrypt.org/directory",
+		},
 	}
 
 	tests := []struct {
@@ -221,7 +224,7 @@ func TestLoadBuiltinPlugin(t *testing.T) {
 			require.NoError(t, err)
 
 			// Test GetMetadata
-			metadata, err := p.GetMetadata(ctx, model.DomainEntry{Domain: "example.com"}, cfg)
+			metadata, err := p.GetMetadata(ctx, &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "example.com"}}, cfg)
 			require.NoError(t, err)
 			assert.NotNil(t, metadata)
 

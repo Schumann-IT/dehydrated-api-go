@@ -164,7 +164,9 @@ func TestInitialize(t *testing.T) {
 			name:   "successful initialization",
 			config: map[string]any{"test": "config"},
 			dehydratedConfig: &dehydrated.Config{
-				BaseDir: "/test/base",
+				DehydratedConfig: pb.DehydratedConfig{
+					BaseDir: "/test/base",
+				},
 			},
 			mockResponse: &pb.InitializeResponse{},
 			mockError:    nil,
@@ -238,7 +240,7 @@ func TestInitialize(t *testing.T) {
 func TestGetMetadata(t *testing.T) {
 	tests := []struct {
 		name         string
-		domain       model.DomainEntry
+		domain       *model.DomainEntry
 		mockResponse *pb.GetMetadataResponse
 		mockError    error
 		wantErr      bool
@@ -246,13 +248,14 @@ func TestGetMetadata(t *testing.T) {
 	}{
 		{
 			name: "successful metadata retrieval",
-			domain: model.DomainEntry{
-				Domain:           "example.com",
-				AlternativeNames: []string{"www.example.com"},
-				Alias:            "example",
-				Enabled:          true,
-				Comment:          "test domain",
-				Metadata:         map[string]any{},
+			domain: &model.DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{"www.example.com"},
+					Alias:            "example",
+					Enabled:          true,
+					Comment:          "test domain",
+				},
 			},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: map[string]*structpb.Value{},
@@ -263,8 +266,10 @@ func TestGetMetadata(t *testing.T) {
 		},
 		{
 			name: "client nil error",
-			domain: model.DomainEntry{
-				Domain: "example.com",
+			domain: &model.DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain: "example.com",
+				},
 			},
 			mockResponse: nil,
 			mockError:    nil,
@@ -273,8 +278,10 @@ func TestGetMetadata(t *testing.T) {
 		},
 		{
 			name: "plugin error",
-			domain: model.DomainEntry{
-				Domain: "example.com",
+			domain: &model.DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain: "example.com",
+				},
 			},
 			mockResponse: nil,
 			mockError:    fmt.Errorf("plugin error"),
@@ -335,7 +342,9 @@ func TestNewClient(t *testing.T) {
 			name:   "successful client creation",
 			config: map[string]any{"test": "config"},
 			dehydratedConfig: &dehydrated.Config{
-				BaseDir: "/test/base",
+				DehydratedConfig: pb.DehydratedConfig{
+					BaseDir: "/test/base",
+				},
 			},
 			mockError: nil,
 			wantErr:   false,
@@ -430,7 +439,7 @@ func TestClientLifecycle(t *testing.T) {
 				err := c.Initialize(ctx, map[string]any{"test": "value"})
 				assert.NoError(t, err)
 
-				_, err = c.GetMetadata(ctx, model.DomainEntry{Domain: "test.com"}, &dehydrated.Config{})
+				_, err = c.GetMetadata(ctx, &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com"}}, &dehydrated.Config{})
 				assert.NoError(t, err)
 
 				err = c.Close(ctx)
@@ -474,7 +483,7 @@ func TestClientLifecycle(t *testing.T) {
 					wg.Add(1)
 					go func(id int) {
 						defer wg.Done()
-						_, err := c.GetMetadata(ctx, model.DomainEntry{Domain: fmt.Sprintf("test%d.com", id)}, &dehydrated.Config{})
+						_, err := c.GetMetadata(ctx, &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: fmt.Sprintf("test%d.com", id)}}, &dehydrated.Config{})
 						assert.NoError(t, err)
 					}(i)
 				}
@@ -530,14 +539,14 @@ func TestClientLifecycle(t *testing.T) {
 func TestMetadataEdgeCases(t *testing.T) {
 	tests := []struct {
 		name         string
-		domain       model.DomainEntry
+		domain       *model.DomainEntry
 		mockResponse *pb.GetMetadataResponse
 		mockError    error
 		wantErr      bool
 	}{
 		{
 			name:   "very large metadata",
-			domain: model.DomainEntry{Domain: "test.com"},
+			domain: &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com"}},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: generateLargeMetadata(t),
 			},
@@ -545,7 +554,7 @@ func TestMetadataEdgeCases(t *testing.T) {
 		},
 		{
 			name:   "nested metadata",
-			domain: model.DomainEntry{Domain: "test.com"},
+			domain: &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com"}},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: generateNestedMetadata(t),
 			},
@@ -553,7 +562,7 @@ func TestMetadataEdgeCases(t *testing.T) {
 		},
 		{
 			name:   "empty metadata",
-			domain: model.DomainEntry{Domain: "test.com"},
+			domain: &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com"}},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: map[string]*structpb.Value{},
 			},
@@ -561,18 +570,15 @@ func TestMetadataEdgeCases(t *testing.T) {
 		},
 		{
 			name:   "nil metadata",
-			domain: model.DomainEntry{Domain: "test.com"},
+			domain: &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com"}},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: nil,
 			},
 			wantErr: false,
 		},
 		{
-			name: "domain with alternative names",
-			domain: model.DomainEntry{
-				Domain:           "test.com",
-				AlternativeNames: []string{"www.test.com", "api.test.com"},
-			},
+			name:   "domain with alternative names",
+			domain: &model.DomainEntry{DomainEntry: pb.DomainEntry{Domain: "test.com", AlternativeNames: []string{"www.test.com", "api.test.com"}}},
 			mockResponse: &pb.GetMetadataResponse{
 				Metadata: map[string]*structpb.Value{
 					"domain": structpb.NewStringValue("test.com"),
@@ -1031,9 +1037,11 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			ctx := context.Background()
 			domain := model.DomainEntry{
-				Domain: fmt.Sprintf("test%d.com", id),
+				DomainEntry: pb.DomainEntry{
+					Domain: fmt.Sprintf("test%d.com", id),
+				},
 			}
-			if _, err := client.GetMetadata(ctx, domain, &dehydrated.Config{}); err != nil {
+			if _, err := client.GetMetadata(ctx, &domain, &dehydrated.Config{}); err != nil {
 				metadataErrors <- err
 			}
 		}(i)

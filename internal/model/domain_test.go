@@ -8,84 +8,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func TestDomainEntry_ToProto(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    *DomainEntry
-		expected *pb.GetMetadataRequest
-	}{
-		{
-			name: "Basic conversion",
-			entry: &DomainEntry{
-				Domain:           "example.com",
-				AlternativeNames: []string{"www.example.com"},
-				Alias:            "alias",
-				Enabled:          true,
-				Comment:          "test comment",
-				Metadata: map[string]any{
-					"key1": "value1",
-					"key2": 123,
-				},
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain:           "example.com",
-					AlternativeNames: []string{"www.example.com"},
-					Alias:            "alias",
-					Enabled:          true,
-					Comment:          "test comment",
-				},
-			},
-		},
-		{
-			name: "Empty metadata",
-			entry: &DomainEntry{
-				Domain: "example.com",
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain: "example.com",
-				},
-			},
-		},
-		{
-			name: "Invalid metadata value",
-			entry: &DomainEntry{
-				Domain: "example.com",
-				Metadata: map[string]any{
-					"key": make(chan int), // This should be skipped during conversion
-				},
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain: "example.com",
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.entry.ToProto()
-			assert.Equal(t, tt.expected.DomainEntry.Domain, result.Domain)
-			assert.Equal(t, tt.expected.DomainEntry.AlternativeNames, result.AlternativeNames)
-			assert.Equal(t, tt.expected.DomainEntry.Alias, result.Alias)
-			assert.Equal(t, tt.expected.DomainEntry.Enabled, result.Enabled)
-			assert.Equal(t, tt.expected.DomainEntry.Comment, result.Comment)
-
-			// For metadata, we need to check the values separately since they're converted
-			if tt.entry.Metadata != nil {
-				assert.NotNil(t, result.Metadata)
-				for k, v := range tt.entry.Metadata {
-					if structValue, ok := v.(string); ok {
-						assert.Equal(t, structValue, result.Metadata[k].GetStringValue())
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestFromProto(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -229,7 +151,9 @@ func TestDomainResponse(t *testing.T) {
 			response: DomainResponse{
 				Success: true,
 				Data: DomainEntry{
-					Domain: "example.com",
+					DomainEntry: pb.DomainEntry{
+						Domain: "example.com",
+					},
 				},
 			},
 			success: true,
@@ -268,8 +192,16 @@ func TestDomainsResponse(t *testing.T) {
 			response: DomainsResponse{
 				Success: true,
 				Data: []DomainEntry{
-					{Domain: "example1.com"},
-					{Domain: "example2.com"},
+					{
+						DomainEntry: pb.DomainEntry{
+							Domain: "example1.com",
+						},
+					},
+					{
+						DomainEntry: pb.DomainEntry{
+							Domain: "example2.com",
+						},
+					},
 				},
 			},
 			success: true,

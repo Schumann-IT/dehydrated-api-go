@@ -32,10 +32,10 @@ func (w *wrapper) Initialize(ctx context.Context, config map[string]any) error {
 	return err
 }
 
-func (w *wrapper) GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
+func (w *wrapper) GetMetadata(ctx context.Context, entry *model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
 	req := &pb.GetMetadataRequest{
-		DomainEntry:      entry.ToProto(),
-		DehydratedConfig: dehydratedConfig.ToProto(),
+		DomainEntry:      &entry.DomainEntry,
+		DehydratedConfig: &dehydratedConfig.DehydratedConfig,
 	}
 
 	resp, err := w.server.GetMetadata(ctx, req)

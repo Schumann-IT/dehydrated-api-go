@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"sync"
@@ -144,7 +145,9 @@ func TestNewDomainService(t *testing.T) {
 		invalidPath := filepath.Join(tmpDir, "nonexistent", "domains.txt")
 
 		dc := &dehydrated.Config{
-			DomainsFile: invalidPath,
+			DehydratedConfig: pb.DehydratedConfig{
+				DomainsFile: invalidPath,
+			},
 		}
 
 		service := NewDomainService(dc)
@@ -201,7 +204,9 @@ func TestDomainServiceErrors(t *testing.T) {
 		assert.NoError(t, err)
 
 		dc := &dehydrated.Config{
-			DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+			DehydratedConfig: pb.DehydratedConfig{
+				DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+			},
 		}
 
 		defer func() {
@@ -365,7 +370,9 @@ func TestEdgeCases(t *testing.T) {
 		assert.NoError(t, err)
 
 		dc := &dehydrated.Config{
-			DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+			DehydratedConfig: pb.DehydratedConfig{
+				DomainsFile: filepath.Join(readOnlyDir, "domains.txt"),
+			},
 		}
 		defer func() {
 			if r := recover(); r == nil {

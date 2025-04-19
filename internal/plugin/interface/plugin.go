@@ -30,7 +30,7 @@ type Plugin interface {
 	// for the specific domain being processed.
 	// The context can be used for cancellation and timeout control.
 	// Returns a map of metadata key-value pairs and an error if the operation fails.
-	GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
+	GetMetadata(ctx context.Context, entry *model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
 
 	// Close is called when the plugin is being unloaded.
 	// It performs any necessary cleanup operations.
