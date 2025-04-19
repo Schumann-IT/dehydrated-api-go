@@ -68,7 +68,7 @@ ENV ENABLE_OPENSSL_PLUGIN=false
 # Format: {"<plugin_name>":{"enabled":<true|false>,"path":"</path/to/plugin|empty>"}}
 ENV EXTERNAL_PLUGINS="{\"openssl\":{\"enabled\":false}}"
 # Format: {"level":"<level>","encoding":"<console|json>","outputPath": "</path/to/logfile>"}
-ENV EXTERNAL_PLUGINS="{\"level\":\"error\",\"encoding\":\"console\",\"outputPath\": \"\"}"
+ENV LOGGING="{\"level\":\"error\",\"encoding\":\"console\",\"outputPath\": \"\"}"
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

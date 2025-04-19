@@ -424,5 +424,4 @@ func (c *Config) ToProto() *pb.DehydratedConfig {
 		CurlOpts:           c.CurlOpts,
 		ConfigD:            c.ConfigD,
 	}
-
 }
