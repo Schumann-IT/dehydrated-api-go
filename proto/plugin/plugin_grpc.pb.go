@@ -30,17 +30,21 @@ const (
 //
 // Plugin service defines the interface for dehydrated-api-go plugins.
 // Plugins can provide additional functionality and metadata for domain entries.
+// This service is implemented by external plugins that communicate via gRPC.
 type PluginClient interface {
 	// Initialize is called when the plugin is loaded.
 	// It receives the plugin configuration and dehydrated configuration.
 	// The plugin should perform any necessary setup and validation.
+	// Returns an error if initialization fails.
 	Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*InitializeResponse, error)
 	// GetMetadata returns metadata for a domain entry.
 	// The plugin can enrich the domain entry with additional information
 	// based on its configuration and capabilities.
+	// The metadata returned will be merged with the existing metadata.
 	GetMetadata(ctx context.Context, in *GetMetadataRequest, opts ...grpc.CallOption) (*GetMetadataResponse, error)
 	// Close is called when the plugin is being unloaded.
 	// The plugin should perform any necessary cleanup and resource release.
+	// Returns an error if cleanup fails.
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 }
 
@@ -88,17 +92,21 @@ func (c *pluginClient) Close(ctx context.Context, in *CloseRequest, opts ...grpc
 //
 // Plugin service defines the interface for dehydrated-api-go plugins.
 // Plugins can provide additional functionality and metadata for domain entries.
+// This service is implemented by external plugins that communicate via gRPC.
 type PluginServer interface {
 	// Initialize is called when the plugin is loaded.
 	// It receives the plugin configuration and dehydrated configuration.
 	// The plugin should perform any necessary setup and validation.
+	// Returns an error if initialization fails.
 	Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
 	// GetMetadata returns metadata for a domain entry.
 	// The plugin can enrich the domain entry with additional information
 	// based on its configuration and capabilities.
+	// The metadata returned will be merged with the existing metadata.
 	GetMetadata(context.Context, *GetMetadataRequest) (*GetMetadataResponse, error)
 	// Close is called when the plugin is being unloaded.
 	// The plugin should perform any necessary cleanup and resource release.
+	// Returns an error if cleanup fails.
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	mustEmbedUnimplementedPluginServer()
 }

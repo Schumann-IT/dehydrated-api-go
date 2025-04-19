@@ -41,7 +41,7 @@ func (e *DomainEntry) PathName() string {
 	return n
 }
 
-// ToProto converts the DomainEntry to a protobuf GetMetadataRequest.
+// ToProto converts the DomainEntry to a protobuf DomainEntry.
 // It handles the conversion of metadata values to protobuf struct values.
 // Returns a new GetMetadataRequest with all fields populated from the DomainEntry.
 func (e *DomainEntry) ToProto() *pb.DomainEntry {
