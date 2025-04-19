@@ -155,7 +155,7 @@ func (c *Client) GetMetadata(ctx context.Context, entry *model.DomainEntry, dehy
 		return nil, fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
 	}
 
-	return model.FromProto(resp), nil
+	return model.MetadataFromProto(resp), nil
 }
 
 // Close terminates the plugin process and cleans up resources.

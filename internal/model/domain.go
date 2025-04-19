@@ -12,10 +12,18 @@ type DomainEntry struct {
 	pb.DomainEntry
 
 	// Metadata contains additional information about the domain entry.
-	// During runtime, this is stored as map[string]any for flexibility.
-	// During serialization (protobuf), this is converted to map[string]*structpb.Value.
-	// The conversion is handled by ToProto() and FromProto() methods.
-	Metadata map[string]any `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata,proto3"`
+	Metadata Metadata `json:"metadata,omitempty"`
+}
+
+type Metadata map[string]any
+
+func MetadataFromProto(resp *pb.GetMetadataResponse) Metadata {
+	metadata := make(map[string]any)
+	for k, v := range resp.Metadata {
+		metadata[k] = v.AsInterface()
+	}
+
+	return metadata
 }
 
 func (e *DomainEntry) PathName() string {
@@ -25,25 +33,6 @@ func (e *DomainEntry) PathName() string {
 	}
 
 	return n
-}
-
-func (e *DomainEntry) ToProto() *pb.DomainEntry {
-	if e == nil {
-		return &pb.DomainEntry{}
-	}
-	return &e.DomainEntry
-}
-
-// FromProto creates a DomainEntry from a protobuf GetMetadataResponse.
-// It converts the protobuf metadata values back to their original types.
-// Returns a new DomainEntry with all fields populated from the response.
-func FromProto(resp *pb.GetMetadataResponse) map[string]any {
-	metadata := make(map[string]any)
-	for k, v := range resp.Metadata {
-		metadata[k] = v.AsInterface()
-	}
-
-	return metadata
 }
 
 // CreateDomainRequest represents a request to create a new domain entry.

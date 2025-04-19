@@ -51,7 +51,7 @@ func TestFromProto(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FromProto(tt.input)
+			result := MetadataFromProto(tt.input)
 			assert.Equal(t, tt.expected.Metadata, result)
 		})
 	}
