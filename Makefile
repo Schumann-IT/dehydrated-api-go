@@ -20,7 +20,7 @@ DOCKER_CONTAINER=dehydrated-api-go
 
 build: generate $(BINARY_NAME) ## Build binary
 
-generate: ## Generate code
+generate: clean-generate ## Generate code
 	@go generate ./...
 
 run: $(BINARY_NAME) ## Run the binary with example config
@@ -86,6 +86,9 @@ clean-docker: ## Remove Docker container and image
 	@docker stop $(DOCKER_CONTAINER) 2>/dev/null || true
 	@docker rm $(DOCKER_CONTAINER) 2>/dev/null || true
 	@docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
+
+clean-generate: ## Clean generated files
+	@rm -f proto/plugin/*.pb.go
 
 #
 # Help
