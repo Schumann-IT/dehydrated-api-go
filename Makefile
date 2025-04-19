@@ -144,5 +144,5 @@ $(BINARY_NAME): ## Build the binary
 $(COVERAGE_FILE): $(GRPC_TEST_PLUGIN_PATH)/test-plugin ## Build coverage profile
 	@go test -v -race -coverprofile=$(COVERAGE_FILE) ./...
 
-$(GRPC_TEST_PLUGIN_PATH)/test-plugin: ## Build test plugin
+$(GRPC_TEST_PLUGIN_PATH)/test-plugin: generate ## Build test plugin
 	@go build -o $(GRPC_TEST_PLUGIN_PATH)/test-plugin $(GRPC_TEST_PLUGIN_PATH)/main.go
