@@ -65,7 +65,7 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 
 	return c.JSON(model.DomainResponse{
 		Success: true,
-		Data:    *entry,
+		Data:    entry,
 	})
 }
 
@@ -89,7 +89,7 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(model.DomainResponse{
 		Success: true,
-		Data:    *entry,
+		Data:    entry,
 	})
 }
 
@@ -121,7 +121,7 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 
 	return c.JSON(model.DomainResponse{
 		Success: true,
-		Data:    *entry,
+		Data:    entry,
 	})
 }
 

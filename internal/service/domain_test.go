@@ -515,9 +515,6 @@ func TestDomainServiceOperations(t *testing.T) {
 		// Create a domain with metadata
 		req := model.CreateDomainRequest{
 			Domain: "example.com",
-			Metadata: map[string]string{
-				"test": "value",
-			},
 		}
 
 		// Create the domain

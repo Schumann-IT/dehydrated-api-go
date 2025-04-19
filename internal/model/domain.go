@@ -27,18 +27,23 @@ func (e *DomainEntry) PathName() string {
 	return n
 }
 
+func (e *DomainEntry) ToProto() *pb.DomainEntry {
+	if e == nil {
+		return &pb.DomainEntry{}
+	}
+	return &e.DomainEntry
+}
+
 // FromProto creates a DomainEntry from a protobuf GetMetadataResponse.
 // It converts the protobuf metadata values back to their original types.
 // Returns a new DomainEntry with all fields populated from the response.
-func FromProto(resp *pb.GetMetadataResponse) *DomainEntry {
+func FromProto(resp *pb.GetMetadataResponse) map[string]any {
 	metadata := make(map[string]any)
 	for k, v := range resp.Metadata {
 		metadata[k] = v.AsInterface()
 	}
 
-	return &DomainEntry{
-		Metadata: metadata,
-	}
+	return metadata
 }
 
 // CreateDomainRequest represents a request to create a new domain entry.
@@ -58,9 +63,6 @@ type CreateDomainRequest struct {
 
 	// Comment is an optional description.
 	Comment string `json:"comment,omitempty"`
-
-	// Metadata contains additional domain-specific information.
-	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // UpdateDomainRequest represents a request to update an existing domain entry.
@@ -77,9 +79,6 @@ type UpdateDomainRequest struct {
 
 	// Comment is an optional description.
 	Comment string `json:"comment,omitempty"`
-
-	// Metadata contains additional domain-specific information.
-	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // DomainResponse represents a response containing a single domain entry.
@@ -89,7 +88,7 @@ type DomainResponse struct {
 	Success bool `json:"success"`
 
 	// Data contains the domain entry if the operation was successful.
-	Data DomainEntry `json:"data,omitempty"`
+	Data *DomainEntry `json:"data,omitempty"`
 
 	// Error contains an error message if the operation failed.
 	Error string `json:"error,omitempty"`
@@ -102,7 +101,7 @@ type DomainsResponse struct {
 	Success bool `json:"success"`
 
 	// Data contains the list of domain entries if the operation was successful.
-	Data []DomainEntry `json:"data,omitempty"`
+	Data []*DomainEntry `json:"data,omitempty"`
 
 	// Error contains an error message if the operation failed.
 	Error string `json:"error,omitempty"`

@@ -227,17 +227,17 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 
 // ListDomains returns all domain entries with their metadata enriched from plugins.
 // It returns a copy of the cached entries to prevent modification of the cache.
-func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
+func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 	s.logger.Info("Load domains")
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	// Return a copy of the cache with enriched metadata
-	entries := make([]model.DomainEntry, len(s.cache))
+	entries := make([]*model.DomainEntry, len(s.cache))
 	for i, entry := range s.cache {
-		entries[i] = entry
-		if err := s.enrichMetadata(&entries[i]); err != nil {
+		entries[i] = &entry
+		if err := s.enrichMetadata(entries[i]); err != nil {
 			s.logger.Error("failed to enrich metadata", zap.String("domain", entries[i].Domain), zap.Error(err))
 			return nil, err
 		}

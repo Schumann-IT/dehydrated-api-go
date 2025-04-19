@@ -52,7 +52,7 @@ func TestFromProto(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := FromProto(tt.input)
-			assert.Equal(t, tt.expected.Metadata, result.Metadata)
+			assert.Equal(t, tt.expected.Metadata, result)
 		})
 	}
 }
@@ -83,9 +83,6 @@ func TestCreateDomainRequest_Validation(t *testing.T) {
 			name: "With metadata",
 			request: CreateDomainRequest{
 				Domain: "example.com",
-				Metadata: map[string]string{
-					"key": "value",
-				},
 			},
 			isValid: true,
 		},
@@ -122,12 +119,8 @@ func TestUpdateDomainRequest_Validation(t *testing.T) {
 			isValid: true,
 		},
 		{
-			name: "With metadata",
-			request: UpdateDomainRequest{
-				Metadata: map[string]string{
-					"key": "value",
-				},
-			},
+			name:    "With metadata",
+			request: UpdateDomainRequest{},
 			isValid: true,
 		},
 	}
@@ -150,7 +143,7 @@ func TestDomainResponse(t *testing.T) {
 			name: "Successful response",
 			response: DomainResponse{
 				Success: true,
-				Data: DomainEntry{
+				Data: &DomainEntry{
 					DomainEntry: pb.DomainEntry{
 						Domain: "example.com",
 					},
@@ -191,7 +184,7 @@ func TestDomainsResponse(t *testing.T) {
 			name: "Successful response",
 			response: DomainsResponse{
 				Success: true,
-				Data: []DomainEntry{
+				Data: []*DomainEntry{
 					{
 						DomainEntry: pb.DomainEntry{
 							Domain: "example1.com",
@@ -218,7 +211,7 @@ func TestDomainsResponse(t *testing.T) {
 			name: "Empty list response",
 			response: DomainsResponse{
 				Success: true,
-				Data:    []DomainEntry{},
+				Data:    []*DomainEntry{},
 			},
 			success: true,
 		},

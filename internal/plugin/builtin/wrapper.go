@@ -43,7 +43,7 @@ func (w *wrapper) GetMetadata(ctx context.Context, entry *model.DomainEntry, deh
 		return nil, err
 	}
 
-	return model.FromProto(resp).Metadata, nil
+	return model.FromProto(resp), nil
 }
 
 func (w *wrapper) Close(ctx context.Context) error {

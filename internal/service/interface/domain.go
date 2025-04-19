@@ -6,7 +6,7 @@ import "github.com/schumann-it/dehydrated-api-go/internal/model"
 // It provides methods for managing domain entries in the dehydrated configuration.
 type DomainService interface {
 	// ListDomains returns all configured domain entries.
-	ListDomains() ([]model.DomainEntry, error)
+	ListDomains() ([]*model.DomainEntry, error)
 
 	// GetDomain retrieves a specific domain entry by its domain name.
 	GetDomain(domain string) (*model.DomainEntry, error)
