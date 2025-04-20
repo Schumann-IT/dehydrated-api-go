@@ -279,7 +279,7 @@ func TestConcurrentOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// load dehydrated config
-	dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 
 	l, _ := logger.NewLogger(nil)
 	service := NewDomainService(dc).WithLogger(l)
@@ -332,7 +332,7 @@ func TestEdgeCases(t *testing.T) {
 
 	t.Run("EmptyDomainList", func(t *testing.T) {
 		// load dehydrated config
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 
 		service := NewDomainService(dc)
 		defer service.Close()
@@ -351,7 +351,7 @@ func TestEdgeCases(t *testing.T) {
 		}
 
 		// load dehydrated config
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 
 		defer func() {
 			if r := recover(); r == nil {
@@ -450,7 +450,7 @@ func TestDomainServiceCleanup(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	t.Run("CleanupWithWatcher", func(t *testing.T) {
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc).WithFileWatcher()
 		assert.NotNil(t, service.watcher)
 
@@ -464,7 +464,7 @@ func TestDomainServiceCleanup(t *testing.T) {
 	})
 
 	t.Run("CleanupWithoutWatcher", func(t *testing.T) {
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc)
 		assert.Nil(t, service.watcher)
 
@@ -480,7 +480,7 @@ func TestDomainServiceOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	t.Run("UpdateNonExistentDomain", func(t *testing.T) {
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc)
 		defer service.Close()
 
@@ -492,7 +492,7 @@ func TestDomainServiceOperations(t *testing.T) {
 	})
 
 	t.Run("DeleteNonExistentDomain", func(t *testing.T) {
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc)
 		defer service.Close()
 
@@ -508,7 +508,7 @@ func TestDomainServiceOperations(t *testing.T) {
 			},
 		}
 
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir)
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc).WithPlugins(pluginConfig)
 		defer service.Close()
 
