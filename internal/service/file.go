@@ -2,9 +2,10 @@ package service
 
 import (
 	"bufio"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"strings"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )

@@ -27,7 +27,7 @@ jobs:
         run: go build -o internal/plugin/grpc/testdata/test-plugin/test-plugin internal/plugin/grpc/testdata/test-plugin/main.go
 
       - name: Run tests
-        run: make test-app
+        run: make ci-test
 
   test-scripts:
     name: Test Scripts
@@ -36,20 +36,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: test api config
-        run: ./scripts/test-update-api-config.sh
-        env:
-          WORKSPACE: ${{ github.workspace }}/
-
-      - name: test dehydrated config
-        run: ./scripts/test-update-dehydrated-config.sh
-        env:
-          WORKSPACE: ${{ github.workspace }}/
-
-      - name: test cron config
-        run: ./scripts/test-configure-cron.sh
-        env:
-          WORKSPACE: ${{ github.workspace }}/
+      - name: Run tests
+        run: make test-scripts
 
 
   lint:
@@ -84,4 +72,4 @@ jobs:
           cache: true
 
       - name: Build
-        run: make build 
+        run: make ci-build

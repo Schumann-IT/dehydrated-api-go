@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"

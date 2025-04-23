@@ -2,8 +2,9 @@ package plugininterface
 
 import (
 	"context"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"testing"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )

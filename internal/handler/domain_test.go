@@ -3,11 +3,12 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 
