@@ -59,7 +59,7 @@ lint-fix: ## Run linter (and fix issues if possible)
 # Docker
 #
 
-docker-build: ## Build Docker image
+docker-build: generate ## Build Docker image
 	@docker build -t $(DOCKER_IMAGE) .
 
 docker-run: ## Run Docker container
