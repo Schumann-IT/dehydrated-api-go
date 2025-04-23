@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"sync"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	"go.uber.org/zap"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
@@ -20,11 +22,11 @@ import (
 // DomainService handles domain-related business logic and operations.
 // It manages domain entries, integrates with plugins, and provides thread-safe access to domain data.
 type DomainService struct {
-	DehydratedConfig *dehydrated.Config  // Path to the domains.txt file
-	watcher          *FileWatcher        // File watcher for monitoring changes
-	cache            []model.DomainEntry // In-memory cache of domain entries
-	mutex            sync.RWMutex        // Mutex for thread-safe access to the cache
-	Registry         *registry.Registry  // Plugin registry for metadata enrichment
+	DehydratedConfig *dehydrated.Config   // Path to the domains.txt file
+	watcher          *FileWatcher         // File watcher for monitoring changes
+	cache            []*model.DomainEntry // In-memory cache of domain entries
+	mutex            sync.RWMutex         // Mutex for thread-safe access to the cache
+	Registry         *registry.Registry   // Plugin registry for metadata enrichment
 	logger           *zap.Logger
 }
 
@@ -100,11 +102,17 @@ func (s *DomainService) Reload() error {
 		return err
 	}
 
+	// Convert entries to pointers
+	pointerEntries := make([]*model.DomainEntry, len(entries))
+	for i := range entries {
+		pointerEntries[i] = &entries[i]
+	}
+
 	s.mutex.Lock()
-	s.cache = entries
+	s.cache = pointerEntries
 	s.mutex.Unlock()
 
-	s.logger.Info("Entries reloaded", zap.Int("count", len(entries)))
+	s.logger.Info("Entries reloaded", zap.Int("count", len(pointerEntries)))
 
 	return nil
 }
@@ -136,12 +144,14 @@ func (s *DomainService) Close() error {
 func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
 	s.logger.Info("Creating domain", zap.Any("domain", req))
 
-	entry := model.DomainEntry{
-		Domain:           req.Domain,
-		AlternativeNames: req.AlternativeNames,
-		Alias:            req.Alias,
-		Enabled:          req.Enabled,
-		Comment:          req.Comment,
+	entry := &model.DomainEntry{
+		DomainEntry: pb.DomainEntry{
+			Domain:           req.Domain,
+			AlternativeNames: req.AlternativeNames,
+			Alias:            req.Alias,
+			Enabled:          req.Enabled,
+			Comment:          req.Comment,
+		},
 	}
 
 	// Validate the domain entry
@@ -166,15 +176,21 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
 
+	// Convert pointers to values for file writing
+	entries := make([]model.DomainEntry, len(s.cache))
+	for i, entry := range s.cache {
+		entries[i] = *entry
+	}
+
 	// Write back to file
-	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, s.cache); err != nil {
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, entries); err != nil {
 		// Revert cache on error
 		s.cache = s.cache[:len(s.cache)-1]
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return nil, err
 	}
 
-	return &entry, nil
+	return entry, nil
 }
 
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
@@ -186,7 +202,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 
 	ctx := context.Background()
 	for name, p := range s.Registry.GetPlugins() {
-		metadata, err := p.GetMetadata(ctx, *entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
+		metadata, err := p.GetMetadata(ctx, entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
 		if err != nil {
 			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
 		}
@@ -209,11 +225,11 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			entryCopy := entry
-			if err := s.enrichMetadata(&entryCopy); err != nil {
+			if err := s.enrichMetadata(entryCopy); err != nil {
 				s.logger.Error("failed to enrich metadata", zap.Error(err))
 				return nil, err
 			}
-			return &entryCopy, nil
+			return entryCopy, nil
 		}
 	}
 
@@ -224,17 +240,17 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 
 // ListDomains returns all domain entries with their metadata enriched from plugins.
 // It returns a copy of the cached entries to prevent modification of the cache.
-func (s *DomainService) ListDomains() ([]model.DomainEntry, error) {
+func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 	s.logger.Info("Load domains")
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	// Return a copy of the cache with enriched metadata
-	entries := make([]model.DomainEntry, len(s.cache))
+	entries := make([]*model.DomainEntry, len(s.cache))
 	for i, entry := range s.cache {
 		entries[i] = entry
-		if err := s.enrichMetadata(&entries[i]); err != nil {
+		if err := s.enrichMetadata(entries[i]); err != nil {
 			s.logger.Error("failed to enrich metadata", zap.String("domain", entries[i].Domain), zap.Error(err))
 			return nil, err
 		}
@@ -255,15 +271,17 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 	// Find and update the domain
 	found := false
-	var updatedEntry model.DomainEntry
+	var updatedEntry *model.DomainEntry
 	for i, existing := range s.cache {
 		if existing.Domain == domain {
-			updatedEntry = model.DomainEntry{
-				Domain:           domain,
-				AlternativeNames: req.AlternativeNames,
-				Alias:            req.Alias,
-				Enabled:          req.Enabled,
-				Comment:          req.Comment,
+			updatedEntry = &model.DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           domain,
+					AlternativeNames: req.AlternativeNames,
+					Alias:            req.Alias,
+					Enabled:          req.Enabled,
+					Comment:          req.Comment,
+				},
 			}
 
 			// Validate the updated entry
@@ -283,16 +301,22 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 		return nil, errors.New("domain not found")
 	}
 
+	// Convert pointers to values for file writing
+	entries := make([]model.DomainEntry, len(s.cache))
+	for i, entry := range s.cache {
+		entries[i] = *entry
+	}
+
 	// Write back to file
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
-	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, s.cache); err != nil {
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, entries); err != nil {
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return nil, err
 	}
 
 	s.logger.Info("Updated domain", zap.String("domain", domain))
 
-	return &updatedEntry, nil
+	return updatedEntry, nil
 }
 
 // DeleteDomain removes a domain entry from both the cache and the domains file.
@@ -304,7 +328,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	defer s.mutex.Unlock()
 
 	found := false
-	newEntries := make([]model.DomainEntry, 0, len(s.cache))
+	newEntries := make([]*model.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
 		if entry.Domain == domain {
 			found = true
@@ -318,9 +342,15 @@ func (s *DomainService) DeleteDomain(domain string) error {
 		return errors.New("domain not found")
 	}
 
+	// Convert pointers to values for file writing
+	entries := make([]model.DomainEntry, len(newEntries))
+	for i, entry := range newEntries {
+		entries[i] = *entry
+	}
+
 	// Write back to file
-	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
-	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, newEntries); err != nil {
+	s.logger.Info("Dumping domains to disk", zap.Int("count", len(entries)))
+	if err := WriteDomainsFile(s.DehydratedConfig.DomainsFile, entries); err != nil {
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return err
 	}

@@ -57,16 +57,18 @@ RUN mkdir -p /app/scripts \
 # copy binaries, scripts and config
 COPY --from=builder /build/dehydrated-api-go /app/
 COPY --from=builder /build/scripts/ /app/scripts/
-COPY --from=builder /build/examples/config/config.yaml /app/config/
 
 RUN chmod +x /app/scripts/*
 
 # Set environment variables
 ENV PORT=3000
+ENV BASE_DIR=/data/dehydrated
 ENV ENABLE_WATCHER=false
 ENV ENABLE_OPENSSL_PLUGIN=false
-# Format: {"plugin_name":{"enabled":true,"path":"/path/to/plugin"}}
-ENV EXTERNAL_PLUGINS=""
+# Format: {"<plugin_name>":{"enabled":<true|false>,"path":"</path/to/plugin|empty>"}}
+ENV EXTERNAL_PLUGINS="{\"openssl\":{\"enabled\":false}}"
+# Format: {"level":"<level>","encoding":"<console|json>","outputPath": "</path/to/logfile>"}
+ENV LOGGING="{\"level\":\"error\",\"encoding\":\"console\",\"outputPath\": \"\"}"
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

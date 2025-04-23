@@ -1,90 +1,13 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
 )
-
-func TestDomainEntry_ToProto(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    *DomainEntry
-		expected *pb.GetMetadataRequest
-	}{
-		{
-			name: "Basic conversion",
-			entry: &DomainEntry{
-				Domain:           "example.com",
-				AlternativeNames: []string{"www.example.com"},
-				Alias:            "alias",
-				Enabled:          true,
-				Comment:          "test comment",
-				Metadata: map[string]any{
-					"key1": "value1",
-					"key2": 123,
-				},
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain:           "example.com",
-					AlternativeNames: []string{"www.example.com"},
-					Alias:            "alias",
-					Enabled:          true,
-					Comment:          "test comment",
-				},
-			},
-		},
-		{
-			name: "Empty metadata",
-			entry: &DomainEntry{
-				Domain: "example.com",
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain: "example.com",
-				},
-			},
-		},
-		{
-			name: "Invalid metadata value",
-			entry: &DomainEntry{
-				Domain: "example.com",
-				Metadata: map[string]any{
-					"key": make(chan int), // This should be skipped during conversion
-				},
-			},
-			expected: &pb.GetMetadataRequest{
-				DomainEntry: &pb.DomainEntry{
-					Domain: "example.com",
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.entry.ToProto()
-			assert.Equal(t, tt.expected.DomainEntry.Domain, result.Domain)
-			assert.Equal(t, tt.expected.DomainEntry.AlternativeNames, result.AlternativeNames)
-			assert.Equal(t, tt.expected.DomainEntry.Alias, result.Alias)
-			assert.Equal(t, tt.expected.DomainEntry.Enabled, result.Enabled)
-			assert.Equal(t, tt.expected.DomainEntry.Comment, result.Comment)
-
-			// For metadata, we need to check the values separately since they're converted
-			if tt.entry.Metadata != nil {
-				assert.NotNil(t, result.Metadata)
-				for k, v := range tt.entry.Metadata {
-					if structValue, ok := v.(string); ok {
-						assert.Equal(t, structValue, result.Metadata[k].GetStringValue())
-					}
-				}
-			}
-		})
-	}
-}
 
 func TestFromProto(t *testing.T) {
 	tests := []struct {
@@ -129,8 +52,8 @@ func TestFromProto(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FromProto(tt.input)
-			assert.Equal(t, tt.expected.Metadata, result.Metadata)
+			result := MetadataFromProto(tt.input)
+			assert.Equal(t, tt.expected.Metadata, result)
 		})
 	}
 }
@@ -161,9 +84,6 @@ func TestCreateDomainRequest_Validation(t *testing.T) {
 			name: "With metadata",
 			request: CreateDomainRequest{
 				Domain: "example.com",
-				Metadata: map[string]string{
-					"key": "value",
-				},
 			},
 			isValid: true,
 		},
@@ -200,12 +120,8 @@ func TestUpdateDomainRequest_Validation(t *testing.T) {
 			isValid: true,
 		},
 		{
-			name: "With metadata",
-			request: UpdateDomainRequest{
-				Metadata: map[string]string{
-					"key": "value",
-				},
-			},
+			name:    "With metadata",
+			request: UpdateDomainRequest{},
 			isValid: true,
 		},
 	}
@@ -228,8 +144,10 @@ func TestDomainResponse(t *testing.T) {
 			name: "Successful response",
 			response: DomainResponse{
 				Success: true,
-				Data: DomainEntry{
-					Domain: "example.com",
+				Data: &DomainEntry{
+					DomainEntry: pb.DomainEntry{
+						Domain: "example.com",
+					},
 				},
 			},
 			success: true,
@@ -267,9 +185,17 @@ func TestDomainsResponse(t *testing.T) {
 			name: "Successful response",
 			response: DomainsResponse{
 				Success: true,
-				Data: []DomainEntry{
-					{Domain: "example1.com"},
-					{Domain: "example2.com"},
+				Data: []*DomainEntry{
+					{
+						DomainEntry: pb.DomainEntry{
+							Domain: "example1.com",
+						},
+					},
+					{
+						DomainEntry: pb.DomainEntry{
+							Domain: "example2.com",
+						},
+					},
 				},
 			},
 			success: true,
@@ -286,7 +212,7 @@ func TestDomainsResponse(t *testing.T) {
 			name: "Empty list response",
 			response: DomainsResponse{
 				Success: true,
-				Data:    []DomainEntry{},
+				Data:    []*DomainEntry{},
 			},
 			success: true,
 		},
@@ -303,6 +229,72 @@ func TestDomainsResponse(t *testing.T) {
 			} else {
 				assert.NotEmpty(t, tt.response.Error)
 			}
+		})
+	}
+}
+
+func TestDomainEntry_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    *DomainEntry
+		expected string
+	}{
+		{
+			name: "all fields set",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{"www.example.com"},
+					Alias:            "example",
+					Enabled:          true,
+					Comment:          "test domain",
+				},
+				Metadata: Metadata{"test": "value"},
+			},
+			expected: `{
+				"domain": "example.com",
+				"alternative_names": ["www.example.com"],
+				"alias": "example",
+				"enabled": true,
+				"comment": "test domain",
+				"metadata": {"test": "value"}
+			}`,
+		},
+		{
+			name: "zero values",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{},
+					Alias:            "",
+					Enabled:          false,
+					Comment:          "",
+				},
+			},
+			expected: `{
+				"domain": "example.com",
+				"alternative_names": [],
+				"alias": "",
+				"enabled": false,
+				"comment": ""
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal the entry
+			actual, err := json.Marshal(tt.entry)
+			assert.NoError(t, err)
+
+			// Compare JSON objects (ignoring whitespace)
+			var actualJSON, expectedJSON interface{}
+			err = json.Unmarshal(actual, &actualJSON)
+			assert.NoError(t, err)
+			err = json.Unmarshal([]byte(tt.expected), &expectedJSON)
+			assert.NoError(t, err)
+
+			assert.Equal(t, expectedJSON, actualJSON)
 		})
 	}
 }

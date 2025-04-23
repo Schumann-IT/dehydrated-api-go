@@ -3,106 +3,142 @@
 package dehydrated
 
 import (
+	"encoding/json"
 	"fmt"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
 // Config represents the dehydrated configuration
 type Config struct {
-	// User and group settings
-	User  string `json:"user,omitempty" protobuf:"bytes,1,opt,name=user,proto3"`   // Which user should dehydrated run as
-	Group string `json:"group,omitempty" protobuf:"bytes,2,opt,name=group,proto3"` // Which group should dehydrated run as
+	pb.DehydratedConfig
+}
 
-	// IP version settings
-	IPVersion string // Resolve names to addresses of IP version only (4, 6)
-
-	// Base directories
-	BaseDir       string `json:"base_dir,omitempty" protobuf:"bytes,3,opt,name=base_dir,json=baseDir,proto3"`                   // Base directory for dehydrated
-	CertDir       string `json:"cert_dir,omitempty" protobuf:"bytes,4,opt,name=cert_dir,json=certDir,proto3"`                   // Directory for certificates
-	DomainsDir    string `json:"domains_dir,omitempty" protobuf:"bytes,5,opt,name=domains_dir,json=domainsDir,proto3"`          // Directory for domain configurations
-	AccountsDir   string `json:"accounts_dir,omitempty" protobuf:"bytes,6,opt,name=accounts_dir,json=accountsDir,proto3"`       // Directory for account keys
-	ChallengesDir string `json:"challenges_dir,omitempty" protobuf:"bytes,7,opt,name=challenges_dir,json=challengesDir,proto3"` // Directory for challenge files
-	ChainCache    string `json:"chain_cache,omitempty" protobuf:"bytes,8,opt,name=chain_cache,json=chainCache,proto3"`          // Issuer chain cache directory
-
-	// File paths
-	DomainsFile string `json:"domains_file,omitempty" protobuf:"bytes,9,opt,name=domains_file,json=domainsFile,proto3"` // Path to domains.txt
-	ConfigFile  string `json:"config_file,omitempty" protobuf:"bytes,10,opt,name=config_file,json=configFile,proto3"`   // Path to config file
-	HookScript  string `json:"hook_script,omitempty" protobuf:"bytes,11,opt,name=hook_script,json=hookScript,proto3"`   // Path to hook script
-	LockFile    string `json:"lock_file,omitempty" protobuf:"bytes,12,opt,name=lock_file,json=lockFile,proto3"`         // Path to lock file
-
-	// OpenSSL settings
-	OpensslConfig string `json:"openssl_config,omitempty" protobuf:"bytes,13,opt,name=openssl_config,json=opensslConfig,proto3"` // Path to openssl config file
-	Openssl       string `json:"openssl,omitempty" protobuf:"bytes,14,opt,name=openssl,proto3"`                                  // Path to OpenSSL binary
-	KeySize       int32  `json:"key_size,omitempty" protobuf:"varint,15,opt,name=key_size,json=keySize,proto3"`                  // Default keysize for private keys
-
-	// ACME settings
-	Ca             string `json:"ca,omitempty" protobuf:"bytes,16,opt,name=ca,proto3"`                                               // CA URL or preset
-	OldCa          string `json:"old_ca,omitempty" protobuf:"bytes,17,opt,name=old_ca,json=oldCa,proto3"`                            // Path to old certificate authority
-	AcceptTerms    bool   `json:"accept_terms,omitempty" protobuf:"varint,18,opt,name=accept_terms,json=acceptTerms,proto3"`         // Whether to accept CA terms
-	Ipv4           bool   `json:"ipv4,omitempty" protobuf:"varint,19,opt,name=ipv4,proto3"`                                          // Resolve names to IPv4 only
-	Ipv6           bool   `json:"ipv6,omitempty" protobuf:"varint,20,opt,name=ipv6,proto3"`                                          // Resolve names to IPv6 only
-	PreferredChain string `json:"preferred_chain,omitempty" protobuf:"bytes,21,opt,name=preferred_chain,json=preferredChain,proto3"` // Alternative certificate chain
-	Api            string `json:"api,omitempty" protobuf:"bytes,22,opt,name=api,proto3"`                                             // ACME API version
-
-	// Certificate settings
-	KeyAlgo            string `json:"key_algo,omitempty" protobuf:"bytes,23,opt,name=key_algo,json=keyAlgo,proto3"`                                     // Public key algorithm (rsa, prime256v1, secp384r1)
-	RenewDays          int32  `json:"renew_days,omitempty" protobuf:"varint,24,opt,name=renew_days,json=renewDays,proto3"`                              // Days before renewal
-	ForceRenew         bool   `json:"force_renew,omitempty" protobuf:"varint,25,opt,name=force_renew,json=forceRenew,proto3"`                           // Force certificate renewal
-	ForceValidation    bool   `json:"force_validation,omitempty" protobuf:"varint,26,opt,name=force_validation,json=forceValidation,proto3"`            // Force domain validation
-	PrivateKeyRenew    bool   `json:"private_key_renew,omitempty" protobuf:"varint,27,opt,name=private_key_renew,json=privateKeyRenew,proto3"`          // Regenerate private keys on renewal
-	PrivateKeyRollover bool   `json:"private_key_rollover,omitempty" protobuf:"varint,28,opt,name=private_key_rollover,json=privateKeyRollover,proto3"` // Create extra private key for rollover
-
-	// Challenge settings
-	ChallengeType string `json:"challenge_type,omitempty" protobuf:"bytes,29,opt,name=challenge_type,json=challengeType,proto3"` // Challenge type (http-01, dns-01, tls-alpn-01)
-	WellKnownDir  string `json:"well_known_dir,omitempty" protobuf:"bytes,30,opt,name=well_known_dir,json=wellKnownDir,proto3"`  // Directory for http-01 challenge
-	AlpnDir       string `json:"alpn_dir,omitempty" protobuf:"bytes,31,opt,name=alpn_dir,json=alpnDir,proto3"`                   // Directory for tls-alpn-01 challenge
-	HookChain     bool   `json:"hook_chain,omitempty" protobuf:"varint,32,opt,name=hook_chain,json=hookChain,proto3"`            // Chain challenge arguments together
-
-	// OCSP settings
-	OcspMustStaple bool  `json:"ocsp_must_staple,omitempty" protobuf:"varint,33,opt,name=ocsp_must_staple,json=ocspMustStaple,proto3"` // Add CSR-flag indicating OCSP stapling mandatory
-	OcspFetch      bool  `json:"ocsp_fetch,omitempty" protobuf:"varint,34,opt,name=ocsp_fetch,json=ocspFetch,proto3"`                  // Fetch OCSP responses
-	OcspDays       int32 `json:"ocsp_days,omitempty" protobuf:"varint,35,opt,name=ocsp_days,json=ocspDays,proto3"`                     // OCSP refresh interval
-
-	// Other settings
-	NoLock       bool   `json:"no_lock,omitempty" protobuf:"varint,36,opt,name=no_lock,json=noLock,proto3"`                  // Don't use lockfile
-	KeepGoing    bool   `json:"keep_going,omitempty" protobuf:"varint,37,opt,name=keep_going,json=keepGoing,proto3"`         // Continue after errors
-	FullChain    bool   `json:"full_chain,omitempty" protobuf:"varint,38,opt,name=full_chain,json=fullChain,proto3"`         // Print full chain
-	Ocsp         bool   `json:"ocsp,omitempty" protobuf:"varint,39,opt,name=ocsp,proto3"`                                    // Enable OCSP stapling
-	AutoCleanup  bool   `json:"auto_cleanup,omitempty" protobuf:"varint,40,opt,name=auto_cleanup,json=autoCleanup,proto3"`   // Automatic cleanup
-	ContactEmail string `json:"contact_email,omitempty" protobuf:"bytes,41,opt,name=contact_email,json=contactEmail,proto3"` // E-mail to use during registration
-	CurlOpts     string `json:"curl_opts,omitempty" protobuf:"bytes,42,opt,name=curl_opts,json=curlOpts,proto3"`             // Extra options passed to curl
-	ConfigD      string `json:"config_d,omitempty" protobuf:"bytes,43,opt,name=config_d,json=configD,proto3"`                // Directory containing additional config files
+// MarshalJSON implements the json.Marshaler interface to ensure all fields are included
+func (c *Config) MarshalJSON() ([]byte, error) {
+	type Alias Config // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		User               string `json:"user"`
+		Group              string `json:"group"`
+		BaseDir            string `json:"base_dir"`
+		CertDir            string `json:"cert_dir"`
+		DomainsDir         string `json:"domains_dir"`
+		AccountsDir        string `json:"accounts_dir"`
+		ChallengesDir      string `json:"challenges_dir"`
+		ChainCache         string `json:"chain_cache"`
+		DomainsFile        string `json:"domains_file"`
+		ConfigFile         string `json:"config_file"`
+		HookScript         string `json:"hook_script"`
+		LockFile           string `json:"lock_file"`
+		OpensslConfig      string `json:"openssl_config"`
+		Openssl            string `json:"openssl"`
+		KeySize            int32  `json:"key_size"`
+		Ca                 string `json:"ca"`
+		OldCa              string `json:"old_ca"`
+		AcceptTerms        bool   `json:"accept_terms"`
+		Ipv4               bool   `json:"ipv4"`
+		Ipv6               bool   `json:"ipv6"`
+		PreferredChain     string `json:"preferred_chain"`
+		Api                string `json:"api"`
+		KeyAlgo            string `json:"key_algo"`
+		RenewDays          int32  `json:"renew_days"`
+		ForceRenew         bool   `json:"force_renew"`
+		ForceValidation    bool   `json:"force_validation"`
+		PrivateKeyRenew    bool   `json:"private_key_renew"`
+		PrivateKeyRollover bool   `json:"private_key_rollover"`
+		ChallengeType      string `json:"challenge_type"`
+		WellKnownDir       string `json:"well_known_dir"`
+		AlpnDir            string `json:"alpn_dir"`
+		HookChain          bool   `json:"hook_chain"`
+		OcspMustStaple     bool   `json:"ocsp_must_staple"`
+		OcspFetch          bool   `json:"ocsp_fetch"`
+		OcspDays           int32  `json:"ocsp_days"`
+		NoLock             bool   `json:"no_lock"`
+		KeepGoing          bool   `json:"keep_going"`
+		FullChain          bool   `json:"full_chain"`
+		Ocsp               bool   `json:"ocsp"`
+		AutoCleanup        bool   `json:"auto_cleanup"`
+		ContactEmail       string `json:"contact_email"`
+		CurlOpts           string `json:"curl_opts"`
+		ConfigD            string `json:"config_d"`
+	}{
+		User:               c.GetUser(),
+		Group:              c.GetGroup(),
+		BaseDir:            c.GetBaseDir(),
+		CertDir:            c.GetCertDir(),
+		DomainsDir:         c.GetDomainsDir(),
+		AccountsDir:        c.GetAccountsDir(),
+		ChallengesDir:      c.GetChallengesDir(),
+		ChainCache:         c.GetChainCache(),
+		DomainsFile:        c.GetDomainsFile(),
+		ConfigFile:         c.GetConfigFile(),
+		HookScript:         c.GetHookScript(),
+		LockFile:           c.GetLockFile(),
+		OpensslConfig:      c.GetOpensslConfig(),
+		Openssl:            c.GetOpenssl(),
+		KeySize:            c.GetKeySize(),
+		Ca:                 c.GetCa(),
+		OldCa:              c.GetOldCa(),
+		AcceptTerms:        c.GetAcceptTerms(),
+		Ipv4:               c.GetIpv4(),
+		Ipv6:               c.GetIpv6(),
+		PreferredChain:     c.GetPreferredChain(),
+		Api:                c.GetApi(),
+		KeyAlgo:            c.GetKeyAlgo(),
+		RenewDays:          c.GetRenewDays(),
+		ForceRenew:         c.GetForceRenew(),
+		ForceValidation:    c.GetForceValidation(),
+		PrivateKeyRenew:    c.GetPrivateKeyRenew(),
+		PrivateKeyRollover: c.GetPrivateKeyRollover(),
+		ChallengeType:      c.GetChallengeType(),
+		WellKnownDir:       c.GetWellKnownDir(),
+		AlpnDir:            c.GetAlpnDir(),
+		HookChain:          c.GetHookChain(),
+		OcspMustStaple:     c.GetOcspMustStaple(),
+		OcspFetch:          c.GetOcspFetch(),
+		OcspDays:           c.GetOcspDays(),
+		NoLock:             c.GetNoLock(),
+		KeepGoing:          c.GetKeepGoing(),
+		FullChain:          c.GetFullChain(),
+		Ocsp:               c.GetOcsp(),
+		AutoCleanup:        c.GetAutoCleanup(),
+		ContactEmail:       c.GetContactEmail(),
+		CurlOpts:           c.GetCurlOpts(),
+		ConfigD:            c.GetConfigD(),
+	})
 }
 
 // NewConfig creates a new Config with default values.
 // It initializes all fields with sensible defaults for the dehydrated ACME client.
 func NewConfig() *Config {
 	return &Config{
-		BaseDir:         ".",
-		CertDir:         "certs",
-		DomainsDir:      "domains",
-		AccountsDir:     "accounts",
-		ChallengesDir:   "acme-challenges",
-		DomainsFile:     "domains.txt",
-		Ca:              "letsencrypt",
-		OldCa:           "https://acme-v01.api.letsencrypt.org/directory",
-		RenewDays:       30,
-		KeySize:         4096,
-		KeyAlgo:         "rsa",
-		ChallengeType:   "http-01",
-		WellKnownDir:    "/var/www/dehydrated",
-		LockFile:        "dehydrated.lock",
-		Openssl:         "openssl",
-		PrivateKeyRenew: true,
-		HookChain:       false,
-		OcspDays:        5,
-		ChainCache:      "chains",
-		Api:             "auto",
+		pb.DehydratedConfig{
+			BaseDir:         ".",
+			CertDir:         "certs",
+			DomainsDir:      "domains",
+			AccountsDir:     "accounts",
+			ChallengesDir:   "acme-challenges",
+			DomainsFile:     "domains.txt",
+			Ca:              "letsencrypt",
+			OldCa:           "https://acme-v01.api.letsencrypt.org/directory",
+			RenewDays:       30,
+			KeySize:         4096,
+			KeyAlgo:         "rsa",
+			ChallengeType:   "http-01",
+			WellKnownDir:    "/var/www/dehydrated",
+			LockFile:        "dehydrated.lock",
+			Openssl:         "openssl",
+			PrivateKeyRenew: true,
+			HookChain:       false,
+			OcspDays:        5,
+			ChainCache:      "chains",
+			Api:             "auto",
+		},
 	}
 }
 
@@ -110,11 +146,13 @@ func NewConfig() *Config {
 // It sets up the configuration for Let's Encrypt v2 API with standard settings.
 func DefaultConfig() *Config {
 	return &Config{
-		Group:    "www-data",
-		Ca:       "https://acme-v02.api.letsencrypt.org/directory",
-		Openssl:  "openssl",
-		OcspDays: 5,
-		Api:      "v2",
+		pb.DehydratedConfig{
+			Group:    "www-data",
+			Ca:       "https://acme-v02.api.letsencrypt.org/directory",
+			Openssl:  "openssl",
+			OcspDays: 5,
+			Api:      "v2",
+		},
 	}
 }
 
@@ -375,54 +413,4 @@ func (c *Config) DomainSpecificConfig(path string) *Config {
 	}
 
 	return &cfg
-}
-
-func (c *Config) ToProto() *pb.DehydratedConfig {
-	// Convert dehydrated config to proto format
-	return &pb.DehydratedConfig{
-		User:               c.User,
-		Group:              c.Group,
-		BaseDir:            c.BaseDir,
-		CertDir:            c.CertDir,
-		DomainsDir:         c.DomainsDir,
-		AccountsDir:        c.AccountsDir,
-		ChallengesDir:      c.ChallengesDir,
-		ChainCache:         c.ChainCache,
-		DomainsFile:        c.DomainsFile,
-		ConfigFile:         c.ConfigFile,
-		HookScript:         c.HookScript,
-		LockFile:           c.LockFile,
-		OpensslConfig:      c.OpensslConfig,
-		Openssl:            c.Openssl,
-		KeySize:            c.KeySize,
-		Ca:                 c.Ca,
-		OldCa:              c.OldCa,
-		AcceptTerms:        c.AcceptTerms,
-		Ipv4:               c.Ipv4,
-		Ipv6:               c.Ipv6,
-		PreferredChain:     c.PreferredChain,
-		Api:                c.Api,
-		KeyAlgo:            c.KeyAlgo,
-		RenewDays:          c.RenewDays,
-		ForceRenew:         c.ForceRenew,
-		ForceValidation:    c.ForceValidation,
-		PrivateKeyRenew:    c.PrivateKeyRenew,
-		PrivateKeyRollover: c.PrivateKeyRollover,
-		ChallengeType:      c.ChallengeType,
-		WellKnownDir:       c.WellKnownDir,
-		AlpnDir:            c.AlpnDir,
-		HookChain:          c.HookChain,
-		OcspMustStaple:     c.OcspMustStaple,
-		OcspFetch:          c.OcspFetch,
-		OcspDays:           c.OcspDays,
-		NoLock:             c.NoLock,
-		KeepGoing:          c.KeepGoing,
-		FullChain:          c.FullChain,
-		Ocsp:               c.Ocsp,
-		AutoCleanup:        c.AutoCleanup,
-		ContactEmail:       c.ContactEmail,
-		CurlOpts:           c.CurlOpts,
-		ConfigD:            c.ConfigD,
-	}
-
 }

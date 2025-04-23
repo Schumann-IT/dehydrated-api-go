@@ -32,10 +32,10 @@ func (w *wrapper) Initialize(ctx context.Context, config map[string]any) error {
 	return err
 }
 
-func (w *wrapper) GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
+func (w *wrapper) GetMetadata(ctx context.Context, entry *model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
 	req := &pb.GetMetadataRequest{
-		DomainEntry:      entry.ToProto(),
-		DehydratedConfig: dehydratedConfig.ToProto(),
+		DomainEntry:      &entry.DomainEntry,
+		DehydratedConfig: &dehydratedConfig.DehydratedConfig,
 	}
 
 	resp, err := w.server.GetMetadata(ctx, req)
@@ -43,7 +43,7 @@ func (w *wrapper) GetMetadata(ctx context.Context, entry model.DomainEntry, dehy
 		return nil, err
 	}
 
-	return model.FromProto(resp).Metadata, nil
+	return model.MetadataFromProto(resp), nil
 }
 
 func (w *wrapper) Close(ctx context.Context) error {

@@ -19,16 +19,18 @@ var ErrPluginError = errors.New("plugin error")
 // and cleanup operations.
 type Plugin interface {
 	// Initialize is called when the plugin is loaded.
-	// It sets up the plugin with the provided configuration and dehydrated settings.
+	// It sets up the plugin with the provided configuration.
 	// The context can be used for cancellation and timeout control.
 	// Returns an error if initialization fails.
 	Initialize(ctx context.Context, config map[string]any) error
 
 	// GetMetadata returns metadata for a domain entry.
 	// This method is called to retrieve plugin-specific information about a domain.
+	// The dehydratedConfig parameter provides access to the dehydrated configuration
+	// for the specific domain being processed.
 	// The context can be used for cancellation and timeout control.
 	// Returns a map of metadata key-value pairs and an error if the operation fails.
-	GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
+	GetMetadata(ctx context.Context, entry *model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error)
 
 	// Close is called when the plugin is being unloaded.
 	// It performs any necessary cleanup operations.

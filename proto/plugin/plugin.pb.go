@@ -24,60 +24,61 @@ const (
 
 // DehydratedConfig contains the complete configuration for the dehydrated ACME client.
 // It includes all settings needed to operate the dehydrated script.
+// This configuration is passed to plugins to provide context for their operations.
 type DehydratedConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// User and group settings for file permissions
+	// User and group settings for file permissions.
 	User  string `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	Group string `protobuf:"bytes,2,opt,name=group,proto3" json:"group,omitempty"`
-	// Base directories for dehydrated operation
-	BaseDir       string `protobuf:"bytes,3,opt,name=base_dir,json=baseDir,proto3" json:"base_dir,omitempty"`                   // Root directory for dehydrated
-	CertDir       string `protobuf:"bytes,4,opt,name=cert_dir,json=certDir,proto3" json:"cert_dir,omitempty"`                   // Directory for certificates
-	DomainsDir    string `protobuf:"bytes,5,opt,name=domains_dir,json=domainsDir,proto3" json:"domains_dir,omitempty"`          // Directory for domain configurations
-	AccountsDir   string `protobuf:"bytes,6,opt,name=accounts_dir,json=accountsDir,proto3" json:"accounts_dir,omitempty"`       // Directory for ACME account data
-	ChallengesDir string `protobuf:"bytes,7,opt,name=challenges_dir,json=challengesDir,proto3" json:"challenges_dir,omitempty"` // Directory for ACME challenges
-	ChainCache    string `protobuf:"bytes,8,opt,name=chain_cache,json=chainCache,proto3" json:"chain_cache,omitempty"`          // Directory for certificate chain cache
-	// File paths for dehydrated operation
-	DomainsFile string `protobuf:"bytes,9,opt,name=domains_file,json=domainsFile,proto3" json:"domains_file,omitempty"` // Path to the domains.txt file
-	ConfigFile  string `protobuf:"bytes,10,opt,name=config_file,json=configFile,proto3" json:"config_file,omitempty"`   // Path to the dehydrated config file
-	HookScript  string `protobuf:"bytes,11,opt,name=hook_script,json=hookScript,proto3" json:"hook_script,omitempty"`   // Path to the hook script
-	LockFile    string `protobuf:"bytes,12,opt,name=lock_file,json=lockFile,proto3" json:"lock_file,omitempty"`         // Path to the lock file
-	// OpenSSL settings for certificate generation
-	OpensslConfig string `protobuf:"bytes,13,opt,name=openssl_config,json=opensslConfig,proto3" json:"openssl_config,omitempty"` // Path to OpenSSL config file
-	Openssl       string `protobuf:"bytes,14,opt,name=openssl,proto3" json:"openssl,omitempty"`                                  // Path to OpenSSL binary
-	KeySize       int32  `protobuf:"varint,15,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty"`                  // RSA key size in bits
-	// ACME settings for Let's Encrypt integration
-	Ca             string `protobuf:"bytes,16,opt,name=ca,proto3" json:"ca,omitempty"`                                               // Certificate Authority URL
-	OldCa          string `protobuf:"bytes,17,opt,name=old_ca,json=oldCa,proto3" json:"old_ca,omitempty"`                            // Old Certificate Authority URL
-	AcceptTerms    bool   `protobuf:"varint,18,opt,name=accept_terms,json=acceptTerms,proto3" json:"accept_terms,omitempty"`         // Whether to accept Let's Encrypt terms
-	Ipv4           bool   `protobuf:"varint,19,opt,name=ipv4,proto3" json:"ipv4,omitempty"`                                          // Whether to use IPv4
-	Ipv6           bool   `protobuf:"varint,20,opt,name=ipv6,proto3" json:"ipv6,omitempty"`                                          // Whether to use IPv6
-	PreferredChain string `protobuf:"bytes,21,opt,name=preferred_chain,json=preferredChain,proto3" json:"preferred_chain,omitempty"` // Preferred certificate chain
-	Api            string `protobuf:"bytes,22,opt,name=api,proto3" json:"api,omitempty"`                                             // API version to use
-	// Certificate settings for generation and renewal
-	KeyAlgo            string `protobuf:"bytes,23,opt,name=key_algo,json=keyAlgo,proto3" json:"key_algo,omitempty"`                                     // Key algorithm (RSA or ECDSA)
-	RenewDays          int32  `protobuf:"varint,24,opt,name=renew_days,json=renewDays,proto3" json:"renew_days,omitempty"`                              // Days before renewal
-	ForceRenew         bool   `protobuf:"varint,25,opt,name=force_renew,json=forceRenew,proto3" json:"force_renew,omitempty"`                           // Whether to force renewal
-	ForceValidation    bool   `protobuf:"varint,26,opt,name=force_validation,json=forceValidation,proto3" json:"force_validation,omitempty"`            // Whether to force validation
-	PrivateKeyRenew    bool   `protobuf:"varint,27,opt,name=private_key_renew,json=privateKeyRenew,proto3" json:"private_key_renew,omitempty"`          // Whether to renew private keys
-	PrivateKeyRollover bool   `protobuf:"varint,28,opt,name=private_key_rollover,json=privateKeyRollover,proto3" json:"private_key_rollover,omitempty"` // Whether to use key rollover
-	// Challenge settings for domain validation
-	ChallengeType string `protobuf:"bytes,29,opt,name=challenge_type,json=challengeType,proto3" json:"challenge_type,omitempty"` // Type of challenge to use
-	WellKnownDir  string `protobuf:"bytes,30,opt,name=well_known_dir,json=wellKnownDir,proto3" json:"well_known_dir,omitempty"`  // Directory for HTTP-01 challenges
-	AlpnDir       string `protobuf:"bytes,31,opt,name=alpn_dir,json=alpnDir,proto3" json:"alpn_dir,omitempty"`                   // Directory for TLS-ALPN-01 challenges
-	HookChain     bool   `protobuf:"varint,32,opt,name=hook_chain,json=hookChain,proto3" json:"hook_chain,omitempty"`            // Whether to chain hook calls
-	// OCSP settings for certificate status
-	OcspMustStaple bool  `protobuf:"varint,33,opt,name=ocsp_must_staple,json=ocspMustStaple,proto3" json:"ocsp_must_staple,omitempty"` // Whether to require OCSP stapling
-	OcspFetch      bool  `protobuf:"varint,34,opt,name=ocsp_fetch,json=ocspFetch,proto3" json:"ocsp_fetch,omitempty"`                  // Whether to fetch OCSP responses
-	OcspDays       int32 `protobuf:"varint,35,opt,name=ocsp_days,json=ocspDays,proto3" json:"ocsp_days,omitempty"`                     // Days to keep OCSP responses
-	// Other settings
-	NoLock        bool   `protobuf:"varint,36,opt,name=no_lock,json=noLock,proto3" json:"no_lock,omitempty"`                  // Whether to disable file locking
-	KeepGoing     bool   `protobuf:"varint,37,opt,name=keep_going,json=keepGoing,proto3" json:"keep_going,omitempty"`         // Whether to continue on errors
-	FullChain     bool   `protobuf:"varint,38,opt,name=full_chain,json=fullChain,proto3" json:"full_chain,omitempty"`         // Whether to include full chain
-	Ocsp          bool   `protobuf:"varint,39,opt,name=ocsp,proto3" json:"ocsp,omitempty"`                                    // Whether to enable OCSP
-	AutoCleanup   bool   `protobuf:"varint,40,opt,name=auto_cleanup,json=autoCleanup,proto3" json:"auto_cleanup,omitempty"`   // Whether to auto-cleanup
-	ContactEmail  string `protobuf:"bytes,41,opt,name=contact_email,json=contactEmail,proto3" json:"contact_email,omitempty"` // Contact email for Let's Encrypt
-	CurlOpts      string `protobuf:"bytes,42,opt,name=curl_opts,json=curlOpts,proto3" json:"curl_opts,omitempty"`             // Additional curl options
-	ConfigD       string `protobuf:"bytes,43,opt,name=config_d,json=configD,proto3" json:"config_d,omitempty"`                // Additional config directory
+	// Base directories for dehydrated operation.
+	BaseDir       string `protobuf:"bytes,3,opt,name=base_dir,json=baseDir,proto3" json:"base_dir,omitempty"`                   // Root directory for dehydrated.
+	CertDir       string `protobuf:"bytes,4,opt,name=cert_dir,json=certDir,proto3" json:"cert_dir,omitempty"`                   // Directory for certificates.
+	DomainsDir    string `protobuf:"bytes,5,opt,name=domains_dir,json=domainsDir,proto3" json:"domains_dir,omitempty"`          // Directory for domain configurations.
+	AccountsDir   string `protobuf:"bytes,6,opt,name=accounts_dir,json=accountsDir,proto3" json:"accounts_dir,omitempty"`       // Directory for ACME account data.
+	ChallengesDir string `protobuf:"bytes,7,opt,name=challenges_dir,json=challengesDir,proto3" json:"challenges_dir,omitempty"` // Directory for ACME challenges.
+	ChainCache    string `protobuf:"bytes,8,opt,name=chain_cache,json=chainCache,proto3" json:"chain_cache,omitempty"`          // Directory for certificate chain cache.
+	// File paths for dehydrated operation.
+	DomainsFile string `protobuf:"bytes,9,opt,name=domains_file,json=domainsFile,proto3" json:"domains_file,omitempty"` // Path to the domains.txt file.
+	ConfigFile  string `protobuf:"bytes,10,opt,name=config_file,json=configFile,proto3" json:"config_file,omitempty"`   // Path to the dehydrated config file.
+	HookScript  string `protobuf:"bytes,11,opt,name=hook_script,json=hookScript,proto3" json:"hook_script,omitempty"`   // Path to the hook script.
+	LockFile    string `protobuf:"bytes,12,opt,name=lock_file,json=lockFile,proto3" json:"lock_file,omitempty"`         // Path to the lock file.
+	// OpenSSL settings for certificate generation.
+	OpensslConfig string `protobuf:"bytes,13,opt,name=openssl_config,json=opensslConfig,proto3" json:"openssl_config,omitempty"` // Path to OpenSSL config file.
+	Openssl       string `protobuf:"bytes,14,opt,name=openssl,proto3" json:"openssl,omitempty"`                                  // Path to OpenSSL binary.
+	KeySize       int32  `protobuf:"varint,15,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty"`                  // RSA key size in bits (e.g., 2048, 4096).
+	// ACME settings for Let's Encrypt integration.
+	Ca             string `protobuf:"bytes,16,opt,name=ca,proto3" json:"ca,omitempty"`                                               // Certificate Authority URL (e.g., https://acme-v02.api.letsencrypt.org/directory).
+	OldCa          string `protobuf:"bytes,17,opt,name=old_ca,json=oldCa,proto3" json:"old_ca,omitempty"`                            // Old Certificate Authority URL for migration.
+	AcceptTerms    bool   `protobuf:"varint,18,opt,name=accept_terms,json=acceptTerms,proto3" json:"accept_terms,omitempty"`         // Whether to accept Let's Encrypt terms of service.
+	Ipv4           bool   `protobuf:"varint,19,opt,name=ipv4,proto3" json:"ipv4,omitempty"`                                          // Whether to use IPv4 for challenges.
+	Ipv6           bool   `protobuf:"varint,20,opt,name=ipv6,proto3" json:"ipv6,omitempty"`                                          // Whether to use IPv6 for challenges.
+	PreferredChain string `protobuf:"bytes,21,opt,name=preferred_chain,json=preferredChain,proto3" json:"preferred_chain,omitempty"` // Preferred certificate chain (e.g., "ISRG Root X1").
+	Api            string `protobuf:"bytes,22,opt,name=api,proto3" json:"api,omitempty"`                                             // API version to use (e.g., "v2").
+	// Certificate settings for generation and renewal.
+	KeyAlgo            string `protobuf:"bytes,23,opt,name=key_algo,json=keyAlgo,proto3" json:"key_algo,omitempty"`                                     // Key algorithm (e.g., "rsa", "ecdsa").
+	RenewDays          int32  `protobuf:"varint,24,opt,name=renew_days,json=renewDays,proto3" json:"renew_days,omitempty"`                              // Days before renewal (e.g., 30).
+	ForceRenew         bool   `protobuf:"varint,25,opt,name=force_renew,json=forceRenew,proto3" json:"force_renew,omitempty"`                           // Whether to force renewal regardless of expiration.
+	ForceValidation    bool   `protobuf:"varint,26,opt,name=force_validation,json=forceValidation,proto3" json:"force_validation,omitempty"`            // Whether to force domain validation.
+	PrivateKeyRenew    bool   `protobuf:"varint,27,opt,name=private_key_renew,json=privateKeyRenew,proto3" json:"private_key_renew,omitempty"`          // Whether to renew private keys with certificates.
+	PrivateKeyRollover bool   `protobuf:"varint,28,opt,name=private_key_rollover,json=privateKeyRollover,proto3" json:"private_key_rollover,omitempty"` // Whether to use key rollover for smoother transitions.
+	// Challenge settings for domain validation.
+	ChallengeType string `protobuf:"bytes,29,opt,name=challenge_type,json=challengeType,proto3" json:"challenge_type,omitempty"` // Type of challenge to use (e.g., "http-01", "dns-01").
+	WellKnownDir  string `protobuf:"bytes,30,opt,name=well_known_dir,json=wellKnownDir,proto3" json:"well_known_dir,omitempty"`  // Directory for HTTP-01 challenges.
+	AlpnDir       string `protobuf:"bytes,31,opt,name=alpn_dir,json=alpnDir,proto3" json:"alpn_dir,omitempty"`                   // Directory for TLS-ALPN-01 challenges.
+	HookChain     bool   `protobuf:"varint,32,opt,name=hook_chain,json=hookChain,proto3" json:"hook_chain,omitempty"`            // Whether to chain hook calls for efficiency.
+	// OCSP settings for certificate status.
+	OcspMustStaple bool  `protobuf:"varint,33,opt,name=ocsp_must_staple,json=ocspMustStaple,proto3" json:"ocsp_must_staple,omitempty"` // Whether to require OCSP stapling (improves security).
+	OcspFetch      bool  `protobuf:"varint,34,opt,name=ocsp_fetch,json=ocspFetch,proto3" json:"ocsp_fetch,omitempty"`                  // Whether to fetch OCSP responses.
+	OcspDays       int32 `protobuf:"varint,35,opt,name=ocsp_days,json=ocspDays,proto3" json:"ocsp_days,omitempty"`                     // Days to keep OCSP responses (e.g., 7).
+	// Other settings.
+	NoLock        bool   `protobuf:"varint,36,opt,name=no_lock,json=noLock,proto3" json:"no_lock,omitempty"`                  // Whether to disable file locking (use with caution).
+	KeepGoing     bool   `protobuf:"varint,37,opt,name=keep_going,json=keepGoing,proto3" json:"keep_going,omitempty"`         // Whether to continue processing on errors.
+	FullChain     bool   `protobuf:"varint,38,opt,name=full_chain,json=fullChain,proto3" json:"full_chain,omitempty"`         // Whether to include full certificate chain.
+	Ocsp          bool   `protobuf:"varint,39,opt,name=ocsp,proto3" json:"ocsp,omitempty"`                                    // Whether to enable OCSP stapling.
+	AutoCleanup   bool   `protobuf:"varint,40,opt,name=auto_cleanup,json=autoCleanup,proto3" json:"auto_cleanup,omitempty"`   // Whether to automatically clean up old files.
+	ContactEmail  string `protobuf:"bytes,41,opt,name=contact_email,json=contactEmail,proto3" json:"contact_email,omitempty"` // Contact email for Let's Encrypt notifications.
+	CurlOpts      string `protobuf:"bytes,42,opt,name=curl_opts,json=curlOpts,proto3" json:"curl_opts,omitempty"`             // Additional curl options for HTTP requests.
+	ConfigD       string `protobuf:"bytes,43,opt,name=config_d,json=configD,proto3" json:"config_d,omitempty"`                // Additional config directory for extensions.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -417,7 +418,8 @@ func (x *DehydratedConfig) GetConfigD() string {
 // It includes both plugin-specific configuration and dehydrated configuration.
 type InitializeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Plugin-specific configuration as a map of values
+	// Plugin-specific configuration as a map of values.
+	// The structure depends on the plugin implementation.
 	Config        map[string]*structpb.Value `protobuf:"bytes,1,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -460,14 +462,15 @@ func (x *InitializeRequest) GetConfig() map[string]*structpb.Value {
 	return nil
 }
 
+// DomainEntry represents a domain configuration in the dehydrated system.
+// It contains all information about a domain, including its names and metadata.
 type DomainEntry struct {
-	state            protoimpl.MessageState     `protogen:"open.v1"`
-	Domain           string                     `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`                                                                               // Primary domain name
-	AlternativeNames []string                   `protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3" json:"alternative_names,omitempty"`                                   // Alternative domain names
-	Alias            string                     `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`                                                                                 // Certificate alias
-	Enabled          bool                       `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                            // Whether the domain is enabled
-	Comment          string                     `protobuf:"bytes,5,opt,name=comment,proto3" json:"comment,omitempty"`                                                                             // Domain comment
-	Metadata         map[string]*structpb.Value `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Existing metadata
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Domain           string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`                                             // Primary domain name (e.g., "example.com").
+	AlternativeNames []string               `protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3" json:"alternative_names,omitempty"` // Alternative domain names (e.g., "www.example.com").
+	Alias            string                 `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`                                               // Certificate alias for reference.
+	Enabled          bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`                                          // Whether the domain is enabled for certificate issuance.
+	Comment          string                 `protobuf:"bytes,5,opt,name=comment,proto3" json:"comment,omitempty"`                                           // Domain comment for documentation.
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -537,13 +540,6 @@ func (x *DomainEntry) GetComment() string {
 	return ""
 }
 
-func (x *DomainEntry) GetMetadata() map[string]*structpb.Value {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
 // InitializeResponse is empty as no data is needed.
 // The plugin should return an error if initialization fails.
 type InitializeResponse struct {
@@ -587,9 +583,10 @@ func (*InitializeResponse) Descriptor() ([]byte, []int) {
 // to generate or retrieve metadata.
 type GetMetadataRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The domain object
+	// The domain object containing all domain information.
 	DomainEntry *DomainEntry `protobuf:"bytes,1,opt,name=domain_entry,json=domainEntry,proto3" json:"domain_entry,omitempty"`
-	// Dehydrated configuration for ACME client operation
+	// Dehydrated configuration for ACME client operation.
+	// This provides context for the plugin about the dehydrated environment.
 	DehydratedConfig *DehydratedConfig `protobuf:"bytes,2,opt,name=dehydrated_config,json=dehydratedConfig,proto3" json:"dehydrated_config,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -643,7 +640,9 @@ func (x *GetMetadataRequest) GetDehydratedConfig() *DehydratedConfig {
 // The plugin should return a map of metadata values that will be
 // merged with the existing metadata.
 type GetMetadataResponse struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Metadata key-value pairs to be added to the domain entry.
+	// Values should be of appropriate types (string, number, boolean, etc.).
 	Metadata      map[string]*structpb.Value `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -827,17 +826,13 @@ const file_proto_plugin_plugin_proto_rawDesc = "" +
 	"\x06config\x18\x01 \x03(\v2%.plugin.InitializeRequest.ConfigEntryR\x06config\x1aQ\n" +
 	"\vConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xb0\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\x9c\x01\n" +
 	"\vDomainEntry\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12+\n" +
 	"\x11alternative_names\x18\x02 \x03(\tR\x10alternativeNames\x12\x14\n" +
 	"\x05alias\x18\x03 \x01(\tR\x05alias\x12\x18\n" +
 	"\aenabled\x18\x04 \x01(\bR\aenabled\x12\x18\n" +
-	"\acomment\x18\x05 \x01(\tR\acomment\x12=\n" +
-	"\bmetadata\x18\x06 \x03(\v2!.plugin.DomainEntry.MetadataEntryR\bmetadata\x1aS\n" +
-	"\rMetadataEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\x14\n" +
+	"\acomment\x18\x05 \x01(\tR\acomment\"\x14\n" +
 	"\x12InitializeResponse\"\x93\x01\n" +
 	"\x12GetMetadataRequest\x126\n" +
 	"\fdomain_entry\x18\x01 \x01(\v2\x13.plugin.DomainEntryR\vdomainEntry\x12E\n" +
@@ -867,7 +862,7 @@ func file_proto_plugin_plugin_proto_rawDescGZIP() []byte {
 	return file_proto_plugin_plugin_proto_rawDescData
 }
 
-var file_proto_plugin_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_plugin_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_plugin_plugin_proto_goTypes = []any{
 	(*DehydratedConfig)(nil),    // 0: plugin.DehydratedConfig
 	(*InitializeRequest)(nil),   // 1: plugin.InitializeRequest
@@ -878,30 +873,27 @@ var file_proto_plugin_plugin_proto_goTypes = []any{
 	(*CloseRequest)(nil),        // 6: plugin.CloseRequest
 	(*CloseResponse)(nil),       // 7: plugin.CloseResponse
 	nil,                         // 8: plugin.InitializeRequest.ConfigEntry
-	nil,                         // 9: plugin.DomainEntry.MetadataEntry
-	nil,                         // 10: plugin.GetMetadataResponse.MetadataEntry
-	(*structpb.Value)(nil),      // 11: google.protobuf.Value
+	nil,                         // 9: plugin.GetMetadataResponse.MetadataEntry
+	(*structpb.Value)(nil),      // 10: google.protobuf.Value
 }
 var file_proto_plugin_plugin_proto_depIdxs = []int32{
 	8,  // 0: plugin.InitializeRequest.config:type_name -> plugin.InitializeRequest.ConfigEntry
-	9,  // 1: plugin.DomainEntry.metadata:type_name -> plugin.DomainEntry.MetadataEntry
-	2,  // 2: plugin.GetMetadataRequest.domain_entry:type_name -> plugin.DomainEntry
-	0,  // 3: plugin.GetMetadataRequest.dehydrated_config:type_name -> plugin.DehydratedConfig
-	10, // 4: plugin.GetMetadataResponse.metadata:type_name -> plugin.GetMetadataResponse.MetadataEntry
-	11, // 5: plugin.InitializeRequest.ConfigEntry.value:type_name -> google.protobuf.Value
-	11, // 6: plugin.DomainEntry.MetadataEntry.value:type_name -> google.protobuf.Value
-	11, // 7: plugin.GetMetadataResponse.MetadataEntry.value:type_name -> google.protobuf.Value
-	1,  // 8: plugin.Plugin.Initialize:input_type -> plugin.InitializeRequest
-	4,  // 9: plugin.Plugin.GetMetadata:input_type -> plugin.GetMetadataRequest
-	6,  // 10: plugin.Plugin.Close:input_type -> plugin.CloseRequest
-	3,  // 11: plugin.Plugin.Initialize:output_type -> plugin.InitializeResponse
-	5,  // 12: plugin.Plugin.GetMetadata:output_type -> plugin.GetMetadataResponse
-	7,  // 13: plugin.Plugin.Close:output_type -> plugin.CloseResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 1: plugin.GetMetadataRequest.domain_entry:type_name -> plugin.DomainEntry
+	0,  // 2: plugin.GetMetadataRequest.dehydrated_config:type_name -> plugin.DehydratedConfig
+	9,  // 3: plugin.GetMetadataResponse.metadata:type_name -> plugin.GetMetadataResponse.MetadataEntry
+	10, // 4: plugin.InitializeRequest.ConfigEntry.value:type_name -> google.protobuf.Value
+	10, // 5: plugin.GetMetadataResponse.MetadataEntry.value:type_name -> google.protobuf.Value
+	1,  // 6: plugin.Plugin.Initialize:input_type -> plugin.InitializeRequest
+	4,  // 7: plugin.Plugin.GetMetadata:input_type -> plugin.GetMetadataRequest
+	6,  // 8: plugin.Plugin.Close:input_type -> plugin.CloseRequest
+	3,  // 9: plugin.Plugin.Initialize:output_type -> plugin.InitializeResponse
+	5,  // 10: plugin.Plugin.GetMetadata:output_type -> plugin.GetMetadataResponse
+	7,  // 11: plugin.Plugin.Close:output_type -> plugin.CloseResponse
+	9,  // [9:12] is the sub-list for method output_type
+	6,  // [6:9] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_proto_plugin_plugin_proto_init() }
@@ -915,7 +907,7 @@ func file_proto_plugin_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_plugin_plugin_proto_rawDesc), len(file_proto_plugin_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

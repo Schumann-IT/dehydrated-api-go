@@ -10,7 +10,7 @@ import (
 type MockErrDomainService struct{}
 
 // ListDomains returns an empty list of domains for testing.
-func (m *MockErrDomainService) ListDomains() ([]model.DomainEntry, error) {
+func (m *MockErrDomainService) ListDomains() ([]*model.DomainEntry, error) {
 	return nil, fmt.Errorf("mock error")
 }
 

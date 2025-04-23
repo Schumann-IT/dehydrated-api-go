@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Test script for update-api-config.sh
+# Test script for update-config.sh
 
 DEBUG=${1:-false}
 WORKSPACE=${WORKSPACE:-$(pwd)/}
@@ -15,7 +15,7 @@ setup_test_env() {
   mkdir -p "$test_dir"
   
   # Create default config
-  cp "${WORKSPACE}examples/config/config.yaml" "$test_dir/"
+  cp "${WORKSPACE}examples/config.yaml" "$test_dir/"
 
   echo "$test_dir"
 }

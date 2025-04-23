@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/auth"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"gopkg.in/yaml.v3"
@@ -37,6 +38,9 @@ type Config struct {
 
 	// Logging configuration
 	Logging *logger.Config `yaml:"logging"` // Configuration for the application logger
+
+	// Authentication configuration
+	Auth *auth.Config `yaml:"auth"` // Azure AD authentication configuration
 
 	err          error
 	parsedConfig *Config
@@ -127,6 +131,11 @@ func (c *Config) Load(path string) *Config {
 		if fc.Logging.OutputPath != "" {
 			c.Logging.OutputPath = fc.Logging.OutputPath
 		}
+	}
+
+	// Merge auth configuration
+	if fc.Auth != nil {
+		c.Auth = fc.Auth
 	}
 
 	if fc.Plugins != nil {
