@@ -5,7 +5,7 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
-// DomainHandler handles HTTP requests for helath operations
+// HealthHandler handles HTTP requests for health operations
 type HealthHandler struct{}
 
 // NewHealthHandler creates a new HealthHandler instance
@@ -15,10 +15,10 @@ func NewHealthHandler() *HealthHandler {
 
 // RegisterRoutes registers all health-related routes
 func (h *HealthHandler) RegisterRoutes(app *fiber.App) {
-	app.Get("/api/v1/health", h.Health)
+	app.Get("/health", h.Health)
 }
 
-// Health handles GET /api/v1/health
+// Health handles GET /health
 func (h *HealthHandler) Health(c *fiber.Ctx) error {
 	return c.JSON(model.DomainsResponse{
 		Success: true,

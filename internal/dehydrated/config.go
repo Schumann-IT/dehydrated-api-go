@@ -3,18 +3,114 @@
 package dehydrated
 
 import (
+	"encoding/json"
 	"fmt"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
 // Config represents the dehydrated configuration
 type Config struct {
 	pb.DehydratedConfig
+}
+
+// MarshalJSON implements the json.Marshaler interface to ensure all fields are included
+func (c *Config) MarshalJSON() ([]byte, error) {
+	type Alias Config // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		User               string `json:"user"`
+		Group              string `json:"group"`
+		BaseDir            string `json:"base_dir"`
+		CertDir            string `json:"cert_dir"`
+		DomainsDir         string `json:"domains_dir"`
+		AccountsDir        string `json:"accounts_dir"`
+		ChallengesDir      string `json:"challenges_dir"`
+		ChainCache         string `json:"chain_cache"`
+		DomainsFile        string `json:"domains_file"`
+		ConfigFile         string `json:"config_file"`
+		HookScript         string `json:"hook_script"`
+		LockFile           string `json:"lock_file"`
+		OpensslConfig      string `json:"openssl_config"`
+		Openssl            string `json:"openssl"`
+		KeySize            int32  `json:"key_size"`
+		Ca                 string `json:"ca"`
+		OldCa              string `json:"old_ca"`
+		AcceptTerms        bool   `json:"accept_terms"`
+		Ipv4               bool   `json:"ipv4"`
+		Ipv6               bool   `json:"ipv6"`
+		PreferredChain     string `json:"preferred_chain"`
+		Api                string `json:"api"`
+		KeyAlgo            string `json:"key_algo"`
+		RenewDays          int32  `json:"renew_days"`
+		ForceRenew         bool   `json:"force_renew"`
+		ForceValidation    bool   `json:"force_validation"`
+		PrivateKeyRenew    bool   `json:"private_key_renew"`
+		PrivateKeyRollover bool   `json:"private_key_rollover"`
+		ChallengeType      string `json:"challenge_type"`
+		WellKnownDir       string `json:"well_known_dir"`
+		AlpnDir            string `json:"alpn_dir"`
+		HookChain          bool   `json:"hook_chain"`
+		OcspMustStaple     bool   `json:"ocsp_must_staple"`
+		OcspFetch          bool   `json:"ocsp_fetch"`
+		OcspDays           int32  `json:"ocsp_days"`
+		NoLock             bool   `json:"no_lock"`
+		KeepGoing          bool   `json:"keep_going"`
+		FullChain          bool   `json:"full_chain"`
+		Ocsp               bool   `json:"ocsp"`
+		AutoCleanup        bool   `json:"auto_cleanup"`
+		ContactEmail       string `json:"contact_email"`
+		CurlOpts           string `json:"curl_opts"`
+		ConfigD            string `json:"config_d"`
+	}{
+		User:               c.GetUser(),
+		Group:              c.GetGroup(),
+		BaseDir:            c.GetBaseDir(),
+		CertDir:            c.GetCertDir(),
+		DomainsDir:         c.GetDomainsDir(),
+		AccountsDir:        c.GetAccountsDir(),
+		ChallengesDir:      c.GetChallengesDir(),
+		ChainCache:         c.GetChainCache(),
+		DomainsFile:        c.GetDomainsFile(),
+		ConfigFile:         c.GetConfigFile(),
+		HookScript:         c.GetHookScript(),
+		LockFile:           c.GetLockFile(),
+		OpensslConfig:      c.GetOpensslConfig(),
+		Openssl:            c.GetOpenssl(),
+		KeySize:            c.GetKeySize(),
+		Ca:                 c.GetCa(),
+		OldCa:              c.GetOldCa(),
+		AcceptTerms:        c.GetAcceptTerms(),
+		Ipv4:               c.GetIpv4(),
+		Ipv6:               c.GetIpv6(),
+		PreferredChain:     c.GetPreferredChain(),
+		Api:                c.GetApi(),
+		KeyAlgo:            c.GetKeyAlgo(),
+		RenewDays:          c.GetRenewDays(),
+		ForceRenew:         c.GetForceRenew(),
+		ForceValidation:    c.GetForceValidation(),
+		PrivateKeyRenew:    c.GetPrivateKeyRenew(),
+		PrivateKeyRollover: c.GetPrivateKeyRollover(),
+		ChallengeType:      c.GetChallengeType(),
+		WellKnownDir:       c.GetWellKnownDir(),
+		AlpnDir:            c.GetAlpnDir(),
+		HookChain:          c.GetHookChain(),
+		OcspMustStaple:     c.GetOcspMustStaple(),
+		OcspFetch:          c.GetOcspFetch(),
+		OcspDays:           c.GetOcspDays(),
+		NoLock:             c.GetNoLock(),
+		KeepGoing:          c.GetKeepGoing(),
+		FullChain:          c.GetFullChain(),
+		Ocsp:               c.GetOcsp(),
+		AutoCleanup:        c.GetAutoCleanup(),
+		ContactEmail:       c.GetContactEmail(),
+		CurlOpts:           c.GetCurlOpts(),
+		ConfigD:            c.GetConfigD(),
+	})
 }
 
 // NewConfig creates a new Config with default values.

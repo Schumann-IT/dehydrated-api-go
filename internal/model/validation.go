@@ -30,6 +30,6 @@ func IsValidDomain(domain string) bool {
 // IsValidDomainEntry checks if a DomainEntry is valid by validating its domain field.
 // It ensures that the domain name follows the standard domain naming conventions.
 // Returns true if the domain entry is valid, false otherwise.
-func IsValidDomainEntry(entry DomainEntry) bool {
+func IsValidDomainEntry(entry *DomainEntry) bool {
 	return IsValidDomain(entry.Domain)
 }

@@ -4,17 +4,21 @@ package server
 
 import (
 	"fmt"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"os"
 	"sync"
 
+	"github.com/gofiber/swagger"
+
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
+	_ "github.com/schumann-it/dehydrated-api-go/docs"
+	"github.com/schumann-it/dehydrated-api-go/internal/auth"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/handler"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
-	"go.uber.org/zap"
-
 	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"go.uber.org/zap"
 )
 
 // ANSI escape codes for text formatting
@@ -115,21 +119,42 @@ func (s *Server) WithDomainService() *Server {
 
 	s.domainService = domainService
 
-	// Create domain handler
-	h := handler.NewDomainHandler(s.domainService)
-	h.RegisterRoutes(s.app)
-
 	return s
 }
 
 func (s *Server) Start() {
-	// Create health handler
+	s.app.Use(cors.New())
+
+	// Add health handler
 	h := handler.NewHealthHandler()
 	h.RegisterRoutes(s.app)
 
-	// Start server in a goroutine
-	s.wg.Add(1)
+	// Add Swagger documentation
+	s.app.Get("/swagger/*", swagger.HandlerDefault)
+
+	// add API group
+	g := s.app.Group("/api/v1")
+	if s.Config.Auth != nil {
+		s.Logger.Info("Adding authentication middleware",
+			zap.String("tenant_id", s.Config.Auth.TenantID),
+			zap.String("client_id", s.Config.Auth.ClientID),
+		)
+
+		// Add authentication middleware to the api group
+		g.Use(auth.Middleware(s.Config.Auth, s.Logger))
+	} else {
+		s.Logger.Warn("No authentication middleware configured!!")
+	}
+
+	// Add domain handler to the api group
+	if s.domainService != nil {
+		d := handler.NewDomainHandler(s.domainService)
+		d.RegisterRoutes(g)
+	}
+
+	// Start the server
 	go func() {
+		s.wg.Add(1)
 		defer s.wg.Done()
 		host := "0.0.0.0" // Listen on all interfaces
 		s.Logger.Info("Starting server",

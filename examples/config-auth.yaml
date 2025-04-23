@@ -1,0 +1,32 @@
+port: 3000
+dehydratedBaseDir: ./data
+enableWatcher: true
+plugins:
+  openssl:
+    enabled: true
+  # External plugins can be configured via environment variables
+  # Example:
+  # firewall:
+  #   enabled: false
+  #   path: /path/to/plugin/plugin.go
+  #   config:
+  #     host: fw.example.com
+  #     user: admin
+  #     password: password
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""
+
+# Azure AD authentication configuration
+auth:
+  # The Azure AD tenant ID
+  tenantId: "cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
+  # The client/application ID registered in Azure AD
+  clientId: "53bde81d-f581-4f29-9551-774b695537bb"
+  # The authority URL for Azure AD (usually https://login.microsoftonline.com/{tenantID})
+  authority: "https://login.microsoftonline.com/cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
+  # List of allowed audience values in the JWT token
+  allowedAudiences:
+    - "api://53bde81d-f581-4f29-9551-774b695537bb" # Usually the same as clientID
+    - "api://6c091a3e-aed9-4bdc-936c-134ef57f75e6"

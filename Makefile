@@ -29,6 +29,9 @@ run: $(BINARY_NAME) ## Run the binary with example config
 release: ## Create a release with goreleaser
 	@goreleaser release --snapshot --clean
 
+swag: ## Update swagger docs
+	@$(GOPATH)/bin/swag init -g cmd/api/main.go
+
 #
 # Test
 #
@@ -133,6 +136,10 @@ check-tools: ## Check if required tools are installed
 		echo "❌ docker is missing. Install with: brew install --cask docker"; \
 		MISSING_TOOLS=1; \
 	fi; \
+	if ! command -v $(GOPATH)/bin/swag >/dev/null 2>&1; then \
+		echo "❌ swag is missing. Install with: make $(GOPATH)/bin/swag"; \
+		MISSING_TOOLS=1; \
+	fi; \
 	if [ $$MISSING_TOOLS -eq 0 ]; then \
 		echo "✅ All required tools are installed"; \
 	fi
@@ -149,3 +156,6 @@ $(COVERAGE_FILE): $(GRPC_TEST_PLUGIN_PATH)/test-plugin ## Build coverage profile
 
 $(GRPC_TEST_PLUGIN_PATH)/test-plugin: generate ## Build test plugin
 	@go build -o $(GRPC_TEST_PLUGIN_PATH)/test-plugin $(GRPC_TEST_PLUGIN_PATH)/main.go
+
+$(GOPATH)/bin/swag:
+	@go install github.com/swaggo/swag/cmd/swag@latest
