@@ -27,7 +27,7 @@ jobs:
         run: go build -o internal/plugin/grpc/testdata/test-plugin/test-plugin internal/plugin/grpc/testdata/test-plugin/main.go
 
       - name: Run tests
-        run: make test
+        run: make ci-test
 
   test-scripts:
     name: Test Scripts
@@ -72,4 +72,4 @@ jobs:
           cache: true
 
       - name: Build
-        run: make build 
+        run: make ci-build
