@@ -25,8 +25,12 @@ Dehydrated API Go transforms dehydrated into a modern, API-driven service that:
 
 - **Domain Management**: Create, read, update, and delete domain entries
 - **Plugin Support**: 
-  - Built-in OpenSSL plugin for certificate analysis
-  - Custom plugin support via gRPC
+  - Built-in OpenSSL plugin for certificate analysis and metadata extraction
+  - Extensible plugin system for dehydrated hooks integration
+  - Example use cases:
+    - Check certificate deployment to load balancers (e.g., NetScaler)
+    - Check Firewall certificate updates
+    - Custom deployment scenarios
 - **Security**:
   - JWT-based authentication
   - Azure AD integration
@@ -40,32 +44,35 @@ Dehydrated API Go transforms dehydrated into a modern, API-driven service that:
   - Environment-based configuration
   - Health checks
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
-
-- Docker
 - Go 1.23 or later (for development)
+- Docker (optional, for containerized deployment)
+
+## Getting Started
 
 ### Quick Start with Docker
 
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -v /path/to/certs:/data/dehydrated \
+  -v /path/to/dehydrated/basedir:/data/dehydrated \
   schumann-it/dehydrated-api-go
 ```
 
-### Configuration
+### Quick Start with binary
 
-The API can be configured using environment variables or a YAML configuration file. Key configuration options include:
-
-- `PORT`: API server port (default: 3000)
-- `BASE_DIR`: Base directory for dehydrated data
-- `ENABLE_WATCHER`: Enable file watching for automatic updates
-- `ENABLE_OPENSSL_PLUGIN`: Enable the built-in OpenSSL plugin
-- `EXTERNAL_PLUGINS`: Configure external plugins
-- `LOGGING`: Configure logging behavior
+1. Download the latest release from [GitHub Releases](https://github.com/schumann-it/dehydrated-api-go/releases)
+2. Create a basic configuration file `config.yaml`:
+   ```yaml
+    port: 3000
+    dehydratedBaseDir: /path/to/dehydrated/basedir
+    enableWatcher: false
+   ```
+3. Run the binary:
+   ```bash
+   ./dehydrated-api-go -config config.yaml
+   ```
 
 ## API Documentation
 
@@ -95,15 +102,46 @@ make build
 make test
 ```
 
-### Running Tests
+### Plugin System
 
-```bash
-# Run all tests
-make test
+The API supports two types of plugins:
 
-# Run tests with coverage
-make test-coverage
-```
+1. **Built-in Plugins**: Integrated directly into the API
+   - OpenSSL Plugin: Parses and analyzes certificate data
+   - More built-in plugins can be added in the future
+
+2. **External Plugins**: Implemented as separate services
+   - Communicate via gRPC
+   - Can implement dehydrated hooks for:
+     - DNS challenge automation
+     - Certificate deployment
+     - Custom deployment scenarios
+
+#### Creating an External Plugin
+
+1. Define your plugin interface using Protocol Buffers:
+   ```protobuf
+   service DehydratedPlugin {
+     rpc DeployCertificate(DeployRequest) returns (DeployResponse);
+     rpc CleanupCertificate(CleanupRequest) returns (CleanupResponse);
+   }
+   ```
+
+2. Implement the plugin service in your preferred language
+3. Configure the plugin in the API's configuration:
+   ```yaml
+   plugins:
+     - name: "my-plugin"
+       address: "localhost:50051"
+       type: "deploy"
+   ```
+
+#### Example Plugin Use Cases
+
+- **Load Balancer Integration**: Deploy certificates to NetScaler or other load balancers
+- **Firewall Management**: Update firewall certificates automatically
+- **DNS Challenge**: Implement DNS challenge automation for various providers
+- **Custom Deployment**: Create custom deployment workflows for your infrastructure
 
 ## License
 
