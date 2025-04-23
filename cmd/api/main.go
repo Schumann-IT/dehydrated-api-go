@@ -4,12 +4,28 @@ package main
 
 import (
 	"flag"
-	"github.com/schumann-it/dehydrated-api-go/internal/server"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/server"
+	"go.uber.org/zap"
 )
+
+// @title Dehydrated API
+// @version 1.0
+// @description This API provides a REST interface to manage domains for https://github.com/dehydrated-io/dehydrated
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:3000
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 var (
 	// Version is set during build time

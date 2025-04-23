@@ -3,33 +3,49 @@
 package model
 
 import (
+	"encoding/json"
+
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // DomainEntry represents a domain configuration entry in the dehydrated system.
 // It contains all the necessary information for managing a domain's SSL certificate.
 type DomainEntry struct {
-	// Domain is the primary domain name for the certificate.
-	Domain string `json:"domain" protobuf:"bytes,1,opt,name=domain,proto3"`
-
-	// AlternativeNames is a list of additional domain names to be included in the certificate.
-	AlternativeNames []string `json:"alternative_names,omitempty" protobuf:"bytes,2,rep,name=alternative_names,json=alternativeNames,proto3"`
-
-	// Alias is an optional alternative identifier for the domain.
-	Alias string `json:"alias,omitempty" protobuf:"bytes,3,opt,name=alias,proto3"`
-
-	// Enabled indicates whether the domain is currently active for certificate management.
-	Enabled bool `json:"enabled" protobuf:"varint,4,opt,name=enabled,proto3"`
-
-	// Comment is an optional description or note about the domain entry.
-	Comment string `json:"comment,omitempty" protobuf:"bytes,5,opt,name=comment,proto3"`
+	pb.DomainEntry
 
 	// Metadata contains additional information about the domain entry.
-	// During runtime, this is stored as map[string]any for flexibility.
-	// During serialization (protobuf), this is converted to map[string]*structpb.Value.
-	// The conversion is handled by ToProto() and FromProto() methods.
-	Metadata map[string]any `json:"metadata,omitempty" protobuf:"bytes,6,rep,name=metadata,proto3"`
+	Metadata Metadata `json:"metadata,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface to ensure all fields are included
+func (e *DomainEntry) MarshalJSON() ([]byte, error) {
+	type Alias DomainEntry // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		Domain           string   `json:"domain"`
+		AlternativeNames []string `json:"alternative_names"`
+		Alias            string   `json:"alias"`
+		Enabled          bool     `json:"enabled"`
+		Comment          string   `json:"comment"`
+		Metadata         Metadata `json:"metadata,omitempty"`
+	}{
+		Domain:           e.GetDomain(),
+		AlternativeNames: e.GetAlternativeNames(),
+		Alias:            e.GetAlias(),
+		Enabled:          e.GetEnabled(),
+		Comment:          e.GetComment(),
+		Metadata:         e.Metadata,
+	})
+}
+
+type Metadata map[string]any
+
+func MetadataFromProto(resp *pb.GetMetadataResponse) Metadata {
+	metadata := make(map[string]any)
+	for k, v := range resp.Metadata {
+		metadata[k] = v.AsInterface()
+	}
+
+	return metadata
 }
 
 func (e *DomainEntry) PathName() string {
@@ -39,42 +55,6 @@ func (e *DomainEntry) PathName() string {
 	}
 
 	return n
-}
-
-// ToProto converts the DomainEntry to a protobuf GetMetadataRequest.
-// It handles the conversion of metadata values to protobuf struct values.
-// Returns a new GetMetadataRequest with all fields populated from the DomainEntry.
-func (e *DomainEntry) ToProto() *pb.DomainEntry {
-	metadata := make(map[string]*structpb.Value)
-	for k, v := range e.Metadata {
-		value, err := structpb.NewValue(v)
-		if err == nil {
-			metadata[k] = value
-		}
-	}
-
-	return &pb.DomainEntry{
-		Domain:           e.Domain,
-		AlternativeNames: e.AlternativeNames,
-		Alias:            e.Alias,
-		Enabled:          e.Enabled,
-		Comment:          e.Comment,
-		Metadata:         metadata,
-	}
-}
-
-// FromProto creates a DomainEntry from a protobuf GetMetadataResponse.
-// It converts the protobuf metadata values back to their original types.
-// Returns a new DomainEntry with all fields populated from the response.
-func FromProto(resp *pb.GetMetadataResponse) *DomainEntry {
-	metadata := make(map[string]any)
-	for k, v := range resp.Metadata {
-		metadata[k] = v.AsInterface()
-	}
-
-	return &DomainEntry{
-		Metadata: metadata,
-	}
 }
 
 // CreateDomainRequest represents a request to create a new domain entry.
@@ -94,9 +74,6 @@ type CreateDomainRequest struct {
 
 	// Comment is an optional description.
 	Comment string `json:"comment,omitempty"`
-
-	// Metadata contains additional domain-specific information.
-	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // UpdateDomainRequest represents a request to update an existing domain entry.
@@ -113,9 +90,6 @@ type UpdateDomainRequest struct {
 
 	// Comment is an optional description.
 	Comment string `json:"comment,omitempty"`
-
-	// Metadata contains additional domain-specific information.
-	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // DomainResponse represents a response containing a single domain entry.
@@ -125,7 +99,7 @@ type DomainResponse struct {
 	Success bool `json:"success"`
 
 	// Data contains the domain entry if the operation was successful.
-	Data DomainEntry `json:"data,omitempty"`
+	Data *DomainEntry `json:"data,omitempty"`
 
 	// Error contains an error message if the operation failed.
 	Error string `json:"error,omitempty"`
@@ -138,7 +112,7 @@ type DomainsResponse struct {
 	Success bool `json:"success"`
 
 	// Data contains the list of domain entries if the operation was successful.
-	Data []DomainEntry `json:"data,omitempty"`
+	Data []*DomainEntry `json:"data,omitempty"`
 
 	// Error contains an error message if the operation failed.
 	Error string `json:"error,omitempty"`

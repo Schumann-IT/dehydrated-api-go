@@ -137,7 +137,7 @@ func (c *Client) Initialize(ctx context.Context, config map[string]any) error {
 // It converts the domain entry to protobuf format and sends it to the plugin.
 // The context can be used for cancellation and timeout control.
 // Returns a map of metadata key-value pairs and an error if the operation fails.
-func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
+func (c *Client) GetMetadata(ctx context.Context, entry *model.DomainEntry, dehydratedConfig *dehydrated.Config) (map[string]any, error) {
 	c.mu.RLock()
 	if c.client == nil {
 		c.mu.RUnlock()
@@ -146,8 +146,8 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry, dehyd
 	c.mu.RUnlock()
 
 	req := &pb.GetMetadataRequest{
-		DomainEntry:      entry.ToProto(),
-		DehydratedConfig: dehydratedConfig.ToProto(),
+		DomainEntry:      &entry.DomainEntry,
+		DehydratedConfig: &dehydratedConfig.DehydratedConfig,
 	}
 
 	resp, err := c.client.GetMetadata(ctx, req)
@@ -155,7 +155,7 @@ func (c *Client) GetMetadata(ctx context.Context, entry model.DomainEntry, dehyd
 		return nil, fmt.Errorf("%w: %v", plugininterface.ErrPluginError, err)
 	}
 
-	return model.FromProto(resp).Metadata, nil
+	return model.MetadataFromProto(resp), nil
 }
 
 // Close terminates the plugin process and cleans up resources.

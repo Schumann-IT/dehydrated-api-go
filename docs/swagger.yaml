@@ -1,0 +1,256 @@
+basePath: /
+definitions:
+  model.CreateDomainRequest:
+    properties:
+      alias:
+        description: Alias is an optional alternative identifier.
+        type: string
+      alternative_names:
+        description: AlternativeNames is a list of additional domain names.
+        items:
+          type: string
+        type: array
+      comment:
+        description: Comment is an optional description.
+        type: string
+      domain:
+        description: Domain is the primary domain name (required).
+        type: string
+      enabled:
+        description: Enabled indicates whether the domain should be active.
+        type: boolean
+    required:
+    - domain
+    type: object
+  model.DomainEntry:
+    properties:
+      alias:
+        description: Certificate alias for reference.
+        type: string
+      alternative_names:
+        description: Alternative domain names (e.g., "www.example.com").
+        items:
+          type: string
+        type: array
+      comment:
+        description: Domain comment for documentation.
+        type: string
+      domain:
+        description: Primary domain name (e.g., "example.com").
+        type: string
+      enabled:
+        description: Whether the domain is enabled for certificate issuance.
+        type: boolean
+      metadata:
+        allOf:
+        - $ref: '#/definitions/model.Metadata'
+        description: Metadata contains additional information about the domain entry.
+    type: object
+  model.DomainResponse:
+    properties:
+      data:
+        allOf:
+        - $ref: '#/definitions/model.DomainEntry'
+        description: Data contains the domain entry if the operation was successful.
+      error:
+        description: Error contains an error message if the operation failed.
+        type: string
+      success:
+        description: Success indicates whether the operation was successful.
+        type: boolean
+    type: object
+  model.DomainsResponse:
+    properties:
+      data:
+        description: Data contains the list of domain entries if the operation was
+          successful.
+        items:
+          $ref: '#/definitions/model.DomainEntry'
+        type: array
+      error:
+        description: Error contains an error message if the operation failed.
+        type: string
+      success:
+        description: Success indicates whether the operation was successful.
+        type: boolean
+    type: object
+  model.Metadata:
+    additionalProperties: {}
+    type: object
+  model.UpdateDomainRequest:
+    properties:
+      alias:
+        description: Alias is an optional alternative identifier.
+        type: string
+      alternative_names:
+        description: AlternativeNames is a list of additional domain names.
+        items:
+          type: string
+        type: array
+      comment:
+        description: Comment is an optional description.
+        type: string
+      enabled:
+        description: Enabled indicates whether the domain should be active.
+        type: boolean
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: This API provides a REST interface to manage domains for https://github.com/dehydrated-io/dehydrated
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Dehydrated API
+  version: "1.0"
+paths:
+  /api/v1/domains:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all configured domains
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.DomainsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.DomainsResponse'
+      security:
+      - BearerAuth: []
+      summary: List all domains
+      tags:
+      - domains
+    post:
+      consumes:
+      - application/json
+      description: Create a new domain entry
+      parameters:
+      - description: Domain creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateDomainRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a domain
+      tags:
+      - domains
+  /api/v1/domains/{domain}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a domain entry
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a domain
+      tags:
+      - domains
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific domain
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a domain
+      tags:
+      - domains
+    put:
+      consumes:
+      - application/json
+      description: Update an existing domain entry
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      - description: Domain update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateDomainRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a domain
+      tags:
+      - domains
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
