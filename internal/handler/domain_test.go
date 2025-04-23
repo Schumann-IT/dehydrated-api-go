@@ -211,8 +211,9 @@ func TestDomainHandler(t *testing.T) {
 // It ensures that the handler correctly sets up all required endpoints.
 func TestRouteRegistration(t *testing.T) {
 	app := fiber.New()
+	group := app.Group("/api/v1")
 	handler := NewDomainHandler(&serviceinterface.MockErrDomainService{})
-	handler.RegisterRoutes(app)
+	handler.RegisterRoutes(group)
 
 	// Test each route individually
 	tests := []struct {
@@ -261,11 +262,11 @@ func TestRouteRegistration(t *testing.T) {
 // It tests error responses for various error conditions that may occur during domain operations.
 func TestServiceErrors(t *testing.T) {
 	app := fiber.New()
-
+	group := app.Group("/api/v1")
 	// Create a mock s that always returns errors
 	s := &serviceinterface.MockErrDomainService{}
 	handler := NewDomainHandler(s)
-	handler.RegisterRoutes(app)
+	handler.RegisterRoutes(group)
 
 	// Test ListDomains with s error
 	t.Run("ListDomains", func(t *testing.T) {
