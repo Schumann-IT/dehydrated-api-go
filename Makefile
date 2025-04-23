@@ -52,6 +52,9 @@ test-coverage: $(COVERAGE_FILE) ## Show coverage report
 lint: ## Run linter
 	@golangci-lint run
 
+lint-fix: ## Run linter (and fix issues if possible)
+	@golangci-lint run --fix
+
 #
 # Docker
 #

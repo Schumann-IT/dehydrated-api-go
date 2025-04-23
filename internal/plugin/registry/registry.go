@@ -3,9 +3,10 @@ package registry
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin"
-	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 
