@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/builtin/openssl"
 	plugininterface "github.com/schumann-it/dehydrated-api-go/internal/plugin/interface"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"

@@ -1,10 +1,11 @@
 package service
 
 import (
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"testing"
+
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )

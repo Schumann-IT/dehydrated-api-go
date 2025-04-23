@@ -20,6 +20,8 @@ DOCKER_CONTAINER=dehydrated-api-go
 
 build: generate $(BINARY_NAME) ## Build binary
 
+ci-build: $(BINARY_NAME) ## Build binary (without generate)
+
 generate: clean-generate ## Generate code
 	@go generate ./...
 
@@ -38,6 +40,9 @@ swag: ## Update swagger docs
 
 test: $(COVERAGE_FILE) test-scripts ## Run all tests
 
+ci-test:
+	@go test -v ./... ## Run tests (without coverage)
+
 test-scripts: ## Run script tests
 	@./scripts/test-update-config.sh
 
@@ -46,6 +51,9 @@ test-coverage: $(COVERAGE_FILE) ## Show coverage report
 
 lint: ## Run linter
 	@golangci-lint run
+
+lint-fix: ## Run linter (and fix issues if possible)
+	@golangci-lint run --fix
 
 #
 # Docker

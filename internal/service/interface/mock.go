@@ -2,6 +2,7 @@ package serviceinterface
 
 import (
 	"fmt"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 

@@ -2,10 +2,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/stretchr/testify/assert"

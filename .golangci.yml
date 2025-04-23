@@ -9,6 +9,7 @@ linters:
     - unconvert
     - staticcheck
     - unused
+    - govet
   enable:
     - gosec
     - misspell
