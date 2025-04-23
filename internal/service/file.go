@@ -75,7 +75,7 @@ func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 		}
 
 		// Only add valid domain entries
-		if model.IsValidDomainEntry(entry) {
+		if model.IsValidDomainEntry(&entry) {
 			entries = append(entries, entry)
 		}
 	}

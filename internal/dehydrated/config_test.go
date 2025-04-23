@@ -1,10 +1,12 @@
 package dehydrated
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -497,4 +499,220 @@ API="v2"
 			t.Errorf("Expected Api to be v2, got %s", cfg.Api)
 		}
 	})
+}
+
+func TestConfig_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *Config
+		expected string
+	}{
+		{
+			name: "all fields set",
+			config: &Config{
+				DehydratedConfig: pb.DehydratedConfig{
+					User:               "testuser",
+					Group:              "testgroup",
+					BaseDir:            "/test/base",
+					CertDir:            "/test/certs",
+					DomainsDir:         "/test/domains",
+					AccountsDir:        "/test/accounts",
+					ChallengesDir:      "/test/challenges",
+					ChainCache:         "/test/chains",
+					DomainsFile:        "domains.txt",
+					ConfigFile:         "config",
+					HookScript:         "hook.sh",
+					LockFile:           "lock",
+					OpensslConfig:      "openssl.cnf",
+					Openssl:            "openssl",
+					KeySize:            4096,
+					Ca:                 "letsencrypt",
+					OldCa:              "old-ca",
+					AcceptTerms:        true,
+					Ipv4:               true,
+					Ipv6:               true,
+					PreferredChain:     "chain1",
+					Api:                "v2",
+					KeyAlgo:            "rsa",
+					RenewDays:          30,
+					ForceRenew:         true,
+					ForceValidation:    true,
+					PrivateKeyRenew:    true,
+					PrivateKeyRollover: true,
+					ChallengeType:      "http-01",
+					WellKnownDir:       "/test/well-known",
+					AlpnDir:            "/test/alpn",
+					HookChain:          true,
+					OcspMustStaple:     true,
+					OcspFetch:          true,
+					OcspDays:           7,
+					NoLock:             true,
+					KeepGoing:          true,
+					FullChain:          true,
+					Ocsp:               true,
+					AutoCleanup:        true,
+					ContactEmail:       "test@example.com",
+					CurlOpts:           "--test",
+					ConfigD:            "/test/config.d",
+				},
+			},
+			expected: `{
+				"user": "testuser",
+				"group": "testgroup",
+				"base_dir": "/test/base",
+				"cert_dir": "/test/certs",
+				"domains_dir": "/test/domains",
+				"accounts_dir": "/test/accounts",
+				"challenges_dir": "/test/challenges",
+				"chain_cache": "/test/chains",
+				"domains_file": "domains.txt",
+				"config_file": "config",
+				"hook_script": "hook.sh",
+				"lock_file": "lock",
+				"openssl_config": "openssl.cnf",
+				"openssl": "openssl",
+				"key_size": 4096,
+				"ca": "letsencrypt",
+				"old_ca": "old-ca",
+				"accept_terms": true,
+				"ipv4": true,
+				"ipv6": true,
+				"preferred_chain": "chain1",
+				"api": "v2",
+				"key_algo": "rsa",
+				"renew_days": 30,
+				"force_renew": true,
+				"force_validation": true,
+				"private_key_renew": true,
+				"private_key_rollover": true,
+				"challenge_type": "http-01",
+				"well_known_dir": "/test/well-known",
+				"alpn_dir": "/test/alpn",
+				"hook_chain": true,
+				"ocsp_must_staple": true,
+				"ocsp_fetch": true,
+				"ocsp_days": 7,
+				"no_lock": true,
+				"keep_going": true,
+				"full_chain": true,
+				"ocsp": true,
+				"auto_cleanup": true,
+				"contact_email": "test@example.com",
+				"curl_opts": "--test",
+				"config_d": "/test/config.d"
+			}`,
+		},
+		{
+			name: "zero values",
+			config: &Config{
+				DehydratedConfig: pb.DehydratedConfig{
+					User:               "",
+					Group:              "",
+					BaseDir:            "",
+					CertDir:            "",
+					DomainsDir:         "",
+					AccountsDir:        "",
+					ChallengesDir:      "",
+					ChainCache:         "",
+					DomainsFile:        "",
+					ConfigFile:         "",
+					HookScript:         "",
+					LockFile:           "",
+					OpensslConfig:      "",
+					Openssl:            "",
+					KeySize:            0,
+					Ca:                 "",
+					OldCa:              "",
+					AcceptTerms:        false,
+					Ipv4:               false,
+					Ipv6:               false,
+					PreferredChain:     "",
+					Api:                "",
+					KeyAlgo:            "",
+					RenewDays:          0,
+					ForceRenew:         false,
+					ForceValidation:    false,
+					PrivateKeyRenew:    false,
+					PrivateKeyRollover: false,
+					ChallengeType:      "",
+					WellKnownDir:       "",
+					AlpnDir:            "",
+					HookChain:          false,
+					OcspMustStaple:     false,
+					OcspFetch:          false,
+					OcspDays:           0,
+					NoLock:             false,
+					KeepGoing:          false,
+					FullChain:          false,
+					Ocsp:               false,
+					AutoCleanup:        false,
+					ContactEmail:       "",
+					CurlOpts:           "",
+					ConfigD:            "",
+				},
+			},
+			expected: `{
+				"user": "",
+				"group": "",
+				"base_dir": "",
+				"cert_dir": "",
+				"domains_dir": "",
+				"accounts_dir": "",
+				"challenges_dir": "",
+				"chain_cache": "",
+				"domains_file": "",
+				"config_file": "",
+				"hook_script": "",
+				"lock_file": "",
+				"openssl_config": "",
+				"openssl": "",
+				"key_size": 0,
+				"ca": "",
+				"old_ca": "",
+				"accept_terms": false,
+				"ipv4": false,
+				"ipv6": false,
+				"preferred_chain": "",
+				"api": "",
+				"key_algo": "",
+				"renew_days": 0,
+				"force_renew": false,
+				"force_validation": false,
+				"private_key_renew": false,
+				"private_key_rollover": false,
+				"challenge_type": "",
+				"well_known_dir": "",
+				"alpn_dir": "",
+				"hook_chain": false,
+				"ocsp_must_staple": false,
+				"ocsp_fetch": false,
+				"ocsp_days": 0,
+				"no_lock": false,
+				"keep_going": false,
+				"full_chain": false,
+				"ocsp": false,
+				"auto_cleanup": false,
+				"contact_email": "",
+				"curl_opts": "",
+				"config_d": ""
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal the config
+			actual, err := json.Marshal(tt.config)
+			assert.NoError(t, err)
+
+			// Compare JSON objects (ignoring whitespace)
+			var actualJSON, expectedJSON interface{}
+			err = json.Unmarshal(actual, &actualJSON)
+			assert.NoError(t, err)
+			err = json.Unmarshal([]byte(tt.expected), &expectedJSON)
+			assert.NoError(t, err)
+
+			assert.Equal(t, expectedJSON, actualJSON)
+		})
+	}
 }

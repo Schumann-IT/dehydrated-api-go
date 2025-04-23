@@ -3,6 +3,8 @@
 package model
 
 import (
+	"encoding/json"
+
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 )
 
@@ -13,6 +15,26 @@ type DomainEntry struct {
 
 	// Metadata contains additional information about the domain entry.
 	Metadata Metadata `json:"metadata,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface to ensure all fields are included
+func (e *DomainEntry) MarshalJSON() ([]byte, error) {
+	type Alias DomainEntry // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		Domain           string   `json:"domain"`
+		AlternativeNames []string `json:"alternative_names"`
+		Alias            string   `json:"alias"`
+		Enabled          bool     `json:"enabled"`
+		Comment          string   `json:"comment"`
+		Metadata         Metadata `json:"metadata,omitempty"`
+	}{
+		Domain:           e.GetDomain(),
+		AlternativeNames: e.GetAlternativeNames(),
+		Alias:            e.GetAlias(),
+		Enabled:          e.GetEnabled(),
+		Comment:          e.GetComment(),
+		Metadata:         e.Metadata,
+	})
 }
 
 type Metadata map[string]any

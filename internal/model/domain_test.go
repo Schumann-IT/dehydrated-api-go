@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
@@ -228,6 +229,72 @@ func TestDomainsResponse(t *testing.T) {
 			} else {
 				assert.NotEmpty(t, tt.response.Error)
 			}
+		})
+	}
+}
+
+func TestDomainEntry_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    *DomainEntry
+		expected string
+	}{
+		{
+			name: "all fields set",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{"www.example.com"},
+					Alias:            "example",
+					Enabled:          true,
+					Comment:          "test domain",
+				},
+				Metadata: Metadata{"test": "value"},
+			},
+			expected: `{
+				"domain": "example.com",
+				"alternative_names": ["www.example.com"],
+				"alias": "example",
+				"enabled": true,
+				"comment": "test domain",
+				"metadata": {"test": "value"}
+			}`,
+		},
+		{
+			name: "zero values",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{},
+					Alias:            "",
+					Enabled:          false,
+					Comment:          "",
+				},
+			},
+			expected: `{
+				"domain": "example.com",
+				"alternative_names": [],
+				"alias": "",
+				"enabled": false,
+				"comment": ""
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal the entry
+			actual, err := json.Marshal(tt.entry)
+			assert.NoError(t, err)
+
+			// Compare JSON objects (ignoring whitespace)
+			var actualJSON, expectedJSON interface{}
+			err = json.Unmarshal(actual, &actualJSON)
+			assert.NoError(t, err)
+			err = json.Unmarshal([]byte(tt.expected), &expectedJSON)
+			assert.NoError(t, err)
+
+			assert.Equal(t, expectedJSON, actualJSON)
 		})
 	}
 }
