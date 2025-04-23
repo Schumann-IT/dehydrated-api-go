@@ -1,53 +1,54 @@
+// Package main provides the entry point for the dehydrated-api-go application.
+// It initializes the server with configuration from a YAML file and handles graceful shutdown.
 package main
 
 import (
-	"log"
+	"flag"
+	"github.com/schumann-it/dehydrated-api-go/internal/server"
+	"go.uber.org/zap"
 	"os"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/schumann-it/dehydrated-api-go/internal/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/handler"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	"os/signal"
+	"syscall"
 )
 
+var (
+	// Version is set during build time
+	Version = "dev"
+	// Commit is set during build time
+	Commit = "unknown"
+	// BuildTime is set during build time
+	BuildTime = "unknown"
+)
+
+// main is the entry point for the dehydrated-api-go application.
+// It parses command line flags, initializes the server with the specified configuration,
+// and handles graceful shutdown when receiving interrupt signals.
 func main() {
-	// Load configuration
-	cfg := config.NewConfig().Load()
+	// Parse command line flags
+	showVersion := flag.Bool("version", false, "Show version information")
+	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
+	showInfo := flag.Bool("info", false, "Show parsed config")
+	flag.Parse()
 
-	// Create domain service
-	domainService, err := service.NewDomainService(cfg.DomainsFile)
-	if err != nil {
-		log.Fatalf("Failed to create domain service: %v", err)
-	}
+	// load server config
+	s := server.NewServer().
+		WithVersionInfo(Version, Commit, BuildTime).
+		WithConfig(*configPath).
+		WithLogger().
+		WithDomainService()
 
-	// Create domain handler
-	domainHandler := handler.NewDomainHandler(domainService)
+	s.PrintInfo(*showVersion, *showInfo)
 
-	// Create Fiber app
-	app := fiber.New(fiber.Config{
-		AppName: "Dehydrated API",
-	})
+	// start the server
+	s.Start()
+	defer s.Shutdown()
 
-	// Add middleware
-	app.Use(recover.New())
-	app.Use(logger.New())
-	app.Use(cors.New())
+	// Wait for interrupt signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-sigChan
 
-	// Register routes
-	domainHandler.RegisterRoutes(app)
-
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	log.Printf("Using domains file: %s", cfg.DomainsFile)
-	if err := app.Listen(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	s.Logger.Debug("Received signal",
+		zap.String("signal", sig.String()),
+	)
 }

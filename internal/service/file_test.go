@@ -8,6 +8,8 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
+// TestFileOperations tests the core file operations of the DomainService.
+// It verifies file reading, writing, and error handling for domain entries.
 func TestFileOperations(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -143,6 +145,9 @@ func TestFileOperations(t *testing.T) {
 	})
 }
 
+// TestComplexDomainsFile tests the handling of complex domain entries with various configurations.
+// It verifies that domains with wildcards, aliases, and multiple alternative names are correctly
+// written to and read from the domains file.
 func TestComplexDomainsFile(t *testing.T) {
 	// Create a temporary file for testing
 	tmpFile := filepath.Join(t.TempDir(), "complex_domains.txt")

@@ -8,7 +8,12 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )
 
-// ReadDomainsFile reads a domains.txt file and returns a slice of DomainEntry
+// ReadDomainsFile reads a domains.txt file and returns a slice of DomainEntry.
+// It parses the file format which supports:
+// - Domain names with optional alternative names
+// - Aliases using the '>' syntax
+// - Comments using '#' prefix or inline
+// - Disabled entries (prefixed with '#')
 func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -79,7 +84,12 @@ func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 	return entries, nil
 }
 
-// WriteDomainsFile writes a slice of DomainEntry to a domains.txt file
+// WriteDomainsFile writes a slice of DomainEntry to a domains.txt file.
+// It formats each entry according to the dehydrated domains.txt format:
+// - Disabled entries are prefixed with '#'
+// - Alternative names are space-separated
+// - Aliases are added with ' > ' separator
+// - Comments are added with ' # ' separator
 func WriteDomainsFile(filename string, entries []model.DomainEntry) error {
 	file, err := os.Create(filename)
 	if err != nil {

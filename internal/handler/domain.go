@@ -1,36 +1,37 @@
+// Package handler provides HTTP handlers for the dehydrated-api-go application.
+// It includes handlers for domain management and configuration operations.
 package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/service"
+	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 )
 
 // DomainHandler handles HTTP requests for domain operations
 type DomainHandler struct {
-	domainService *service.DomainService
+	service serviceinterface.DomainService
 }
 
 // NewDomainHandler creates a new DomainHandler instance
-func NewDomainHandler(domainService *service.DomainService) *DomainHandler {
+func NewDomainHandler(service serviceinterface.DomainService) *DomainHandler {
 	return &DomainHandler{
-		domainService: domainService,
+		service: service,
 	}
 }
 
 // RegisterRoutes registers all domain-related routes
 func (h *DomainHandler) RegisterRoutes(app *fiber.App) {
-	domains := app.Group("/api/v1/domains")
-	domains.Get("/", h.ListDomains)
-	domains.Get("/:domain", h.GetDomain)
-	domains.Post("/", h.CreateDomain)
-	domains.Put("/:domain", h.UpdateDomain)
-	domains.Delete("/:domain", h.DeleteDomain)
+	app.Get("/api/v1/domains", h.ListDomains)
+	app.Get("/api/v1/domains/:domain", h.GetDomain)
+	app.Post("/api/v1/domains", h.CreateDomain)
+	app.Put("/api/v1/domains/:domain", h.UpdateDomain)
+	app.Delete("/api/v1/domains/:domain", h.DeleteDomain)
 }
 
 // ListDomains handles GET /api/v1/domains
 func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
-	entries, err := h.domainService.ListDomains()
+	entries, err := h.service.ListDomains()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(model.DomainsResponse{
 			Success: false,
@@ -54,7 +55,7 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.GetDomain(domain)
+	entry, err := h.service.GetDomain(domain)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
@@ -78,7 +79,7 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.CreateDomain(req)
+	entry, err := h.service.CreateDomain(req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(model.DomainResponse{
 			Success: false,
@@ -110,7 +111,7 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.domainService.UpdateDomain(domain, req)
+	entry, err := h.service.UpdateDomain(domain, req)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
@@ -134,7 +135,7 @@ func (h *DomainHandler) DeleteDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.domainService.DeleteDomain(domain); err != nil {
+	if err := h.service.DeleteDomain(domain); err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
 			Error:   err.Error(),

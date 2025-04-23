@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package plugin;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/schumann-it/dehydrated-api-go/proto/plugin";
+
+// Plugin service defines the interface for dehydrated-api-go plugins.
+// Plugins can provide additional functionality and metadata for domain entries.
+service Plugin {
+  // Initialize is called when the plugin is loaded.
+  // It receives the plugin configuration and dehydrated configuration.
+  // The plugin should perform any necessary setup and validation.
+  rpc Initialize(InitializeRequest) returns (InitializeResponse) {}
+
+  // GetMetadata returns metadata for a domain entry.
+  // The plugin can enrich the domain entry with additional information
+  // based on its configuration and capabilities.
+  rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse) {}
+
+  // Close is called when the plugin is being unloaded.
+  // The plugin should perform any necessary cleanup and resource release.
+  rpc Close(CloseRequest) returns (CloseResponse) {}
+}
+
+// DehydratedConfig contains the complete configuration for the dehydrated ACME client.
+// It includes all settings needed to operate the dehydrated script.
+message DehydratedConfig {
+  // User and group settings for file permissions
+  string user = 1;
+  string group = 2;
+
+  // Base directories for dehydrated operation
+  string base_dir = 3;      // Root directory for dehydrated
+  string cert_dir = 4;      // Directory for certificates
+  string domains_dir = 5;   // Directory for domain configurations
+  string accounts_dir = 6;  // Directory for ACME account data
+  string challenges_dir = 7; // Directory for ACME challenges
+  string chain_cache = 8;   // Directory for certificate chain cache
+
+  // File paths for dehydrated operation
+  string domains_file = 9;  // Path to the domains.txt file
+  string config_file = 10;  // Path to the dehydrated config file
+  string hook_script = 11;  // Path to the hook script
+  string lock_file = 12;    // Path to the lock file
+
+  // OpenSSL settings for certificate generation
+  string openssl_config = 13; // Path to OpenSSL config file
+  string openssl = 14;        // Path to OpenSSL binary
+  int32 key_size = 15;        // RSA key size in bits
+
+  // ACME settings for Let's Encrypt integration
+  string ca = 16;             // Certificate Authority URL
+  string old_ca = 17;         // Old Certificate Authority URL
+  bool accept_terms = 18;     // Whether to accept Let's Encrypt terms
+  bool ipv4 = 19;             // Whether to use IPv4
+  bool ipv6 = 20;             // Whether to use IPv6
+  string preferred_chain = 21; // Preferred certificate chain
+  string api = 22;            // API version to use
+
+  // Certificate settings for generation and renewal
+  string key_algo = 23;       // Key algorithm (RSA or ECDSA)
+  int32 renew_days = 24;      // Days before renewal
+  bool force_renew = 25;      // Whether to force renewal
+  bool force_validation = 26;  // Whether to force validation
+  bool private_key_renew = 27; // Whether to renew private keys
+  bool private_key_rollover = 28; // Whether to use key rollover
+
+  // Challenge settings for domain validation
+  string challenge_type = 29;  // Type of challenge to use
+  string well_known_dir = 30;  // Directory for HTTP-01 challenges
+  string alpn_dir = 31;        // Directory for TLS-ALPN-01 challenges
+  bool hook_chain = 32;        // Whether to chain hook calls
+
+  // OCSP settings for certificate status
+  bool ocsp_must_staple = 33;  // Whether to require OCSP stapling
+  bool ocsp_fetch = 34;        // Whether to fetch OCSP responses
+  int32 ocsp_days = 35;        // Days to keep OCSP responses
+
+  // Other settings
+  bool no_lock = 36;           // Whether to disable file locking
+  bool keep_going = 37;        // Whether to continue on errors
+  bool full_chain = 38;        // Whether to include full chain
+  bool ocsp = 39;              // Whether to enable OCSP
+  bool auto_cleanup = 40;      // Whether to auto-cleanup
+  string contact_email = 41;   // Contact email for Let's Encrypt
+  string curl_opts = 42;       // Additional curl options
+  string config_d = 43;        // Additional config directory
+}
+
+// InitializeRequest contains the configuration for the plugin.
+// It includes both plugin-specific configuration and dehydrated configuration.
+message InitializeRequest {
+  // Plugin-specific configuration as a map of values
+  map<string, google.protobuf.Value> config = 1;
+}
+
+message DomainEntry {
+  string domain = 1;           // Primary domain name
+  repeated string alternative_names = 2; // Alternative domain names
+  string alias = 3;            // Certificate alias
+  bool enabled = 4;            // Whether the domain is enabled
+  string comment = 5;          // Domain comment
+  map<string, google.protobuf.Value> metadata = 6; // Existing metadata
+}
+
+// InitializeResponse is empty as no data is needed.
+// The plugin should return an error if initialization fails.
+message InitializeResponse {}
+
+// GetMetadataRequest contains the domain entry to get metadata for.
+// It includes all fields from the domain entry that the plugin can use
+// to generate or retrieve metadata.
+message GetMetadataRequest {
+  // The domain object
+  DomainEntry domain_entry = 1;
+
+  // Dehydrated configuration for ACME client operation
+  DehydratedConfig dehydrated_config = 2;
+
+}
+
+// GetMetadataResponse contains the metadata for the domain entry.
+// The plugin should return a map of metadata values that will be
+// merged with the existing metadata.
+message GetMetadataResponse {
+  map<string, google.protobuf.Value> metadata = 1;
+}
+
+// CloseRequest is empty as no data is needed.
+// The plugin should perform cleanup when receiving this request.
+message CloseRequest {}
+
+// CloseResponse is empty as no data is needed.
+// The plugin should return an error if cleanup fails.
+message CloseResponse {} 

@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-app:
+    name: Test App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build test plugin
+        run: go build -o internal/plugin/grpc/testdata/test-plugin/test-plugin internal/plugin/grpc/testdata/test-plugin/main.go
+
+      - name: Run tests
+        run: make test-app
+
+  test-scripts:
+    name: Test Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: test api config
+        run: ./scripts/test-update-api-config.sh
+        env:
+          WORKSPACE: ${{ github.workspace }}/
+
+      - name: test dehydrated config
+        run: ./scripts/test-update-dehydrated-config.sh
+        env:
+          WORKSPACE: ${{ github.workspace }}/
+
+      - name: test cron config
+        run: ./scripts/test-configure-cron.sh
+        env:
+          WORKSPACE: ${{ github.workspace }}/
+
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build
+        run: make build 

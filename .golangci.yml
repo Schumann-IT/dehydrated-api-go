@@ -1,0 +1,92 @@
+version: "2"
+linters:
+  disable:
+    - errcheck
+    - gocyclo
+    - gocognit
+    - goconst
+    - gocritic
+    - unconvert
+    - staticcheck
+    - unused
+  enable:
+    - gosec
+    - misspell
+    - revive
+    - unparam
+    - whitespace
+  settings:
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G404
+        - G107
+        - G108
+        - G110
+        - G112
+        - G114
+        - G204
+        - G109
+        - G306
+        - G115
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - goconst
+          - gocritic
+          - gocyclo
+          - gosec
+          - revive
+        path: internal/mocks
+      - linters:
+          - goconst
+          - gocritic
+          - gocyclo
+          - gosec
+          - revive
+        path: cmd
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
