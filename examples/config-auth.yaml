@@ -28,5 +28,5 @@ auth:
   authority: "https://login.microsoftonline.com/cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
   # List of allowed audience values in the JWT token
   allowedAudiences:
-    - "api://53bde81d-f581-4f29-9551-774b695537bb" # Usually the same as clientID
+    - "api://53bde81d-f581-4f29-9551-774b695537bb"
     - "api://6c091a3e-aed9-4bdc-936c-134ef57f75e6"
