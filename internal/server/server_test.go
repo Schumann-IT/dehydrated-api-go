@@ -28,13 +28,11 @@ func TestMain(m *testing.M) {
 	originalFlags := flag.CommandLine
 
 	// Run tests
-	code := m.Run()
+	_ = m.Run()
 
 	// Restore original state
 	os.Args = originalArgs
 	flag.CommandLine = originalFlags
-
-	os.Exit(code)
 }
 
 // TestConfigLoading verifies that the configuration file is properly loaded
@@ -505,8 +503,8 @@ enableWatcher: false
 		// Verify server is running
 		assert.NotZero(t, s.GetPort())
 
-		// Shutdown server
 		s.Shutdown()
+		time.Sleep(100 * time.Millisecond)
 
 		// Verify server is stopped
 		_, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
