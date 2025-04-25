@@ -86,7 +86,7 @@ type UpdateDomainRequest struct {
 	Alias string `json:"alias,omitempty"`
 
 	// Enabled indicates whether the domain should be active.
-	Enabled bool `json:"enabled"`
+	Enabled bool `json:"enabled,omitempty"`
 
 	// Comment is an optional description.
 	Comment string `json:"comment,omitempty"`
