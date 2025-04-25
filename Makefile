@@ -41,7 +41,7 @@ swag: ## Update swagger docs
 test: $(COVERAGE_FILE) test-scripts ## Run all tests
 
 ci-test:
-	@go test -v ./... ## Run tests (without coverage)
+	@go test -v -race ./... ## Run tests (without coverage)
 
 test-scripts: ## Run script tests
 	@./scripts/test-update-config.sh

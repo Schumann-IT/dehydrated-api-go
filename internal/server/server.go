@@ -38,7 +38,10 @@ type Server struct {
 	app      *fiber.App     // The Fiber web framework instance
 	shutdown chan struct{}  // Channel for signaling shutdown
 	wg       sync.WaitGroup // WaitGroup for managing goroutines
+	mu       sync.RWMutex   // RWMutex for protecting server state
+	running  bool           // Flag to track if server is running
 	port     int            // Port number the server listens on
+	started  chan struct{}  // Channel to signal server has started
 
 	Config        *Config
 	Logger        *zap.Logger
@@ -47,13 +50,12 @@ type Server struct {
 
 // NewServer creates a new server instance.
 func NewServer() *Server {
-	server := &Server{
+	return &Server{
 		app:      fiber.New(),
 		shutdown: make(chan struct{}),
+		started:  make(chan struct{}),
 		Logger:   zap.NewNop(),
 	}
-
-	return server
 }
 
 func (s *Server) WithVersionInfo(v, c, b string) *Server {
@@ -123,7 +125,17 @@ func (s *Server) WithDomainService() *Server {
 	return s
 }
 
+// Start starts the server and begins listening for requests.
 func (s *Server) Start() {
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return
+	}
+	s.running = true
+	s.port = s.Config.Port
+	s.mu.Unlock()
+
 	s.app.Use(cors.New())
 
 	// Add health handler
@@ -158,19 +170,30 @@ func (s *Server) Start() {
 		s.wg.Add(1)
 		defer s.wg.Done()
 		host := "0.0.0.0" // Listen on all interfaces
+
+		s.mu.RLock()
+		port := s.port
+		s.mu.RUnlock()
+
+		// Signal that we're about to start
+		close(s.started)
+
 		s.Logger.Info("Starting server",
 			zap.String("host", host),
-			zap.Int("port", s.Config.Port),
+			zap.Int("port", port),
 			zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 			zap.Int("enabled_plugins", len(s.Config.Plugins)),
 		)
 
-		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, s.Config.Port)); err != nil {
-			s.Logger.Error("Server error",
-				zap.Error(err),
-				zap.String("host", host),
-				zap.Int("port", s.Config.Port),
-			)
+		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, port)); err != nil {
+			// Only log if it's not a normal shutdown
+			if err.Error() != "server closed" {
+				s.Logger.Error("Server error",
+					zap.Error(err),
+					zap.String("host", host),
+					zap.Int("port", port),
+				)
+			}
 		}
 	}()
 
@@ -178,6 +201,10 @@ func (s *Server) Start() {
 	go func() {
 		// Wait for shutdown signal
 		<-s.shutdown
+
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
 
 		// Graceful shutdown
 		s.Logger.Info("Starting graceful shutdown")
@@ -196,20 +223,29 @@ func (s *Server) Start() {
 
 		s.Logger.Sync()
 	}()
+
+	// Wait for server to start
+	<-s.started
 }
 
 // Shutdown gracefully shuts down the server and its associated resources.
-// It signals all goroutines to stop and waits for them to complete.
-// This method blocks until all resources are cleaned up.
 func (s *Server) Shutdown() {
+	s.mu.RLock()
+	if !s.running {
+		s.mu.RUnlock()
+		return
+	}
+	s.mu.RUnlock()
+
 	close(s.shutdown)
 	s.wg.Wait()
 }
 
 // GetPort returns the port number that the server is listening on.
-// This is useful for testing and monitoring purposes.
 func (s *Server) GetPort() int {
-	return s.Config.Port
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.port
 }
 
 func (s *Server) PrintInfo(v, i bool) {

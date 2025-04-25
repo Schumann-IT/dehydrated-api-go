@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/Azure/go-autorest/autorest/to"
+
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"go.uber.org/zap"
 
@@ -274,13 +276,29 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	var updatedEntry *model.DomainEntry
 	for i, existing := range s.cache {
 		if existing.Domain == domain {
+			alt := existing.AlternativeNames
+			if req.AlternativeNames != nil {
+				alt = to.StringSlice(req.AlternativeNames)
+			}
+			alias := existing.Alias
+			if req.Alias != nil {
+				alias = to.String(req.Alias)
+			}
+			enabled := existing.Enabled
+			if req.Enabled != nil {
+				enabled = to.Bool(req.Enabled)
+			}
+			comment := existing.Comment
+			if req.Comment != nil {
+				comment = to.String(req.Comment)
+			}
 			updatedEntry = &model.DomainEntry{
 				DomainEntry: pb.DomainEntry{
 					Domain:           domain,
-					AlternativeNames: req.AlternativeNames,
-					Alias:            req.Alias,
-					Enabled:          req.Enabled,
-					Comment:          req.Comment,
+					AlternativeNames: alt,
+					Alias:            alias,
+					Enabled:          enabled,
+					Comment:          comment,
 				},
 			}
 
