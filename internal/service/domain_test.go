@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 
@@ -92,7 +94,7 @@ func TestDomainService(t *testing.T) {
 			// Test UpdateDomain
 			t.Run("UpdateDomain", func(t *testing.T) {
 				req := model.UpdateDomainRequest{
-					Enabled: true,
+					Enabled: to.BoolPtr(true),
 				}
 				entry, err := service.UpdateDomain("example.com", req)
 				assert.NoError(t, err)
@@ -486,7 +488,7 @@ func TestDomainServiceOperations(t *testing.T) {
 		defer service.Close()
 
 		req := model.UpdateDomainRequest{
-			Enabled: true,
+			Enabled: to.BoolPtr(true),
 		}
 		_, err := service.UpdateDomain("nonexistent.com", req)
 		assert.Error(t, err)

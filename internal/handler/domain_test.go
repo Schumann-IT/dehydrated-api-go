@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 
@@ -48,6 +49,7 @@ func TestDomainHandler(t *testing.T) {
 		req := model.CreateDomainRequest{
 			Domain:           "example.com",
 			AlternativeNames: []string{"www.example.com"},
+			Alias:            "*.example.com",
 			Enabled:          true,
 		}
 		body, _ := json.Marshal(req)
@@ -163,8 +165,8 @@ func TestDomainHandler(t *testing.T) {
 	// Test UpdateDomain
 	t.Run("UpdateDomain", func(t *testing.T) {
 		req := model.UpdateDomainRequest{
-			AlternativeNames: []string{"www.example.com", "api.example.com"},
-			Enabled:          true,
+			AlternativeNames: to.StringSlicePtr([]string{"www.example.com", "api.example.com"}),
+			Enabled:          to.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 
@@ -178,6 +180,39 @@ func TestDomainHandler(t *testing.T) {
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+		}
+
+		var response model.DomainResponse
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if !response.Success {
+			t.Error("Expected success to be true")
+		}
+		if len(response.Data.AlternativeNames) != 2 {
+			t.Errorf("Expected 2 alternative names, got %d", len(response.Data.AlternativeNames))
+		}
+	})
+
+	// Test UpdateDomain
+	t.Run("UpdateDomainWithoutOverwritingEmptyFields", func(t *testing.T) {
+		req := model.UpdateDomainRequest{
+			Enabled: to.BoolPtr(true),
+		}
+		body, _ := json.Marshal(req)
+
+		resp := httptest.NewRequest("PUT", "/api/v1/domains/example.com", bytes.NewReader(body))
+		resp.Header.Set("Content-Type", "application/json")
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+			return
 		}
 
 		var response model.DomainResponse
