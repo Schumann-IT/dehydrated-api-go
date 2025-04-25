@@ -80,16 +80,16 @@ type CreateDomainRequest struct {
 // It contains the fields that can be modified for an existing domain.
 type UpdateDomainRequest struct {
 	// AlternativeNames is a list of additional domain names.
-	AlternativeNames []string `json:"alternative_names,omitempty"`
+	AlternativeNames *[]string `json:"alternative_names,omitempty"`
 
 	// Alias is an optional alternative identifier.
-	Alias string `json:"alias,omitempty"`
+	Alias *string `json:"alias,omitempty"`
 
 	// Enabled indicates whether the domain should be active.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// Comment is an optional description.
-	Comment string `json:"comment,omitempty"`
+	Comment *string `json:"comment,omitempty"`
 }
 
 // DomainResponse represents a response containing a single domain entry.

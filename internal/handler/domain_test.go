@@ -3,11 +3,13 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
+	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 
@@ -163,8 +165,8 @@ func TestDomainHandler(t *testing.T) {
 	// Test UpdateDomain
 	t.Run("UpdateDomain", func(t *testing.T) {
 		req := model.UpdateDomainRequest{
-			AlternativeNames: []string{"www.example.com", "api.example.com"},
-			Enabled:          true,
+			AlternativeNames: to.StringSlicePtr([]string{"www.example.com", "api.example.com"}),
+			Enabled:          to.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 
@@ -196,7 +198,7 @@ func TestDomainHandler(t *testing.T) {
 	// Test UpdateDomain
 	t.Run("UpdateDomainWithoutOverwritingEmptyFields", func(t *testing.T) {
 		req := model.UpdateDomainRequest{
-			Enabled: true,
+			Enabled: to.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 

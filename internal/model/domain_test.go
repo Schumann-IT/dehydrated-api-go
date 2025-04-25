@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
+
 	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -109,8 +111,8 @@ func TestUpdateDomainRequest_Validation(t *testing.T) {
 		{
 			name: "Valid request",
 			request: UpdateDomainRequest{
-				AlternativeNames: []string{"www.example.com"},
-				Enabled:          true,
+				AlternativeNames: to.StringSlicePtr([]string{"www.example.com"}),
+				Enabled:          to.BoolPtr(true),
 			},
 			isValid: true,
 		},
