@@ -46,9 +46,6 @@ func TestConfigLoading(t *testing.T) {
 port: 8080
 dehydratedBaseDir: %s
 enableWatcher: true
-plugins:
-  openssl:
-    enabled: true
 `, tmpDir)
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -59,7 +56,6 @@ plugins:
 	assert.Equal(t, 8080, cfg.Port)
 	assert.Equal(t, tmpDir, cfg.DehydratedBaseDir)
 	assert.True(t, cfg.EnableWatcher)
-	assert.NotNil(t, cfg.Plugins["openssl"])
 }
 
 // TestMainAccIntegration performs an integration test of the main application.
@@ -77,9 +73,6 @@ func TestMainAccIntegration(t *testing.T) {
 port: 0
 dehydratedBaseDir: %s
 enableWatcher: false
-plugins:
-  openssl:
-    enabled: true
 `, tmpDir)
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)

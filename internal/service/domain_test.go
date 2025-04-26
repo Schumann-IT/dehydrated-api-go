@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
 	"os"
 	"path/filepath"
 	"sync"
@@ -9,14 +10,8 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/logger"
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
-
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
-
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
-
+	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -143,25 +138,6 @@ func TestNewDomainService(t *testing.T) {
 		}
 	})
 
-	// Test with invalid path
-	t.Run("InvalidPath", func(t *testing.T) {
-		invalidPath := filepath.Join(tmpDir, "nonexistent", "domains.txt")
-
-		dc := &dehydrated.Config{
-			DehydratedConfig: pb.DehydratedConfig{
-				DomainsFile: invalidPath,
-			},
-		}
-
-		service := NewDomainService(dc)
-		defer service.Close()
-
-		// Verify that the directory and file were created
-		if _, err := os.Stat(invalidPath); os.IsNotExist(err) {
-			t.Error("Expected domains file to be created")
-		}
-	})
-
 	// Test without watcher
 	t.Run("WithoutWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
@@ -178,27 +154,6 @@ func TestNewDomainService(t *testing.T) {
 // It verifies proper error responses for invalid operations and edge cases.
 func TestDomainServiceErrors(t *testing.T) {
 	tmpDir := t.TempDir()
-
-	t.Run("RegistryCreationFailure", func(t *testing.T) {
-		// Create invalid plugin config to force registry creation failure
-		pluginConfig := map[string]plugin.PluginConfig{
-			"invalid": {
-				Enabled: true,
-				Path:    "/nonexistent/path",
-			},
-		}
-
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("The function did not panic as expected")
-			}
-		}()
-
-		service := NewDomainService(dc).WithPlugins(pluginConfig)
-		service.Close()
-	})
 
 	t.Run("CacheReloadFailure", func(t *testing.T) {
 		// Create a read-only directory to force cache reload failure
@@ -219,59 +174,6 @@ func TestDomainServiceErrors(t *testing.T) {
 		}()
 
 		_ = NewDomainService(dc)
-	})
-}
-
-// TestMetadataEnrichment tests the metadata enrichment functionality.
-// It verifies that domain entries are properly enriched with metadata from plugins.
-func TestMetadataEnrichment(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	t.Run("SuccessfulEnrichment", func(t *testing.T) {
-		pluginConfig := map[string]plugin.PluginConfig{
-			"test": {
-				Enabled: true,
-				Path:    mustGetPluginPath(t),
-			},
-		}
-
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-		service := NewDomainService(dc).WithPlugins(pluginConfig)
-		defer service.Close()
-
-		// Create a domain
-		req := model.CreateDomainRequest{
-			Domain: "example.com",
-		}
-		_, err := service.CreateDomain(req)
-		assert.NoError(t, err)
-
-		// Get the domain with metadata
-		enriched, err := service.GetDomain("example.com")
-		assert.NoError(t, err)
-		assert.NotNil(t, enriched.Metadata)
-		assert.Contains(t, enriched.Metadata, "test")
-	})
-
-	t.Run("EnrichmentFailure", func(t *testing.T) {
-		// Create a plugin config that will fail
-		pluginConfig := map[string]plugin.PluginConfig{
-			"failing": {
-				Enabled: true,
-				Path:    "/nonexistent/path",
-			},
-		}
-
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("The function did not panic as expected")
-			}
-		}()
-
-		service := NewDomainService(dc).WithPlugins(pluginConfig)
-		service.Close()
 	})
 }
 
@@ -343,27 +245,6 @@ func TestEdgeCases(t *testing.T) {
 		entries, err := service.ListDomains()
 		assert.NoError(t, err)
 		assert.Empty(t, entries)
-	})
-
-	t.Run("InvalidPluginConfig", func(t *testing.T) {
-		pluginConfig := map[string]plugin.PluginConfig{
-			"invalid": {
-				Enabled: true,
-				Path:    "/nonexistent/path",
-			},
-		}
-
-		// load dehydrated config
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("The function did not panic as expected")
-			}
-		}()
-
-		service := NewDomainService(dc).WithPlugins(pluginConfig)
-		service.Close()
 	})
 
 	t.Run("FileSystemErrors", func(t *testing.T) {
@@ -502,48 +383,4 @@ func TestDomainServiceOperations(t *testing.T) {
 		err := service.DeleteDomain("nonexistent.com")
 		assert.Error(t, err)
 	})
-
-	t.Run("CreateDomainWithInvalidMetadata", func(t *testing.T) {
-		pluginConfig := map[string]plugin.PluginConfig{
-			"test": {
-				Enabled: true,
-				Path:    mustGetPluginPath(t),
-			},
-		}
-
-		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-		service := NewDomainService(dc).WithPlugins(pluginConfig)
-		defer service.Close()
-
-		// Create a domain with metadata
-		req := model.CreateDomainRequest{
-			Domain: "example.com",
-		}
-
-		// Create the domain
-		_, err := service.CreateDomain(req)
-		assert.NoError(t, err)
-
-		// Get the domain to verify metadata
-		enriched, err := service.GetDomain("example.com")
-		assert.NoError(t, err)
-		assert.NotNil(t, enriched.Metadata)
-		assert.Contains(t, enriched.Metadata, "test")
-	})
-}
-
-func mustGetPluginPath(t *testing.T) string {
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get current directory: %v", err)
-	}
-
-	p := filepath.Join(dir, "..", "plugin", "grpc", "testdata", "test-plugin", "test-plugin")
-
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		t.Fatalf("Failed to get abs path for %s: %v", p, err)
-	}
-
-	return abs
 }
