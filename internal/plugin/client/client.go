@@ -3,15 +3,16 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/rpc"
+	"os"
+	"os/exec"
+	"time"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
-	"net/rpc"
-	"os"
-	"os/exec"
-	"time"
 )
 
 // Client represents a plugin client

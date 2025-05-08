@@ -2,10 +2,11 @@ package registry
 
 import (
 	"context"
+	"path/filepath"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/client"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
-	"path/filepath"
 )
 
 type Registry struct {

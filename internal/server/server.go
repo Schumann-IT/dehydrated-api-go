@@ -4,9 +4,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"os"
 	"sync"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 

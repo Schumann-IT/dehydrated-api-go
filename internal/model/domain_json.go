@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 

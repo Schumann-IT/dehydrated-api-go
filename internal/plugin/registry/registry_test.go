@@ -2,12 +2,13 @@ package registry
 
 import (
 	"context"
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
@@ -28,7 +29,7 @@ func TestRegistry(t *testing.T) {
 
 	// Create a test configuration
 	cfg := map[string]config.PluginConfig{
-		"simple": config.PluginConfig{
+		"simple": {
 			Enabled: true,
 			Path:    pluginPath,
 			Config: map[string]interface{}{

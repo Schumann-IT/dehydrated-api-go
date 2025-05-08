@@ -2,11 +2,12 @@ package client
 
 import (
 	"context"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 

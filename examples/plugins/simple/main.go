@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"os"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"github.com/schumann-it/dehydrated-api-go/plugin/server"
 	"google.golang.org/protobuf/types/known/structpb"
-	"os"
 )
 
 // ExamplePlugin is a simple plugin implementation

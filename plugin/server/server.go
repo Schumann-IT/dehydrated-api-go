@@ -3,10 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/rpc"
+
 	"github.com/hashicorp/go-plugin"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"google.golang.org/grpc"
-	"net/rpc"
 )
 
 // PluginServer is the server implementation that plugins will use

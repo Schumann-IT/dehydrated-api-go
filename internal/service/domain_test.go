@@ -2,12 +2,13 @@ package service
 
 import (
 	"fmt"
-	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"

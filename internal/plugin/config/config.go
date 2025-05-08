@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

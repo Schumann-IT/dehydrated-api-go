@@ -5,10 +5,11 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -179,7 +180,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	if entry.Metadata == nil {
 		entry.Metadata = make(model.Metadata)
 	}
-	
+
 	for name, plugin := range s.registry.Plugins() {
 		resp, err := plugin.GetMetadata(context.Background(), &pb.GetMetadataRequest{
 			DomainEntry:      &entry.DomainEntry,

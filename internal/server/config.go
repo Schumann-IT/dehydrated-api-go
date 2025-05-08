@@ -5,9 +5,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"os"
 	"path/filepath"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/auth"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
