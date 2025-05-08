@@ -25,7 +25,7 @@ jobs:
           cache: true
 
       - name: Build test plugin
-        run: go build -o examples/plugins/simple/simple examples/plugins/simple/simple/main.go
+        run: go build -o examples/plugins/simple/simple examples/plugins/simple/main.go
 
 
       - name: Run tests
