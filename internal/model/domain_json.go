@@ -2,13 +2,12 @@ package model
 
 import (
 	"encoding/json"
-
-	"github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 
 // DomainEntryJSON is a wrapper type for plugin.DomainEntry that provides custom JSON marshaling
 type DomainEntryJSON struct {
-	*plugin.DomainEntry
+	*pb.DomainEntry
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -40,7 +39,7 @@ func (d *DomainEntryJSON) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
 	}
-	d.DomainEntry = &plugin.DomainEntry{
+	d.DomainEntry = &pb.DomainEntry{
 		Domain:           v.Domain,
 		AlternativeNames: v.AlternativeNames,
 		Alias:            v.Alias,
@@ -51,6 +50,6 @@ func (d *DomainEntryJSON) UnmarshalJSON(data []byte) error {
 }
 
 // NewDomainEntryJSON creates a new DomainEntryJSON wrapper
-func NewDomainEntryJSON(d *plugin.DomainEntry) *DomainEntryJSON {
+func NewDomainEntryJSON(d *pb.DomainEntry) *DomainEntryJSON {
 	return &DomainEntryJSON{DomainEntry: d}
 }

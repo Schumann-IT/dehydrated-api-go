@@ -5,6 +5,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"os"
 	"path/filepath"
 
@@ -37,6 +38,8 @@ type Config struct {
 
 	// Authentication configuration
 	Auth *auth.Config `yaml:"auth"` // Azure AD authentication configuration
+
+	Plugins map[string]config.PluginConfig `yaml:"plugins"`
 
 	err          error
 	parsedConfig *Config
@@ -131,6 +134,11 @@ func (c *Config) Load(path string) *Config {
 	// Merge auth configuration
 	if fc.Auth != nil {
 		c.Auth = fc.Auth
+	}
+
+	// Merge plugin config
+	if fc.Plugins != nil {
+		c.Plugins = fc.Plugins
 	}
 
 	if !filepath.IsAbs(c.DehydratedBaseDir) {

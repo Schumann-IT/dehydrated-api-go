@@ -18,3 +18,10 @@ auth:
   allowedAudiences:
     - "api://53bde81d-f581-4f29-9551-774b695537bb"
     - "api://6c091a3e-aed9-4bdc-936c-134ef57f75e6"
+
+plugins:
+  example:
+    enabled: true
+    path: ./examples/plugins/simple/simple
+    config:
+      name: example

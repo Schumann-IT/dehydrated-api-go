@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"os"
 	"sync"
 
@@ -96,7 +97,8 @@ func (s *Server) WithDomainService() *Server {
 		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	domainService := service.NewDomainService(cfg)
+	r := registry.NewRegistry(s.Config.Plugins)
+	domainService := service.NewDomainService(cfg, r)
 
 	if s.Logger != nil {
 		domainService.WithLogger(s.Logger)

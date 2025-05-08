@@ -383,9 +383,6 @@ func TestServerPrintFunctions(t *testing.T) {
 port: 8080
 dehydratedBaseDir: /tmp/dehydrated
 enableWatcher: true
-plugins:
-  openssl:
-    enabled: true
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	require.NoError(t, err)
@@ -539,9 +536,6 @@ func TestDomainServiceIntegration(t *testing.T) {
 port: 3000
 dehydratedBaseDir: /tmp/dehydrated
 enableWatcher: true
-plugins:
-  openssl:
-    enabled: true
 `
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)

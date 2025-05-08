@@ -6,7 +6,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
 )

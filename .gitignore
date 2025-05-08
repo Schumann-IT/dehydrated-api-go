@@ -56,6 +56,7 @@ debug/
 domains.txt
 coverage.html
 examples/data/
+examples/plugins/simple/simple
 
 internal/plugin/grpc/testdata/test-plugin/test-plugin
 dehydrated-api-go

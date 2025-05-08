@@ -3,14 +3,16 @@
 package service
 
 import (
+	"context"
 	"errors"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"go.uber.org/zap"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
@@ -25,12 +27,13 @@ type DomainService struct {
 	cache            []*model.DomainEntry // In-memory cache of domain entries
 	mutex            sync.RWMutex         // Mutex for thread-safe access to the cache
 	logger           *zap.Logger
+	registry         *registry.Registry
 }
 
 // NewDomainService creates a new DomainService instance with the provided configuration.
 // It initializes the dehydrated client, sets up the plugin registry, and optionally
 // enables file watching for automatic updates.
-func NewDomainService(cfg *dehydrated.Config) *DomainService {
+func NewDomainService(cfg *dehydrated.Config, registry *registry.Registry) *DomainService {
 	// Ensure the domains file exists
 	if _, err := os.Stat(cfg.DomainsFile); err != nil {
 		// Create the directory if it doesn't exist
@@ -45,6 +48,7 @@ func NewDomainService(cfg *dehydrated.Config) *DomainService {
 
 	s := &DomainService{
 		logger:           zap.NewNop(),
+		registry:         registry,
 		DehydratedConfig: cfg,
 	}
 
@@ -172,6 +176,22 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
 // It calls each plugin's GetMetadata method and merges the results into the entry.
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+	if entry.Metadata == nil {
+		entry.Metadata = make(model.Metadata)
+	}
+	
+	for name, plugin := range s.registry.Plugins() {
+		resp, err := plugin.GetMetadata(context.Background(), &pb.GetMetadataRequest{
+			DomainEntry:      &entry.DomainEntry,
+			DehydratedConfig: s.DehydratedConfig.ToProto(),
+		})
+		if err != nil {
+
+		}
+
+		entry.Metadata[name] = model.MetadataFromProto(resp)
+	}
+
 	return nil
 }
 

@@ -5,3 +5,9 @@ logging:
   level: debug
   encoding: console
   outputPath: ""
+plugins:
+  example:
+    enabled: true
+    path: ./examples/plugins/simple/simple
+    config:
+      name: example

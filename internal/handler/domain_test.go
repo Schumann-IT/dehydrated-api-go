@@ -31,13 +31,13 @@ func TestDomainHandler(t *testing.T) {
 	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 
 	// Create domain service
-	s := service.NewDomainService(dc)
+	s := service.NewDomainService(dc, nil)
 	defer s.Close()
 
 	// Create a new domain handler
 	handler := NewDomainHandler(s)
 
-	// Register routes
+	// register routes
 	app.Post("/api/v1/domains", handler.CreateDomain)
 	app.Get("/api/v1/domains", handler.ListDomains)
 	app.Get("/api/v1/domains/:domain", handler.GetDomain)
