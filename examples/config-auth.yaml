@@ -1,18 +1,6 @@
 port: 3000
 dehydratedBaseDir: ./data
 enableWatcher: false
-plugins:
-  openssl:
-    enabled: true
-  # External plugins can be configured via environment variables
-  # Example:
-  # firewall:
-  #   enabled: false
-  #   path: /path/to/plugin/plugin.go
-  #   config:
-  #     host: fw.example.com
-  #     user: admin
-  #     password: password
 logging:
   level: debug
   encoding: console
@@ -30,3 +18,10 @@ auth:
   allowedAudiences:
     - "api://53bde81d-f581-4f29-9551-774b695537bb"
     - "api://6c091a3e-aed9-4bdc-936c-134ef57f75e6"
+
+plugins:
+  example:
+    enabled: true
+    path: ./examples/plugins/simple/simple
+    config:
+      name: example

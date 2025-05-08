@@ -5,7 +5,6 @@ BINARY_NAME=dehydrated-api-go
 LDFLAGS=-ldflags "-X main.Version=$(shell git describe --tags --always --dirty) -X main.Commit=$(shell git rev-parse --short HEAD) -X main.BuildTime=$(shell date -u '+%Y-%m-%d_%H:%M:%S')"
 
 # Test
-GRPC_TEST_PLUGIN_PATH=internal/plugin/grpc/testdata/test-plugin
 COVERAGE_FILE=coverage.out
 
 # Docker
@@ -88,7 +87,7 @@ clean: ## Clean build artifacts
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)
-	@rm -f $(GRPC_TEST_PLUGIN_PATH)/test-plugin
+	@rm -f $(TEST_PLUGIN)
 
 clean-dist: ## Clean dist
 	@rm -rf dist
@@ -99,7 +98,7 @@ clean-docker: ## Remove Docker container and image
 	@docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
 
 clean-generate: ## Clean generated files
-	@rm -f proto/plugin/*.pb.go
+	@rm -f plugin/proto/*.pb.go
 
 #
 # Help
@@ -159,11 +158,8 @@ check-tools: ## Check if required tools are installed
 $(BINARY_NAME): ## Build the binary
 	@go build $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
 
-$(COVERAGE_FILE): $(GRPC_TEST_PLUGIN_PATH)/test-plugin ## Build coverage profile
+$(COVERAGE_FILE): ## Build coverage profile
 	@go test -v -race -coverprofile=$(COVERAGE_FILE) ./...
-
-$(GRPC_TEST_PLUGIN_PATH)/test-plugin: generate ## Build test plugin
-	@go build -o $(GRPC_TEST_PLUGIN_PATH)/test-plugin $(GRPC_TEST_PLUGIN_PATH)/main.go
 
 $(GOPATH)/bin/swag:
 	@go install github.com/swaggo/swag/cmd/swag@latest

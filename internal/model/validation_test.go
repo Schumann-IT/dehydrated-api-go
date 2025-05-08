@@ -3,7 +3,7 @@ package model
 import (
 	"testing"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 
 // TestIsValidDomain tests the domain validation function with various domain names.

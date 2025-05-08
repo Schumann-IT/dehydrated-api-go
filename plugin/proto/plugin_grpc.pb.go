@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: proto/plugin/plugin.proto
+// source: plugin/proto/plugin.proto
 
-package plugin
+package proto
 
 import (
 	context "context"
@@ -223,5 +223,5 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/plugin/plugin.proto",
+	Metadata: "plugin/proto/plugin.proto",
 }

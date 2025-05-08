@@ -4,7 +4,7 @@ package plugin;
 
 import "google/protobuf/struct.proto";
 
-option go_package = "github.com/schumann-it/dehydrated-api-go/proto/plugin";
+option go_package = "github.com/schumann-it/dehydrated-api-go/plugin/proto";
 
 // Plugin service defines the interface for dehydrated-api-go plugins.
 // Plugins can provide additional functionality and metadata for domain entries.

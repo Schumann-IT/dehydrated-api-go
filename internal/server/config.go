@@ -8,9 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/auth"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,9 +21,6 @@ import (
 type Config struct {
 	// Server configuration
 	Port int `yaml:"port"` // Port number for the HTTP server (1-65535)
-
-	// Plugin configuration
-	Plugins map[string]plugin.PluginConfig `yaml:"plugins"` // Map of plugin names to their configurations
 
 	// Dehydrated configuration
 	DehydratedBaseDir string `yaml:"dehydratedBaseDir"` // Base directory for dehydrated client files
@@ -42,6 +40,8 @@ type Config struct {
 	// Authentication configuration
 	Auth *auth.Config `yaml:"auth"` // Azure AD authentication configuration
 
+	Plugins map[string]config.PluginConfig `yaml:"plugins"`
+
 	err          error
 	parsedConfig *Config
 }
@@ -58,7 +58,6 @@ func NewConfig() *Config {
 		Port:                 3000,
 		DehydratedBaseDir:    ".",
 		DehydratedConfigFile: "config",
-		Plugins:              make(map[string]plugin.PluginConfig),
 		EnableWatcher:        false,
 	}
 }
@@ -138,38 +137,9 @@ func (c *Config) Load(path string) *Config {
 		c.Auth = fc.Auth
 	}
 
+	// Merge plugin config
 	if fc.Plugins != nil {
-		// Merge plugin configurations
-		for name, p := range fc.Plugins {
-			// If plugin doesn't exist in defaults, create it
-			if _, exists := c.Plugins[name]; !exists {
-				c.Plugins[name] = plugin.PluginConfig{
-					Config: make(map[string]any),
-				}
-			}
-
-			// Get reference to existing plugin config
-			existingPlugin := c.Plugins[name]
-
-			// Merge plugin settings
-			if p.Enabled {
-				existingPlugin.Enabled = true
-			}
-			if p.Path != "" {
-				existingPlugin.Path = p.Path
-			}
-			if p.Config != nil {
-				// Merge plugin config maps
-				if existingPlugin.Config == nil {
-					existingPlugin.Config = make(map[string]any)
-				}
-				for k, v := range p.Config {
-					existingPlugin.Config[k] = v
-				}
-			}
-			// Update the plugin in the main config
-			c.Plugins[name] = existingPlugin
-		}
+		c.Plugins = fc.Plugins
 	}
 
 	if !filepath.IsAbs(c.DehydratedBaseDir) {
@@ -197,27 +167,6 @@ func (c *Config) Validate() error {
 	// Validate dehydrated base dir
 	if _, err := os.Stat(c.DehydratedBaseDir); os.IsNotExist(err) {
 		return fmt.Errorf("dehydrated base dir does not exist: %s", c.DehydratedBaseDir)
-	}
-
-	// Validate plugin configurations
-	for name, p := range c.Plugins {
-		if !p.Enabled {
-			continue
-		}
-
-		if p.Path == "" {
-			return fmt.Errorf("plugin path is required for enabled plugin: %s", name)
-		}
-
-		// Check if plugin path exists and is executable
-		if _, err := os.Stat(p.Path); err != nil {
-			return fmt.Errorf("plugin path does not exist: %s", p.Path)
-		}
-
-		// Check if plugin path is absolute
-		if !filepath.IsAbs(p.Path) {
-			return fmt.Errorf("plugin path must be absolute: %s", p.Path)
-		}
 	}
 
 	return nil
