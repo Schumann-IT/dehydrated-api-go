@@ -5,20 +5,19 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
+
 	"github.com/Azure/go-autorest/autorest/to"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"go.uber.org/zap"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 )
 
 // DomainService handles domain-related business logic and operations.
@@ -28,14 +27,14 @@ type DomainService struct {
 	watcher          *FileWatcher         // File watcher for monitoring changes
 	cache            []*model.DomainEntry // In-memory cache of domain entries
 	mutex            sync.RWMutex         // Mutex for thread-safe access to the cache
-	Registry         *registry.Registry   // Plugin registry for metadata enrichment
 	logger           *zap.Logger
+	registry         *registry.Registry
 }
 
 // NewDomainService creates a new DomainService instance with the provided configuration.
 // It initializes the dehydrated client, sets up the plugin registry, and optionally
 // enables file watching for automatic updates.
-func NewDomainService(cfg *dehydrated.Config) *DomainService {
+func NewDomainService(cfg *dehydrated.Config, registry *registry.Registry) *DomainService {
 	// Ensure the domains file exists
 	if _, err := os.Stat(cfg.DomainsFile); err != nil {
 		// Create the directory if it doesn't exist
@@ -50,6 +49,7 @@ func NewDomainService(cfg *dehydrated.Config) *DomainService {
 
 	s := &DomainService{
 		logger:           zap.NewNop(),
+		registry:         registry,
 		DehydratedConfig: cfg,
 	}
 
@@ -58,21 +58,6 @@ func NewDomainService(cfg *dehydrated.Config) *DomainService {
 
 func (s *DomainService) WithLogger(l *zap.Logger) *DomainService {
 	s.logger = l
-	return s
-}
-
-func (s *DomainService) WithPlugins(plugins map[string]plugin.PluginConfig) *DomainService {
-	s.logger.Info("Initializing plugins")
-
-	reg, err := registry.NewRegistry(plugins)
-	if err != nil {
-		s.logger.Error("Failed to initialize plugin registry", zap.Error(err))
-		panic(err)
-	}
-	s.Registry = reg
-
-	s.logger.Info("Plugins initialized", zap.Int("count", len(plugins)))
-
 	return s
 }
 
@@ -127,12 +112,6 @@ func (s *DomainService) Close() error {
 	if s.watcher != nil {
 		if err := s.watcher.Close(); err != nil {
 			s.logger.Error("Failed to  close watcher", zap.Error(err))
-		}
-	}
-
-	if s.Registry != nil {
-		if err := s.Registry.Close(context.Background()); err != nil {
-			s.logger.Error("Failed to close plugin Registry", zap.Error(err))
 		}
 	}
 
@@ -198,21 +177,22 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
 // It calls each plugin's GetMetadata method and merges the results into the entry.
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
-	if s.Registry == nil {
-		return nil
+	if entry.Metadata == nil {
+		entry.Metadata = make(model.Metadata)
 	}
 
-	ctx := context.Background()
-	for name, p := range s.Registry.GetPlugins() {
-		metadata, err := p.GetMetadata(ctx, entry, s.DehydratedConfig.DomainSpecificConfig(entry.PathName()))
+	for name, plugin := range s.registry.Plugins() {
+		resp, err := plugin.GetMetadata(context.Background(), &pb.GetMetadataRequest{
+			DomainEntry:      &entry.DomainEntry,
+			DehydratedConfig: s.DehydratedConfig.ToProto(),
+		})
 		if err != nil {
-			return fmt.Errorf("failed to get metadata from plugin %s: %w", name, err)
+			return err
 		}
-		if entry.Metadata == nil {
-			entry.Metadata = make(map[string]any)
-		}
-		entry.Metadata[name] = metadata
+
+		entry.Metadata[name] = model.MetadataFromProto(resp)
 	}
+
 	return nil
 }
 

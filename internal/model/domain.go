@@ -5,7 +5,7 @@ package model
 import (
 	"encoding/json"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 
 // DomainEntry represents a domain configuration entry in the dehydrated system.
@@ -35,6 +35,10 @@ func (e *DomainEntry) MarshalJSON() ([]byte, error) {
 		Comment:          e.GetComment(),
 		Metadata:         e.Metadata,
 	})
+}
+
+func (e *DomainEntry) SetMetadata(m map[string]any) {
+	e.Metadata = m
 }
 
 type Metadata map[string]any

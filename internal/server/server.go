@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
+
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"github.com/gofiber/swagger"
@@ -96,8 +98,8 @@ func (s *Server) WithDomainService() *Server {
 		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	domainService := service.NewDomainService(cfg).
-		WithPlugins(s.Config.Plugins)
+	r := registry.NewRegistry(s.Config.Plugins)
+	domainService := service.NewDomainService(cfg, r)
 
 	if s.Logger != nil {
 		domainService.WithLogger(s.Logger)
@@ -116,9 +118,7 @@ func (s *Server) WithDomainService() *Server {
 		return s
 	}
 
-	s.Logger.Info("Domain service created successfully",
-		zap.Int("enabled_plugins", len(s.Config.Plugins)),
-	)
+	s.Logger.Info("Domain service created successfully")
 
 	s.domainService = domainService
 
@@ -182,7 +182,6 @@ func (s *Server) Start() {
 			zap.String("host", host),
 			zap.Int("port", port),
 			zap.Bool("watcher_enabled", s.Config.EnableWatcher),
-			zap.Int("enabled_plugins", len(s.Config.Plugins)),
 		)
 
 		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, port)); err != nil {

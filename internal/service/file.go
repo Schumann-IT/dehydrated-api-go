@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 )

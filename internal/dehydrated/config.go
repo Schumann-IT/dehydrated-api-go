@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/schumann-it/dehydrated-api-go/proto/plugin"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 
 // Config represents the dehydrated configuration
@@ -413,4 +413,36 @@ func (c *Config) DomainSpecificConfig(path string) *Config {
 	}
 
 	return &cfg
+}
+
+func (c *Config) ToProto() *pb.DehydratedConfig {
+	return &pb.DehydratedConfig{
+		BaseDir:         c.BaseDir,
+		CertDir:         c.CertDir,
+		DomainsDir:      c.DomainsDir,
+		AccountsDir:     c.AccountsDir,
+		ChallengesDir:   c.ChallengesDir,
+		DomainsFile:     c.DomainsFile,
+		Ca:              c.Ca,
+		OldCa:           c.OldCa,
+		RenewDays:       c.RenewDays,
+		KeySize:         c.KeySize,
+		KeyAlgo:         c.KeyAlgo,
+		ChallengeType:   c.ChallengeType,
+		WellKnownDir:    c.WellKnownDir,
+		LockFile:        c.LockFile,
+		Openssl:         c.Openssl,
+		PrivateKeyRenew: c.PrivateKeyRenew,
+		HookChain:       c.HookChain,
+		OcspDays:        c.OcspDays,
+		ChainCache:      c.ChainCache,
+		Api:             c.Api,
+		AcceptTerms:     c.AcceptTerms,
+		Ipv4:            c.Ipv4,
+		Ipv6:            c.Ipv6,
+		PreferredChain:  c.PreferredChain,
+		HookScript:      c.HookScript,
+		OpensslConfig:   c.OpensslConfig,
+		ConfigD:         c.ConfigD,
+	}
 }

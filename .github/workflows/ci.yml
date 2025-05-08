@@ -25,7 +25,8 @@ jobs:
           cache: true
 
       - name: Build test plugin
-        run: go build -o internal/plugin/grpc/testdata/test-plugin/test-plugin internal/plugin/grpc/testdata/test-plugin/main.go
+        run: go build -o examples/plugins/simple/simple examples/plugins/simple/main.go
+
 
       - name: Run tests
         run: make ci-test
