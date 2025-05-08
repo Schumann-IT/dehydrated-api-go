@@ -187,7 +187,7 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 			DehydratedConfig: s.DehydratedConfig.ToProto(),
 		})
 		if err != nil {
-
+			return err
 		}
 
 		entry.Metadata[name] = model.MetadataFromProto(resp)
