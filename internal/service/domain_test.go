@@ -10,11 +10,14 @@ import (
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
+	"github.com/schumann-it/dehydrated-api-go/internal/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Package service provides core business logic for the dehydrated-api-go application.
@@ -90,7 +93,7 @@ func TestDomainService(t *testing.T) {
 			// Test UpdateDomain
 			t.Run("UpdateDomain", func(t *testing.T) {
 				req := model.UpdateDomainRequest{
-					Enabled: to.BoolPtr(true),
+					Enabled: util.BoolPtr(true),
 				}
 				entry, err := service.UpdateDomain("example.com", req)
 				assert.NoError(t, err)
@@ -370,7 +373,7 @@ func TestDomainServiceOperations(t *testing.T) {
 		defer service.Close()
 
 		req := model.UpdateDomainRequest{
-			Enabled: to.BoolPtr(true),
+			Enabled: util.BoolPtr(true),
 		}
 		_, err := service.UpdateDomain("nonexistent.com", req)
 		assert.Error(t, err)
@@ -384,4 +387,67 @@ func TestDomainServiceOperations(t *testing.T) {
 		err := service.DeleteDomain("nonexistent.com")
 		assert.Error(t, err)
 	})
+}
+
+func TestDomainService_UpdateDomain(t *testing.T) {
+	tests := []struct {
+		name    string
+		domain  string
+		req     model.UpdateDomainRequest
+		wantErr bool
+	}{
+		{
+			name:   "valid update",
+			domain: "example.com",
+			req: model.UpdateDomainRequest{
+				AlternativeNames: util.StringSlicePtr([]string{"www.example.com"}),
+				Enabled:          util.BoolPtr(true),
+			},
+			wantErr: false,
+		},
+		{
+			name:   "invalid domain",
+			domain: "invalid",
+			req: model.UpdateDomainRequest{
+				AlternativeNames: util.StringSlicePtr([]string{"www.example.com"}),
+				Enabled:          util.BoolPtr(true),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a new domain service with default config and empty registry
+			cfg := dehydrated.NewConfig()
+			reg := registry.NewRegistry(make(map[string]config.PluginConfig))
+			service := NewDomainService(cfg, reg)
+
+			// Create a test domain
+			if tt.domain == "example.com" {
+				_, err := service.CreateDomain(model.CreateDomainRequest{
+					Domain:           tt.domain,
+					AlternativeNames: []string{"www.example.com"},
+					Enabled:          true,
+				})
+				require.NoError(t, err)
+			}
+
+			// Update the domain
+			updated, err := service.UpdateDomain(tt.domain, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				require.NotNil(t, updated)
+
+				// Verify the domain was updated
+				domain, err := service.GetDomain(tt.domain)
+				require.NoError(t, err)
+				assert.Equal(t, tt.domain, domain.Domain)
+				assert.Equal(t, util.StringSlice(tt.req.AlternativeNames), domain.AlternativeNames)
+				assert.Equal(t, util.Bool(tt.req.Enabled), domain.Enabled)
+			}
+		})
+	}
 }

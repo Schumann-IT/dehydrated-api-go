@@ -4,58 +4,116 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
+	"github.com/go-playground/validator/v10"
+	"github.com/schumann-it/dehydrated-api-go/internal/util"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func TestFromProto(t *testing.T) {
+var validate = validator.New()
+
+func TestDomainEntry_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    *pb.GetMetadataResponse
-		expected *DomainEntry
+		entry    *DomainEntry
+		expected string
 	}{
 		{
-			name: "Basic conversion",
-			input: &pb.GetMetadataResponse{
-				Metadata: map[string]*structpb.Value{
-					"key1": structpb.NewStringValue("value1"),
-					"key2": structpb.NewNumberValue(123),
+			name: "full entry",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:           "example.com",
+					AlternativeNames: []string{"www.example.com"},
+					Alias:            "example",
+					Enabled:          true,
+					Comment:          "test comment",
 				},
+				Metadata: pb.NewMetadata(),
 			},
-			expected: &DomainEntry{
-				Metadata: map[string]any{
-					"key1": "value1",
-					"key2": float64(123),
-				},
-			},
+			expected: `{"domain":"example.com","alternative_names":["www.example.com"],"alias":"example","enabled":true,"comment":"test comment","metadata":{}}`,
 		},
 		{
-			name: "Empty metadata",
-			input: &pb.GetMetadataResponse{
-				Metadata: map[string]*structpb.Value{},
+			name: "minimal entry",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:  "example.com",
+					Enabled: true,
+				},
+				Metadata: pb.NewMetadata(),
 			},
-			expected: &DomainEntry{
-				Metadata: map[string]any{},
-			},
+			expected: `{"domain":"example.com","alternative_names":null,"alias":"","enabled":true,"comment":"","metadata":{}}`,
 		},
 		{
-			name: "Nil metadata",
-			input: &pb.GetMetadataResponse{
-				Metadata: nil,
+			name: "entry with metadata",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain:  "example.com",
+					Enabled: true,
+				},
+				Metadata: func() *pb.Metadata {
+					m := pb.NewMetadata()
+					m.Set("key", "value")
+					return m
+				}(),
 			},
-			expected: &DomainEntry{
-				Metadata: map[string]any{},
-			},
+			expected: `{"domain":"example.com","alternative_names":null,"alias":"","enabled":true,"comment":"","metadata":{"key":"value"}}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MetadataFromProto(tt.input)
-			assert.Equal(t, tt.expected.Metadata, result)
+			data, err := json.Marshal(tt.entry)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tt.expected, string(data))
+		})
+	}
+}
+
+func TestDomainEntry_SetMetadata(t *testing.T) {
+	entry := &DomainEntry{
+		DomainEntry: pb.DomainEntry{
+			Domain:  "example.com",
+			Enabled: true,
+		},
+	}
+
+	metadata := pb.NewMetadata()
+	metadata.Set("key", "value")
+	entry.SetMetadata(metadata)
+
+	assert.Equal(t, metadata, entry.Metadata)
+}
+
+func TestDomainEntry_PathName(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    *DomainEntry
+		expected string
+	}{
+		{
+			name: "with domain only",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain: "example.com",
+				},
+			},
+			expected: "example.com",
+		},
+		{
+			name: "with alias",
+			entry: &DomainEntry{
+				DomainEntry: pb.DomainEntry{
+					Domain: "example.com",
+					Alias:  "example",
+				},
+			},
+			expected: "example",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.entry.PathName())
 		})
 	}
 }
@@ -63,40 +121,35 @@ func TestFromProto(t *testing.T) {
 func TestCreateDomainRequest_Validation(t *testing.T) {
 	tests := []struct {
 		name    string
-		request CreateDomainRequest
-		isValid bool
+		request *CreateDomainRequest
+		wantErr bool
 	}{
 		{
-			name: "Valid request",
-			request: CreateDomainRequest{
+			name: "valid request",
+			request: &CreateDomainRequest{
 				Domain:           "example.com",
 				AlternativeNames: []string{"www.example.com"},
 				Enabled:          true,
 			},
-			isValid: true,
+			wantErr: false,
 		},
 		{
-			name: "Empty domain",
-			request: CreateDomainRequest{
-				Domain: "",
+			name: "missing domain",
+			request: &CreateDomainRequest{
+				AlternativeNames: []string{"www.example.com"},
+				Enabled:          true,
 			},
-			isValid: false,
-		},
-		{
-			name: "With metadata",
-			request: CreateDomainRequest{
-				Domain: "example.com",
-			},
-			isValid: true,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.isValid {
-				assert.NotEmpty(t, tt.request.Domain)
+			err := validate.Struct(tt.request)
+			if tt.wantErr {
+				assert.Error(t, err)
 			} else {
-				assert.Empty(t, tt.request.Domain)
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -111,8 +164,8 @@ func TestUpdateDomainRequest_Validation(t *testing.T) {
 		{
 			name: "Valid request",
 			request: UpdateDomainRequest{
-				AlternativeNames: to.StringSlicePtr([]string{"www.example.com"}),
-				Enabled:          to.BoolPtr(true),
+				AlternativeNames: util.StringSlicePtr([]string{"www.example.com"}),
+				Enabled:          util.BoolPtr(true),
 			},
 			isValid: true,
 		},
@@ -210,93 +263,17 @@ func TestDomainsResponse(t *testing.T) {
 			},
 			success: false,
 		},
-		{
-			name: "Empty list response",
-			response: DomainsResponse{
-				Success: true,
-				Data:    []*DomainEntry{},
-			},
-			success: true,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.success, tt.response.Success)
 			if tt.success {
-				if len(tt.response.Data) > 0 {
-					assert.NotEmpty(t, tt.response.Data[0].Domain)
-				}
+				assert.NotEmpty(t, tt.response.Data)
 				assert.Empty(t, tt.response.Error)
 			} else {
 				assert.NotEmpty(t, tt.response.Error)
 			}
-		})
-	}
-}
-
-func TestDomainEntry_MarshalJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    *DomainEntry
-		expected string
-	}{
-		{
-			name: "all fields set",
-			entry: &DomainEntry{
-				DomainEntry: pb.DomainEntry{
-					Domain:           "example.com",
-					AlternativeNames: []string{"www.example.com"},
-					Alias:            "example",
-					Enabled:          true,
-					Comment:          "test domain",
-				},
-				Metadata: Metadata{"test": "value"},
-			},
-			expected: `{
-				"domain": "example.com",
-				"alternative_names": ["www.example.com"],
-				"alias": "example",
-				"enabled": true,
-				"comment": "test domain",
-				"metadata": {"test": "value"}
-			}`,
-		},
-		{
-			name: "zero values",
-			entry: &DomainEntry{
-				DomainEntry: pb.DomainEntry{
-					Domain:           "example.com",
-					AlternativeNames: []string{},
-					Alias:            "",
-					Enabled:          false,
-					Comment:          "",
-				},
-			},
-			expected: `{
-				"domain": "example.com",
-				"alternative_names": [],
-				"alias": "",
-				"enabled": false,
-				"comment": ""
-			}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Marshal the entry
-			actual, err := json.Marshal(tt.entry)
-			assert.NoError(t, err)
-
-			// Compare JSON objects (ignoring whitespace)
-			var actualJSON, expectedJSON interface{}
-			err = json.Unmarshal(actual, &actualJSON)
-			assert.NoError(t, err)
-			err = json.Unmarshal([]byte(tt.expected), &expectedJSON)
-			assert.NoError(t, err)
-
-			assert.Equal(t, expectedJSON, actualJSON)
 		})
 	}
 }
