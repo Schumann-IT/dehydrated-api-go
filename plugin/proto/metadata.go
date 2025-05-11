@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -56,6 +57,25 @@ func (mm *Metadata) GetError() string {
 // Set sets a value for the given key
 func (mm *Metadata) Set(key string, value interface{}) {
 	mm.values[key] = value
+}
+
+// SetMap converts the parameter value to a map[string]interface{} using JSON marshaling
+// and sets the result as the value for the given key.
+// If the conversion fails, an error is returned.
+func (mm *Metadata) SetMap(key string, value interface{}) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("failed to marshal: %w", err)
+	}
+
+	var result map[string]interface{}
+	if err = json.Unmarshal(data, &result); err != nil {
+		return fmt.Errorf("failed to unmarshal: %w", err)
+	}
+
+	mm.values[key] = result
+
+	return nil
 }
 
 // Get returns a value for the given key
