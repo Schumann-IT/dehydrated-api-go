@@ -643,7 +643,10 @@ type GetMetadataResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Metadata key-value pairs to be added to the domain entry.
 	// Values should be of appropriate types (string, number, boolean, etc.).
-	Metadata      map[string]*structpb.Value `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]*structpb.Value `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Optional error message if the plugin encountered issues
+	// but still wants to return partial metadata.
+	Error         string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -683,6 +686,13 @@ func (x *GetMetadataResponse) GetMetadata() map[string]*structpb.Value {
 		return x.Metadata
 	}
 	return nil
+}
+
+func (x *GetMetadataResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
 }
 
 // CloseRequest is empty as no data is needed.
@@ -836,9 +846,10 @@ const file_plugin_proto_plugin_proto_rawDesc = "" +
 	"\x12InitializeResponse\"\x93\x01\n" +
 	"\x12GetMetadataRequest\x126\n" +
 	"\fdomain_entry\x18\x01 \x01(\v2\x13.plugin.DomainEntryR\vdomainEntry\x12E\n" +
-	"\x11dehydrated_config\x18\x02 \x01(\v2\x18.plugin.DehydratedConfigR\x10dehydratedConfig\"\xb1\x01\n" +
+	"\x11dehydrated_config\x18\x02 \x01(\v2\x18.plugin.DehydratedConfigR\x10dehydratedConfig\"\xc7\x01\n" +
 	"\x13GetMetadataResponse\x12E\n" +
-	"\bmetadata\x18\x01 \x03(\v2).plugin.GetMetadataResponse.MetadataEntryR\bmetadata\x1aS\n" +
+	"\bmetadata\x18\x01 \x03(\v2).plugin.GetMetadataResponse.MetadataEntryR\bmetadata\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\x1aS\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
 	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\x0e\n" +

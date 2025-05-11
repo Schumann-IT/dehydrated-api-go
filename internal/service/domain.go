@@ -10,8 +10,7 @@ import (
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
-
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/schumann-it/dehydrated-api-go/internal/util"
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"go.uber.org/zap"
@@ -178,19 +177,21 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 // It calls each plugin's GetMetadata method and merges the results into the entry.
 func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 	if entry.Metadata == nil {
-		entry.Metadata = make(model.Metadata)
+		entry.Metadata = pb.NewMetadata()
 	}
 
 	for name, plugin := range s.registry.Plugins() {
 		resp, err := plugin.GetMetadata(context.Background(), &pb.GetMetadataRequest{
 			DomainEntry:      &entry.DomainEntry,
-			DehydratedConfig: s.DehydratedConfig.ToProto(),
+			DehydratedConfig: s.DehydratedConfig.DomainSpecificConfig(entry.PathName()).ToProto(),
 		})
 		if err != nil {
 			return err
 		}
 
-		entry.Metadata[name] = model.MetadataFromProto(resp)
+		if resp.Metadata != nil {
+			entry.Metadata.FromProto(name, resp.Metadata)
+		}
 	}
 
 	return nil
@@ -258,19 +259,19 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 		if existing.Domain == domain {
 			alt := existing.AlternativeNames
 			if req.AlternativeNames != nil {
-				alt = to.StringSlice(req.AlternativeNames)
+				alt = util.StringSlice(req.AlternativeNames)
 			}
 			alias := existing.Alias
 			if req.Alias != nil {
-				alias = to.String(req.Alias)
+				alias = util.String(req.Alias)
 			}
 			enabled := existing.Enabled
 			if req.Enabled != nil {
-				enabled = to.Bool(req.Enabled)
+				enabled = util.Bool(req.Enabled)
 			}
 			comment := existing.Comment
 			if req.Comment != nil {
-				comment = to.String(req.Comment)
+				comment = util.String(req.Comment)
 			}
 			updatedEntry = &model.DomainEntry{
 				DomainEntry: pb.DomainEntry{
