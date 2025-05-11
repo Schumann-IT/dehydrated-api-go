@@ -7,7 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/schumann-it/dehydrated-api-go/internal/util"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
 
@@ -165,8 +166,8 @@ func TestDomainHandler(t *testing.T) {
 	// Test UpdateDomain
 	t.Run("UpdateDomain", func(t *testing.T) {
 		req := model.UpdateDomainRequest{
-			AlternativeNames: to.StringSlicePtr([]string{"www.example.com", "api.example.com"}),
-			Enabled:          to.BoolPtr(true),
+			AlternativeNames: util.StringSlicePtr([]string{"www.example.com", "api.example.com"}),
+			Enabled:          util.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 
@@ -198,7 +199,7 @@ func TestDomainHandler(t *testing.T) {
 	// Test UpdateDomain
 	t.Run("UpdateDomainWithoutOverwritingEmptyFields", func(t *testing.T) {
 		req := model.UpdateDomainRequest{
-			Enabled: to.BoolPtr(true),
+			Enabled: util.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 

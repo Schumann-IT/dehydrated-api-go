@@ -14,42 +14,34 @@ type DomainEntry struct {
 	pb.DomainEntry
 
 	// Metadata contains additional information about the domain entry.
-	Metadata Metadata `json:"metadata,omitempty"`
+	Metadata *pb.Metadata `json:"metadata,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshaler interface to ensure all fields are included
 func (e *DomainEntry) MarshalJSON() ([]byte, error) {
-	type Alias DomainEntry // Create an alias to avoid recursion
-	return json.Marshal(&struct {
-		Domain           string   `json:"domain"`
-		AlternativeNames []string `json:"alternative_names"`
-		Alias            string   `json:"alias"`
-		Enabled          bool     `json:"enabled"`
-		Comment          string   `json:"comment"`
-		Metadata         Metadata `json:"metadata,omitempty"`
-	}{
-		Domain:           e.GetDomain(),
-		AlternativeNames: e.GetAlternativeNames(),
-		Alias:            e.GetAlias(),
-		Enabled:          e.GetEnabled(),
-		Comment:          e.GetComment(),
-		Metadata:         e.Metadata,
+	metadata := make(map[string]interface{})
+	if e.Metadata != nil {
+		protoMap, err := e.Metadata.ToProto()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range protoMap {
+			metadata[k] = v.AsInterface()
+		}
+	}
+
+	return json.Marshal(map[string]interface{}{
+		"domain":            e.GetDomain(),
+		"alternative_names": e.GetAlternativeNames(),
+		"alias":             e.GetAlias(),
+		"enabled":           e.GetEnabled(),
+		"comment":           e.GetComment(),
+		"metadata":          metadata,
 	})
 }
 
-func (e *DomainEntry) SetMetadata(m map[string]any) {
+func (e *DomainEntry) SetMetadata(m *pb.Metadata) {
 	e.Metadata = m
-}
-
-type Metadata map[string]any
-
-func MetadataFromProto(resp *pb.GetMetadataResponse) Metadata {
-	metadata := make(map[string]any)
-	for k, v := range resp.Metadata {
-		metadata[k] = v.AsInterface()
-	}
-
-	return metadata
 }
 
 func (e *DomainEntry) PathName() string {

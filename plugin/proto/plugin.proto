@@ -135,6 +135,10 @@ message GetMetadataResponse {
   // Metadata key-value pairs to be added to the domain entry.
   // Values should be of appropriate types (string, number, boolean, etc.).
   map<string, google.protobuf.Value> metadata = 1;
+
+  // Optional error message if the plugin encountered issues
+  // but still wants to return partial metadata.
+  string error = 2;
 }
 
 // CloseRequest is empty as no data is needed.

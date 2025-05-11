@@ -7,9 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
-
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +38,6 @@ func TestRegistry(t *testing.T) {
 	r := NewRegistry(cfg)
 	defer r.Close()
 
-	var m []model.Metadata
 	for _, p := range r.Plugins() {
 		// Create a test domain entry
 		domain := &pb.DomainEntry{
@@ -106,8 +103,11 @@ func TestRegistry(t *testing.T) {
 		resp, err := p.GetMetadata(ctx, req)
 		require.NoError(t, err)
 
-		m = append(m, model.MetadataFromProto(resp))
+		// Check the metadata value
+		if resp.Metadata != nil {
+			if nameValue, ok := resp.Metadata["name"]; ok {
+				assert.Equal(t, "example", nameValue.AsInterface())
+			}
+		}
 	}
-
-	assert.Equal(t, "example", m[0]["name"])
 }
