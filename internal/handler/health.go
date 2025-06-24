@@ -18,6 +18,14 @@ func (h *HealthHandler) RegisterRoutes(app *fiber.App) {
 	app.Get("/health", h.Health)
 }
 
+// @Summary Health check
+// @Description Check if the API is running and healthy
+// @Tags health
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.DomainsResponse
+// @Router /health [get]
 // Health handles GET /health
 func (h *HealthHandler) Health(c *fiber.Ctx) error {
 	return c.JSON(model.DomainsResponse{

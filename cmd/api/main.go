@@ -25,7 +25,10 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Type "Bearer" followed by a space and JWT token. Authentication is optional and depends on server configuration. When authentication is disabled, this header is not required.
+
+// @security BearerAuth
+// @description Authentication is optional and depends on server configuration. When enabled, all API endpoints require a valid JWT token in the Authorization header. When disabled, no authentication is required.
 
 var (
 	// Version is set during build time

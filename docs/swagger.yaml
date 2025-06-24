@@ -1,28 +1,48 @@
 basePath: /
 definitions:
   model.CreateDomainRequest:
+    description: Request to create a new domain entry
     properties:
       alias:
-        description: Alias is an optional alternative identifier.
+        description: |-
+          Alias is an optional alternative identifier.
+          @Description Optional alternative identifier for the domain
+        example: my-domain
         type: string
       alternative_names:
-        description: AlternativeNames is a list of additional domain names.
+        description: |-
+          AlternativeNames is a list of additional domain names.
+          @Description List of additional domain names (e.g., "www.example.com")
+        example:
+        - www.example.com
+        - api.example.com
         items:
           type: string
         type: array
       comment:
-        description: Comment is an optional description.
+        description: |-
+          Comment is an optional description.
+          @Description Optional description or comment for the domain
+        example: Production domain for web application
         type: string
       domain:
-        description: Domain is the primary domain name (required).
+        description: |-
+          Domain is the primary domain name (required).
+          @Description Primary domain name (required)
+          @required
+        example: example.com
         type: string
       enabled:
-        description: Enabled indicates whether the domain should be active.
+        description: |-
+          Enabled indicates whether the domain should be active.
+          @Description Whether the domain is enabled for certificate issuance
+        example: true
         type: boolean
     required:
     - domain
     type: object
   model.DomainEntry:
+    description: Domain configuration entry for SSL certificate management
     properties:
       alias:
         description: Certificate alias for reference.
@@ -43,61 +63,96 @@ definitions:
         type: boolean
       metadata:
         allOf:
-        - $ref: '#/definitions/model.Metadata'
-        description: Metadata contains additional information about the domain entry.
+        - $ref: '#/definitions/proto.Metadata'
+        description: |-
+          Metadata contains additional information about the domain entry.
+          @Description Additional metadata about the domain entry
     type: object
   model.DomainResponse:
+    description: Response containing a single domain entry
     properties:
       data:
         allOf:
         - $ref: '#/definitions/model.DomainEntry'
-        description: Data contains the domain entry if the operation was successful.
+        description: |-
+          Data contains the domain entry if the operation was successful.
+          @Description Domain entry data if the operation was successful
       error:
-        description: Error contains an error message if the operation failed.
+        description: |-
+          Error contains an error message if the operation failed.
+          @Description Error message if the operation failed
+        example: Domain not found
         type: string
       success:
-        description: Success indicates whether the operation was successful.
+        description: |-
+          Success indicates whether the operation was successful.
+          @Description Whether the operation was successful
+        example: true
         type: boolean
     type: object
   model.DomainsResponse:
+    description: Response containing multiple domain entries
     properties:
       data:
-        description: Data contains the list of domain entries if the operation was
-          successful.
+        description: |-
+          Data contains the list of domain entries if the operation was successful.
+          @Description List of domain entries if the operation was successful
         items:
           $ref: '#/definitions/model.DomainEntry'
         type: array
       error:
-        description: Error contains an error message if the operation failed.
+        description: |-
+          Error contains an error message if the operation failed.
+          @Description Error message if the operation failed
+        example: Failed to load domains
         type: string
       success:
-        description: Success indicates whether the operation was successful.
+        description: |-
+          Success indicates whether the operation was successful.
+          @Description Whether the operation was successful
+        example: true
         type: boolean
     type: object
-  model.Metadata:
-    additionalProperties: {}
-    type: object
   model.UpdateDomainRequest:
+    description: Request to update an existing domain entry
     properties:
       alias:
-        description: Alias is an optional alternative identifier.
+        description: |-
+          Alias is an optional alternative identifier.
+          @Description Optional alternative identifier for the domain
+        example: my-domain
         type: string
       alternative_names:
-        description: AlternativeNames is a list of additional domain names.
+        description: |-
+          AlternativeNames is a list of additional domain names.
+          @Description List of additional domain names (e.g., "www.example.com")
+        example:
+        - www.example.com
+        - api.example.com
         items:
           type: string
         type: array
       comment:
-        description: Comment is an optional description.
+        description: |-
+          Comment is an optional description.
+          @Description Optional description or comment for the domain
+        example: Production domain for web application
         type: string
       enabled:
-        description: Enabled indicates whether the domain should be active.
+        description: |-
+          Enabled indicates whether the domain should be active.
+          @Description Whether the domain is enabled for certificate issuance
+        example: true
         type: boolean
+    type: object
+  proto.Metadata:
     type: object
 host: localhost:3000
 info:
   contact: {}
-  description: This API provides a REST interface to manage domains for https://github.com/dehydrated-io/dehydrated
+  description: Authentication is optional and depends on server configuration. When
+    enabled, all API endpoints require a valid JWT token in the Authorization header.
+    When disabled, no authentication is required.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -114,6 +169,10 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/model.DomainsResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
           schema:
             $ref: '#/definitions/model.DomainsResponse'
         "500":
@@ -144,7 +203,11 @@ paths:
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "400":
-          description: Bad Request
+          description: Bad Request - Invalid request body or domain already exists
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
           schema:
             $ref: '#/definitions/model.DomainResponse'
       security:
@@ -169,11 +232,15 @@ paths:
         "204":
           description: No Content
         "400":
-          description: Bad Request
+          description: Bad Request - Invalid domain parameter
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "404":
-          description: Not Found
+          description: Not Found - Domain not found
           schema:
             $ref: '#/definitions/model.DomainResponse'
       security:
@@ -199,11 +266,15 @@ paths:
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "400":
-          description: Bad Request
+          description: Bad Request - Invalid domain parameter
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "404":
-          description: Not Found
+          description: Not Found - Domain not found
           schema:
             $ref: '#/definitions/model.DomainResponse'
       security:
@@ -235,11 +306,15 @@ paths:
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "400":
-          description: Bad Request
+          description: Bad Request - Invalid request body or domain parameter
+          schema:
+            $ref: '#/definitions/model.DomainResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
           schema:
             $ref: '#/definitions/model.DomainResponse'
         "404":
-          description: Not Found
+          description: Not Found - Domain not found
           schema:
             $ref: '#/definitions/model.DomainResponse'
       security:
@@ -247,9 +322,30 @@ paths:
       summary: Update a domain
       tags:
       - domains
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the API is running and healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.DomainsResponse'
+      security:
+      - BearerAuth: []
+      summary: Health check
+      tags:
+      - health
+security:
+- BearerAuth: []
 securityDefinitions:
   BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
+    description: Type "Bearer" followed by a space and JWT token. Authentication is
+      optional and depends on server configuration. When authentication is disabled,
+      this header is not required.
     in: header
     name: Authorization
     type: apiKey

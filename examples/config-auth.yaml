@@ -9,15 +9,15 @@ logging:
 # Azure AD authentication configuration using Microsoft Graph
 auth:
   # The Azure AD tenant ID
-  tenantId: ""
+  tenantId: "cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
   # Microsoft Graph resource ID
-  clientId: ""
+  clientId: "00000003-0000-0000-c000-000000000000"
   # The authority URL for Azure AD
-  authority: "https://login.microsoftonline.com/<tenantId>"
+  authority: "https://login.microsoftonline.com/cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
   # List of allowed audience values in the JWT token
   allowedAudiences:
     - "https://graph.microsoft.com"
-    - "https://<valid-tenant-domain>/00000003-0000-0000-c000-000000000000"
+    - "https://schumann-it.com/00000003-0000-0000-c000-000000000000"
 
 plugins:
   example:

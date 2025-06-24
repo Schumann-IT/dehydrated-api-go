@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This API provides a REST interface to manage domains for https://github.com/dehydrated-io/dehydrated",
+        "description": "Authentication is optional and depends on server configuration. When enabled, all API endpoints require a valid JWT token in the Authorization header. When disabled, no authentication is required.",
         "title": "Dehydrated API",
         "contact": {},
         "license": {
@@ -34,6 +34,12 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
                             "$ref": "#/definitions/model.DomainsResponse"
                         }
@@ -82,7 +88,13 @@
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid request body or domain already exists",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
@@ -125,13 +137,19 @@
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid domain parameter",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Not Found - Domain not found",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
@@ -181,13 +199,19 @@
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid request body or domain parameter",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Not Found - Domain not found",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
@@ -225,15 +249,49 @@
                         "description": "No Content"
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid domain parameter",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Not Found - Domain not found",
                         "schema": {
                             "$ref": "#/definitions/model.DomainResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Check if the API is running and healthy",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.DomainsResponse"
                         }
                     }
                 }
@@ -242,37 +300,47 @@
     },
     "definitions": {
         "model.CreateDomainRequest": {
+            "description": "Request to create a new domain entry",
             "type": "object",
             "required": [
                 "domain"
             ],
             "properties": {
                 "alias": {
-                    "description": "Alias is an optional alternative identifier.",
-                    "type": "string"
+                    "description": "Alias is an optional alternative identifier.\n@Description Optional alternative identifier for the domain",
+                    "type": "string",
+                    "example": "my-domain"
                 },
                 "alternative_names": {
-                    "description": "AlternativeNames is a list of additional domain names.",
+                    "description": "AlternativeNames is a list of additional domain names.\n@Description List of additional domain names (e.g., \"www.example.com\")",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "www.example.com",
+                        "api.example.com"
+                    ]
                 },
                 "comment": {
-                    "description": "Comment is an optional description.",
-                    "type": "string"
+                    "description": "Comment is an optional description.\n@Description Optional description or comment for the domain",
+                    "type": "string",
+                    "example": "Production domain for web application"
                 },
                 "domain": {
-                    "description": "Domain is the primary domain name (required).",
-                    "type": "string"
+                    "description": "Domain is the primary domain name (required).\n@Description Primary domain name (required)\n@required",
+                    "type": "string",
+                    "example": "example.com"
                 },
                 "enabled": {
-                    "description": "Enabled indicates whether the domain should be active.",
-                    "type": "boolean"
+                    "description": "Enabled indicates whether the domain should be active.\n@Description Whether the domain is enabled for certificate issuance",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
         "model.DomainEntry": {
+            "description": "Domain configuration entry for SSL certificate management",
             "type": "object",
             "properties": {
                 "alias": {
@@ -299,20 +367,21 @@
                     "type": "boolean"
                 },
                 "metadata": {
-                    "description": "Metadata contains additional information about the domain entry.",
+                    "description": "Metadata contains additional information about the domain entry.\n@Description Additional metadata about the domain entry",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.Metadata"
+                            "$ref": "#/definitions/proto.Metadata"
                         }
                     ]
                 }
             }
         },
         "model.DomainResponse": {
+            "description": "Response containing a single domain entry",
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "Data contains the domain entry if the operation was successful.",
+                    "description": "Data contains the domain entry if the operation was successful.\n@Description Domain entry data if the operation was successful",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.DomainEntry"
@@ -320,70 +389,87 @@
                     ]
                 },
                 "error": {
-                    "description": "Error contains an error message if the operation failed.",
-                    "type": "string"
+                    "description": "Error contains an error message if the operation failed.\n@Description Error message if the operation failed",
+                    "type": "string",
+                    "example": "Domain not found"
                 },
                 "success": {
-                    "description": "Success indicates whether the operation was successful.",
-                    "type": "boolean"
+                    "description": "Success indicates whether the operation was successful.\n@Description Whether the operation was successful",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
         "model.DomainsResponse": {
+            "description": "Response containing multiple domain entries",
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "Data contains the list of domain entries if the operation was successful.",
+                    "description": "Data contains the list of domain entries if the operation was successful.\n@Description List of domain entries if the operation was successful",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.DomainEntry"
                     }
                 },
                 "error": {
-                    "description": "Error contains an error message if the operation failed.",
-                    "type": "string"
+                    "description": "Error contains an error message if the operation failed.\n@Description Error message if the operation failed",
+                    "type": "string",
+                    "example": "Failed to load domains"
                 },
                 "success": {
-                    "description": "Success indicates whether the operation was successful.",
-                    "type": "boolean"
+                    "description": "Success indicates whether the operation was successful.\n@Description Whether the operation was successful",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
-        "model.Metadata": {
-            "type": "object",
-            "additionalProperties": {}
-        },
         "model.UpdateDomainRequest": {
+            "description": "Request to update an existing domain entry",
             "type": "object",
             "properties": {
                 "alias": {
-                    "description": "Alias is an optional alternative identifier.",
-                    "type": "string"
+                    "description": "Alias is an optional alternative identifier.\n@Description Optional alternative identifier for the domain",
+                    "type": "string",
+                    "example": "my-domain"
                 },
                 "alternative_names": {
-                    "description": "AlternativeNames is a list of additional domain names.",
+                    "description": "AlternativeNames is a list of additional domain names.\n@Description List of additional domain names (e.g., \"www.example.com\")",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "www.example.com",
+                        "api.example.com"
+                    ]
                 },
                 "comment": {
-                    "description": "Comment is an optional description.",
-                    "type": "string"
+                    "description": "Comment is an optional description.\n@Description Optional description or comment for the domain",
+                    "type": "string",
+                    "example": "Production domain for web application"
                 },
                 "enabled": {
-                    "description": "Enabled indicates whether the domain should be active.",
-                    "type": "boolean"
+                    "description": "Enabled indicates whether the domain should be active.\n@Description Whether the domain is enabled for certificate issuance",
+                    "type": "boolean",
+                    "example": true
                 }
             }
+        },
+        "proto.Metadata": {
+            "type": "object"
         }
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "description": "Type \"Bearer\" followed by a space and JWT token. Authentication is optional and depends on server configuration. When authentication is disabled, this header is not required.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
         }
-    }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ]
 }

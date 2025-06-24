@@ -36,7 +36,8 @@ func (h *DomainHandler) RegisterRoutes(app fiber.Router) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} model.DomainsResponse
-// @Failure 500 {object} model.DomainsResponse
+// @Failure 401 {object} model.DomainsResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 500 {object} model.DomainsResponse "Internal Server Error"
 // @Router /api/v1/domains [get]
 // ListDomains handles GET /api/v1/domains
 func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
@@ -62,8 +63,9 @@ func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param domain path string true "Domain name"
 // @Success 200 {object} model.DomainResponse
-// @Failure 400 {object} model.DomainResponse
-// @Failure 404 {object} model.DomainResponse
+// @Failure 400 {object} model.DomainResponse "Bad Request - Invalid domain parameter"
+// @Failure 401 {object} model.DomainResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 404 {object} model.DomainResponse "Not Found - Domain not found"
 // @Router /api/v1/domains/{domain} [get]
 // GetDomain handles GET /api/v1/domains/:domain
 func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
@@ -97,7 +99,8 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body model.CreateDomainRequest true "Domain creation request"
 // @Success 201 {object} model.DomainResponse
-// @Failure 400 {object} model.DomainResponse
+// @Failure 400 {object} model.DomainResponse "Bad Request - Invalid request body or domain already exists"
+// @Failure 401 {object} model.DomainResponse "Unauthorized - Invalid or missing authentication token"
 // @Router /api/v1/domains [post]
 // CreateDomain handles POST /api/v1/domains
 func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
@@ -132,8 +135,9 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 // @Param domain path string true "Domain name"
 // @Param request body model.UpdateDomainRequest true "Domain update request"
 // @Success 200 {object} model.DomainResponse
-// @Failure 400 {object} model.DomainResponse
-// @Failure 404 {object} model.DomainResponse
+// @Failure 400 {object} model.DomainResponse "Bad Request - Invalid request body or domain parameter"
+// @Failure 401 {object} model.DomainResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 404 {object} model.DomainResponse "Not Found - Domain not found"
 // @Router /api/v1/domains/{domain} [put]
 // UpdateDomain handles PUT /api/v1/domains/:domain
 func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
@@ -175,8 +179,9 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param domain path string true "Domain name"
 // @Success 204 "No Content"
-// @Failure 400 {object} model.DomainResponse
-// @Failure 404 {object} model.DomainResponse
+// @Failure 400 {object} model.DomainResponse "Bad Request - Invalid domain parameter"
+// @Failure 401 {object} model.DomainResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 404 {object} model.DomainResponse "Not Found - Domain not found"
 // @Router /api/v1/domains/{domain} [delete]
 // DeleteDomain handles DELETE /api/v1/domains/:domain
 func (h *DomainHandler) DeleteDomain(c *fiber.Ctx) error {
