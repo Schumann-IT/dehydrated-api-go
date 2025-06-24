@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestDefaultConfig verifies that the DefaultConfig function returns a Config
@@ -15,11 +15,11 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
-	assert.Equal(t, "www-data", config.Group, "Expected Group to be www-data")
-	assert.Equal(t, "https://acme-v02.api.letsencrypt.org/directory", config.Ca, "Expected Ca to be https://acme-v02.api.letsencrypt.org/directory")
-	assert.Equal(t, "openssl", config.Openssl, "Expected Openssl to be openssl")
-	assert.Equal(t, 5, int(config.OcspDays), "Expected OcspDays to be 5")
-	assert.Equal(t, "v2", config.Api, "Expected Api to be v2")
+	require.Equal(t, "www-data", config.Group, "Expected Group to be www-data")
+	require.Equal(t, "https://acme-v02.api.letsencrypt.org/directory", config.Ca, "Expected Ca to be https://acme-v02.api.letsencrypt.org/directory")
+	require.Equal(t, "openssl", config.Openssl, "Expected Openssl to be openssl")
+	require.Equal(t, 5, int(config.OcspDays), "Expected OcspDays to be 5")
+	require.Equal(t, "v2", config.Api, "Expected Api to be v2")
 }
 
 // TestLoadConfig tests loading configuration from a config file.
@@ -608,16 +608,16 @@ func TestConfig_MarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Marshal the config
 			actual, err := json.Marshal(tt.config)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Compare JSON objects (ignoring whitespace)
-			var actualJSON, expectedJSON interface{}
+			var actualJSON, expectedJSON any
 			err = json.Unmarshal(actual, &actualJSON)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			err = json.Unmarshal([]byte(tt.expected), &expectedJSON)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
-			assert.Equal(t, expectedJSON, actualJSON)
+			require.Equal(t, expectedJSON, actualJSON)
 		})
 	}
 }

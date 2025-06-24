@@ -9,20 +9,20 @@ import (
 
 // Metadata represents a map of metadata values that can be converted to and from proto values
 type Metadata struct {
-	values map[string]interface{}
+	values map[string]any
 	error  string
 }
 
 // NewMetadata creates a new Metadata
 func NewMetadata() *Metadata {
 	return &Metadata{
-		values: make(map[string]interface{}),
+		values: make(map[string]any),
 	}
 }
 
 // FromProto sets values from a proto value map
 func (mm *Metadata) FromProto(name string, m map[string]*structpb.Value) {
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for k, v := range m {
 		if v != nil {
 			result[k] = v.AsInterface()
@@ -55,20 +55,20 @@ func (mm *Metadata) GetError() string {
 }
 
 // Set sets a value for the given key
-func (mm *Metadata) Set(key string, value interface{}) {
+func (mm *Metadata) Set(key string, value any) {
 	mm.values[key] = value
 }
 
 // SetMap converts the parameter value to a map[string]interface{} using JSON marshaling
 // and sets the result as the value for the given key.
 // If the conversion fails, an error is returned.
-func (mm *Metadata) SetMap(key string, value interface{}) error {
+func (mm *Metadata) SetMap(key string, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err = json.Unmarshal(data, &result); err != nil {
 		return fmt.Errorf("failed to unmarshal: %w", err)
 	}
@@ -79,7 +79,7 @@ func (mm *Metadata) SetMap(key string, value interface{}) error {
 }
 
 // Get returns a value for the given key
-func (mm *Metadata) Get(key string) interface{} {
+func (mm *Metadata) Get(key string) any {
 	return mm.values[key]
 }
 

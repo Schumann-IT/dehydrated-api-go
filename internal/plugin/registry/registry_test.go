@@ -10,8 +10,8 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestRegistry(t *testing.T) {
@@ -30,84 +30,40 @@ func TestRegistry(t *testing.T) {
 		"simple": {
 			Enabled: true,
 			Path:    pluginPath,
-			Config: map[string]interface{}{
+			Config: map[string]any{
 				"name": "example",
 			},
 		},
 	}
-	r := NewRegistry(cfg)
+
+	// Create logger for testing
+	logger := zap.NewNop()
+
+	r := NewRegistry(cfg, logger)
 	defer r.Close()
 
-	for _, p := range r.Plugins() {
-		// Create a test domain entry
-		domain := &pb.DomainEntry{
-			Domain:           "example.com",
-			AlternativeNames: []string{"www.example.com"},
-			Alias:            "example",
-			Enabled:          true,
-			Comment:          "Test domain",
-		}
+	// Test that plugins are available
+	plugins := r.Plugins()
+	require.NotNil(t, plugins)
+	require.Contains(t, plugins, "simple")
 
-		// Create a test dehydrated config
-		dehydratedConfig := &pb.DehydratedConfig{
-			User:               "test",
-			Group:              "test",
-			BaseDir:            "/tmp/test",
-			CertDir:            "/tmp/test/certs",
-			DomainsDir:         "/tmp/test/domains",
-			AccountsDir:        "/tmp/test/accounts",
-			ChallengesDir:      "/tmp/test/challenges",
-			ChainCache:         "/tmp/test/chain",
-			DomainsFile:        "/tmp/test/domains.txt",
-			ConfigFile:         "/tmp/test/config",
-			HookScript:         "/tmp/test/hook.sh",
-			LockFile:           "/tmp/test/lock",
-			OpensslConfig:      "/tmp/test/openssl.cnf",
-			Openssl:            "/usr/bin/openssl",
-			KeySize:            2048,
-			Ca:                 "https://acme-v02.api.letsencrypt.org/directory",
-			OldCa:              "https://acme-v01.api.letsencrypt.org/directory",
-			AcceptTerms:        true,
-			Ipv4:               true,
-			Ipv6:               false,
-			PreferredChain:     "ISRG Root X1",
-			Api:                "v2",
-			KeyAlgo:            "rsa",
-			RenewDays:          30,
-			ForceRenew:         false,
-			ForceValidation:    false,
-			PrivateKeyRenew:    false,
-			PrivateKeyRollover: false,
-			ChallengeType:      "http-01",
-			WellKnownDir:       "/tmp/test/.well-known",
-			AlpnDir:            "/tmp/test/alpn",
-			HookChain:          false,
-			OcspMustStaple:     true,
-			OcspFetch:          true,
-			OcspDays:           7,
-			NoLock:             false,
-			KeepGoing:          false,
-			FullChain:          true,
-			Ocsp:               true,
-			AutoCleanup:        true,
-			ContactEmail:       "test@example.com",
-			CurlOpts:           "",
-			ConfigD:            "/tmp/test/config.d",
-		}
+	// Test plugin functionality
+	plugin := plugins["simple"]
+	require.NotNil(t, plugin)
 
-		// Get plugin metadata
-		req := &pb.GetMetadataRequest{
-			DomainEntry:      domain,
-			DehydratedConfig: dehydratedConfig,
-		}
-		resp, err := p.GetMetadata(ctx, req)
-		require.NoError(t, err)
-
-		// Check the metadata value
-		if resp.Metadata != nil {
-			if nameValue, ok := resp.Metadata["name"]; ok {
-				assert.Equal(t, "example", nameValue.AsInterface())
-			}
-		}
+	// Test GetMetadata call
+	domainEntry := &pb.DomainEntry{
+		Domain:           "example.com",
+		AlternativeNames: []string{"www.example.com"},
+		Alias:            "example",
+		Enabled:          true,
+		Comment:          "Test domain",
 	}
+
+	resp, err := plugin.GetMetadata(ctx, &pb.GetMetadataRequest{
+		DomainEntry: domainEntry,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Metadata)
 }

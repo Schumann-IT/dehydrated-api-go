@@ -19,7 +19,7 @@ type DomainEntry struct {
 
 // MarshalJSON implements the json.Marshaler interface to ensure all fields are included
 func (e *DomainEntry) MarshalJSON() ([]byte, error) {
-	metadata := make(map[string]interface{})
+	metadata := make(map[string]any)
 	if e.Metadata != nil {
 		protoMap, err := e.Metadata.ToProto()
 		if err != nil {
@@ -30,7 +30,7 @@ func (e *DomainEntry) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"domain":            e.GetDomain(),
 		"alternative_names": e.GetAlternativeNames(),
 		"alias":             e.GetAlias(),

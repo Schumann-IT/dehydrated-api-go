@@ -7,7 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/schumann-it/dehydrated-api-go/internal/util"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var validate = validator.New()
@@ -63,8 +63,8 @@ func TestDomainEntry_MarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := json.Marshal(tt.entry)
-			assert.NoError(t, err)
-			assert.JSONEq(t, tt.expected, string(data))
+			require.NoError(t, err)
+			require.JSONEq(t, tt.expected, string(data))
 		})
 	}
 }
@@ -81,7 +81,7 @@ func TestDomainEntry_SetMetadata(t *testing.T) {
 	metadata.Set("key", "value")
 	entry.SetMetadata(metadata)
 
-	assert.Equal(t, metadata, entry.Metadata)
+	require.Equal(t, metadata, entry.Metadata)
 }
 
 func TestDomainEntry_PathName(t *testing.T) {
@@ -113,7 +113,7 @@ func TestDomainEntry_PathName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.entry.PathName())
+			require.Equal(t, tt.expected, tt.entry.PathName())
 		})
 	}
 }
@@ -147,9 +147,9 @@ func TestCreateDomainRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validate.Struct(tt.request)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -184,7 +184,7 @@ func TestUpdateDomainRequest_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// UpdateDomainRequest doesn't have required fields, so all validations should pass
-			assert.True(t, tt.isValid)
+			require.True(t, tt.isValid)
 		})
 	}
 }
@@ -219,12 +219,12 @@ func TestDomainResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.success, tt.response.Success)
+			require.Equal(t, tt.success, tt.response.Success)
 			if tt.success {
-				assert.NotEmpty(t, tt.response.Data.Domain)
-				assert.Empty(t, tt.response.Error)
+				require.NotEmpty(t, tt.response.Data.Domain)
+				require.Empty(t, tt.response.Error)
 			} else {
-				assert.NotEmpty(t, tt.response.Error)
+				require.NotEmpty(t, tt.response.Error)
 			}
 		})
 	}
@@ -267,12 +267,12 @@ func TestDomainsResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.success, tt.response.Success)
+			require.Equal(t, tt.success, tt.response.Success)
 			if tt.success {
-				assert.NotEmpty(t, tt.response.Data)
-				assert.Empty(t, tt.response.Error)
+				require.NotEmpty(t, tt.response.Data)
+				require.Empty(t, tt.response.Error)
 			} else {
-				assert.NotEmpty(t, tt.response.Error)
+				require.NotEmpty(t, tt.response.Error)
 			}
 		})
 	}

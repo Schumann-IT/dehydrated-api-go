@@ -14,7 +14,7 @@ import (
 type PluginServer struct {
 	pb.UnimplementedPluginServer
 	impl   pb.PluginServer
-	config map[string]interface{}
+	config map[string]any
 }
 
 // NewPluginServer creates a new plugin server
@@ -52,17 +52,17 @@ func (p *GRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error
 }
 
 // GRPCClient is required by the go-plugin interface
-func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return pb.NewPluginClient(c), nil
 }
 
 // Client is required by the go-plugin interface
-func (p *GRPCPlugin) Client(broker *plugin.MuxBroker, rpcClient *rpc.Client) (interface{}, error) {
+func (p *GRPCPlugin) Client(broker *plugin.MuxBroker, rpcClient *rpc.Client) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
 
 // Server is required by the go-plugin interface
-func (p *GRPCPlugin) Server(broker *plugin.MuxBroker) (interface{}, error) {
+func (p *GRPCPlugin) Server(broker *plugin.MuxBroker) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
 

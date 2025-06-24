@@ -59,7 +59,7 @@ func main() {
 	s.Start()
 	defer s.Shutdown()
 
-	// Wait for interrupt signal
+	// Wait for the interrupt signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigChan

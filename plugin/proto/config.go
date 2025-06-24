@@ -45,7 +45,7 @@ func (cm *PluginConfig) Get(key string) *PluginConfigValue {
 }
 
 // Set sets a value for the given key
-func (cm *PluginConfig) Set(key string, value interface{}) {
+func (cm *PluginConfig) Set(key string, value any) {
 	cm.values[key] = NewConfigValue(value)
 }
 
@@ -90,7 +90,7 @@ func (cm *PluginConfig) GetStringSlice(key string) ([]string, error) {
 }
 
 // GetMap returns the value for the given key as a map[string]interface{}
-func (cm *PluginConfig) GetMap(key string) (map[string]interface{}, error) {
+func (cm *PluginConfig) GetMap(key string) (map[string]any, error) {
 	if v, ok := cm.values[key]; ok {
 		return v.GetMap()
 	}
@@ -98,7 +98,7 @@ func (cm *PluginConfig) GetMap(key string) (map[string]interface{}, error) {
 }
 
 // GetStruct converts the value for the given key to the given struct type
-func (cm *PluginConfig) GetStruct(key string, target interface{}) error {
+func (cm *PluginConfig) GetStruct(key string, target any) error {
 	if v, ok := cm.values[key]; ok {
 		return v.GetStruct(target)
 	}
@@ -107,11 +107,11 @@ func (cm *PluginConfig) GetStruct(key string, target interface{}) error {
 
 // PluginConfigValue represents a configuration value that can be converted to and from proto values
 type PluginConfigValue struct {
-	value interface{}
+	value any
 }
 
 // NewConfigValue creates a new PluginConfigValue from a Go value
-func NewConfigValue(v interface{}) *PluginConfigValue {
+func NewConfigValue(v any) *PluginConfigValue {
 	return &PluginConfigValue{value: v}
 }
 
@@ -175,7 +175,7 @@ func (cv *PluginConfigValue) GetBool() (bool, error) {
 
 // GetStringSlice returns the value as a []string
 func (cv *PluginConfigValue) GetStringSlice() ([]string, error) {
-	if slice, ok := cv.value.([]interface{}); ok {
+	if slice, ok := cv.value.([]any); ok {
 		result := make([]string, len(slice))
 		for i, v := range slice {
 			if str, ok := v.(string); ok {
@@ -190,16 +190,16 @@ func (cv *PluginConfigValue) GetStringSlice() ([]string, error) {
 }
 
 // GetMap returns the value as a map[string]interface{}
-func (cv *PluginConfigValue) GetMap() (map[string]interface{}, error) {
-	if m, ok := cv.value.(map[string]interface{}); ok {
+func (cv *PluginConfigValue) GetMap() (map[string]any, error) {
+	if m, ok := cv.value.(map[string]any); ok {
 		return m, nil
 	}
 	return nil, fmt.Errorf("value is not a map: %v", cv.value)
 }
 
 // GetStruct converts the value to the given struct type
-func (cv *PluginConfigValue) GetStruct(target interface{}) error {
-	if m, ok := cv.value.(map[string]interface{}); ok {
+func (cv *PluginConfigValue) GetStruct(target any) error {
+	if m, ok := cv.value.(map[string]any); ok {
 		val := reflect.ValueOf(target)
 		if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Struct {
 			return fmt.Errorf("target must be a pointer to a struct")
@@ -238,7 +238,7 @@ func (cv *PluginConfigValue) GetStruct(target interface{}) error {
 						field.SetBool(b)
 					}
 				case reflect.Slice:
-					if slice, ok := value.([]interface{}); ok {
+					if slice, ok := value.([]any); ok {
 						sliceType := field.Type().Elem()
 						newSlice := reflect.MakeSlice(field.Type(), len(slice), len(slice))
 						for j, v := range slice {

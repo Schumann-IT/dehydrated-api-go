@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/logger"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -130,12 +130,12 @@ func TestConfigValidation(t *testing.T) {
 			err := cfg.Validate()
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
+					require.Contains(t, err.Error(), tt.errContains)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -215,19 +215,19 @@ port: not-a-number
 
 			if tt.configContent != "" {
 				err := os.WriteFile(configPath, []byte(tt.configContent), 0644)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			if tt.setupFiles != nil {
 				err := tt.setupFiles(tmpDir)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			cfg := NewConfig()
 			cfg.Load(configPath)
 			if cfg.err != nil {
 				if tt.expectError {
-					assert.Error(t, cfg.err)
+					require.Error(t, cfg.err)
 				} else {
 					t.Fatalf("Unexpected error: %v", cfg.err)
 				}
@@ -239,15 +239,15 @@ port: not-a-number
 
 			// Compare configurations
 			if tt.expectedConfig != nil {
-				assert.Equal(t, tt.expectedConfig.Port, cfg.Port)
-				assert.Equal(t, tt.expectedConfig.DehydratedBaseDir, cfg.DehydratedBaseDir)
-				assert.Equal(t, tt.expectedConfig.EnableWatcher, cfg.EnableWatcher)
+				require.Equal(t, tt.expectedConfig.Port, cfg.Port)
+				require.Equal(t, tt.expectedConfig.DehydratedBaseDir, cfg.DehydratedBaseDir)
+				require.Equal(t, tt.expectedConfig.EnableWatcher, cfg.EnableWatcher)
 
 				if tt.expectedConfig.Logging != nil {
-					assert.NotNil(t, cfg.Logging)
-					assert.Equal(t, tt.expectedConfig.Logging.Level, cfg.Logging.Level)
-					assert.Equal(t, tt.expectedConfig.Logging.Encoding, cfg.Logging.Encoding)
-					assert.Equal(t, tt.expectedConfig.Logging.OutputPath, cfg.Logging.OutputPath)
+					require.NotNil(t, cfg.Logging)
+					require.Equal(t, tt.expectedConfig.Logging.Level, cfg.Logging.Level)
+					require.Equal(t, tt.expectedConfig.Logging.Encoding, cfg.Logging.Encoding)
+					require.Equal(t, tt.expectedConfig.Logging.OutputPath, cfg.Logging.OutputPath)
 				}
 			}
 		})

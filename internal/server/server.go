@@ -98,7 +98,7 @@ func (s *Server) WithDomainService() *Server {
 		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	r := registry.NewRegistry(s.Config.Plugins)
+	r := registry.NewRegistry(s.Config.Plugins, s.Logger)
 	domainService := service.NewDomainService(cfg, r)
 
 	if s.Logger != nil {

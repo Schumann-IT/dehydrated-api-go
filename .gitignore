@@ -60,3 +60,4 @@ examples/plugins/simple/simple
 
 internal/plugin/grpc/testdata/test-plugin/test-plugin
 dehydrated-api-go
+.dehydrated-api-go

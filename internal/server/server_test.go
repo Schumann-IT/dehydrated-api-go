@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -51,9 +50,9 @@ enableWatcher: true
 
 	// Test config loading
 	cfg := NewConfig().Load(configPath)
-	assert.Equal(t, 8080, cfg.Port)
-	assert.Equal(t, tmpDir, cfg.DehydratedBaseDir)
-	assert.True(t, cfg.EnableWatcher)
+	require.Equal(t, 8080, cfg.Port)
+	require.Equal(t, tmpDir, cfg.DehydratedBaseDir)
+	require.True(t, cfg.EnableWatcher)
 }
 
 // TestMainAccIntegration performs an integration test of the main application.
@@ -122,9 +121,9 @@ enableWatcher: false
 func TestServerInitialization(t *testing.T) {
 	t.Run("WithVersionInfo", func(t *testing.T) {
 		s := NewServer().WithVersionInfo("1.0.0", "abc123", "2024-01-01")
-		assert.Equal(t, "1.0.0", s.Version)
-		assert.Equal(t, "abc123", s.Commit)
-		assert.Equal(t, "2024-01-01", s.BuildTime)
+		require.Equal(t, "1.0.0", s.Version)
+		require.Equal(t, "abc123", s.Commit)
+		require.Equal(t, "2024-01-01", s.BuildTime)
 	})
 
 	t.Run("WithLogger", func(t *testing.T) {
@@ -141,15 +140,15 @@ logging:
 		require.NoError(t, err)
 
 		s := NewServer().WithConfig(configPath).WithLogger()
-		assert.NotNil(t, s.Logger)
-		assert.NotEqual(t, zap.NewNop(), s.Logger)
+		require.NotNil(t, s.Logger)
+		require.NotEqual(t, zap.NewNop(), s.Logger)
 	})
 
 	t.Run("WithInvalidConfig", func(t *testing.T) {
 		s := NewServer().WithConfig("non-existent-config.yaml")
-		assert.NotNil(t, s.Config)
+		require.NotNil(t, s.Config)
 		// Should use default values when config file doesn't exist
-		assert.Equal(t, 3000, s.Config.Port)
+		require.Equal(t, 3000, s.Config.Port)
 	})
 }
 
@@ -190,9 +189,9 @@ enableWatcher: true
 		}
 		require.NoError(t, scanner.Err())
 
-		assert.Contains(t, output, "dehydrated-api-go version 1.0.0")
-		assert.Contains(t, output, "commit: abc123")
-		assert.Contains(t, output, "built: 2024-01-01")
+		require.Contains(t, output, "dehydrated-api-go version 1.0.0")
+		require.Contains(t, output, "commit: abc123")
+		require.Contains(t, output, "built: 2024-01-01")
 	})
 
 	// Test PrintServerConfig
@@ -214,9 +213,9 @@ enableWatcher: true
 		}
 		require.NoError(t, scanner.Err())
 
-		assert.Contains(t, output, "Resolved Server Config")
-		assert.Contains(t, output, "port: 8080")
-		assert.Contains(t, output, "dehydratedBaseDir: /tmp/dehydrated")
+		require.Contains(t, output, "Resolved Server Config")
+		require.Contains(t, output, "port: 8080")
+		require.Contains(t, output, "dehydratedBaseDir: /tmp/dehydrated")
 	})
 
 	// Test PrintDehydratedConfig
@@ -241,7 +240,7 @@ enableWatcher: true
 		}
 		require.NoError(t, scanner.Err())
 
-		assert.Contains(t, output, "Resolved Dehydrated Config")
+		require.Contains(t, output, "Resolved Dehydrated Config")
 	})
 }
 
@@ -270,14 +269,14 @@ enableWatcher: false
 		time.Sleep(100 * time.Millisecond)
 
 		// Verify server is running
-		assert.NotZero(t, s.GetPort())
+		require.NotZero(t, s.GetPort())
 
 		s.Shutdown()
 		time.Sleep(100 * time.Millisecond)
 
 		// Verify server is stopped
 		_, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("StartWithInvalidPort", func(t *testing.T) {
@@ -332,7 +331,7 @@ enableWatcher: true
 		time.Sleep(100 * time.Millisecond)
 
 		// Verify domain service is initialized
-		assert.NotNil(t, s.domainService)
+		require.NotNil(t, s.domainService)
 
 		// Test domain operations
 		client := &http.Client{}
@@ -341,7 +340,7 @@ enableWatcher: true
 		// Delete any existing domains first
 		resp, err := http.Get(baseURL + "/domains")
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var existingDomains model.DomainsResponse
 		err = json.NewDecoder(resp.Body).Decode(&existingDomains)
@@ -349,11 +348,11 @@ enableWatcher: true
 		resp.Body.Close()
 
 		for _, domain := range existingDomains.Data {
-			req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), nil)
+			req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), http.NoBody)
 			require.NoError(t, err)
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 			resp.Body.Close()
 		}
 
@@ -363,19 +362,19 @@ enableWatcher: true
 		createReq.Header.Set("Content-Type", "application/json")
 		resp, err = client.Do(createReq)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+		require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 		// Get domains
 		resp, err = http.Get(baseURL + "/domains")
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var domainsResp model.DomainsResponse
 		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
 		require.NoError(t, err)
-		assert.True(t, domainsResp.Success)
-		assert.Len(t, domainsResp.Data, 1)
-		assert.Equal(t, "test.example.com", domainsResp.Data[0].Domain)
+		require.True(t, domainsResp.Success)
+		require.Len(t, domainsResp.Data, 1)
+		require.Equal(t, "test.example.com", domainsResp.Data[0].Domain)
 	})
 
 	t.Run("WithInvalidDomainService", func(t *testing.T) {

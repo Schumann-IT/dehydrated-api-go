@@ -51,7 +51,7 @@ func TestFileWatcher(t *testing.T) {
 	// Test debouncing
 	t.Run("Debouncing", func(t *testing.T) {
 		// Make multiple rapid modifications
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			if err := os.WriteFile(testFile, []byte("rapid change"), 0644); err != nil {
 				t.Fatalf("Failed to modify test file: %v", err)
 			}

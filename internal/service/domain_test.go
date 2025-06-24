@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
@@ -16,7 +18,6 @@ import (
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 	"github.com/schumann-it/dehydrated-api-go/internal/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,8 +56,8 @@ func TestDomainService(t *testing.T) {
 					Domain: "example.com",
 				}
 				entry, err := service.CreateDomain(req)
-				assert.NoError(t, err)
-				assert.Equal(t, "example.com", entry.Domain)
+				require.NoError(t, err)
+				require.Equal(t, "example.com", entry.Domain)
 			})
 
 			// Test CreateInvalidDomain
@@ -65,7 +66,7 @@ func TestDomainService(t *testing.T) {
 					Domain: "invalid..domain",
 				}
 				_, err := service.CreateDomain(req)
-				assert.Error(t, err)
+				require.Error(t, err)
 			})
 
 			// Test CreateDuplicateDomain
@@ -74,20 +75,20 @@ func TestDomainService(t *testing.T) {
 					Domain: "example.com",
 				}
 				_, err := service.CreateDomain(req)
-				assert.Error(t, err)
+				require.Error(t, err)
 			})
 
 			// Test GetDomain
 			t.Run("GetDomain", func(t *testing.T) {
 				entry, err := service.GetDomain("example.com")
-				assert.NoError(t, err)
-				assert.Equal(t, "example.com", entry.Domain)
+				require.NoError(t, err)
+				require.Equal(t, "example.com", entry.Domain)
 			})
 
 			// Test GetNonExistentDomain
 			t.Run("GetNonExistentDomain", func(t *testing.T) {
 				_, err := service.GetDomain("nonexistent.com")
-				assert.Error(t, err)
+				require.Error(t, err)
 			})
 
 			// Test UpdateDomain
@@ -96,25 +97,25 @@ func TestDomainService(t *testing.T) {
 					Enabled: util.BoolPtr(true),
 				}
 				entry, err := service.UpdateDomain("example.com", req)
-				assert.NoError(t, err)
-				assert.True(t, entry.Enabled)
+				require.NoError(t, err)
+				require.True(t, entry.Enabled)
 			})
 
 			// Test ListDomains
 			t.Run("ListDomains", func(t *testing.T) {
 				entries, err := service.ListDomains()
-				assert.NoError(t, err)
-				assert.Len(t, entries, 1)
-				assert.Equal(t, "example.com", entries[0].Domain)
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+				require.Equal(t, "example.com", entries[0].Domain)
 			})
 
 			// Test DeleteDomain
 			t.Run("DeleteDomain", func(t *testing.T) {
 				err := service.DeleteDomain("example.com")
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				_, err = service.GetDomain("example.com")
-				assert.Error(t, err)
+				require.Error(t, err)
 			})
 		})
 	}
@@ -163,7 +164,7 @@ func TestDomainServiceErrors(t *testing.T) {
 		// Create a read-only directory to force cache reload failure
 		readOnlyDir := filepath.Join(tmpDir, "readonly")
 		err := os.MkdirAll(readOnlyDir, 0444)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		dc := &dehydrated.Config{
 			DehydratedConfig: pb.DehydratedConfig{
@@ -199,7 +200,7 @@ func TestConcurrentOperations(t *testing.T) {
 		numGoroutines := 10
 
 		// Start multiple goroutines that read and write
-		for i := 0; i < numGoroutines; i++ {
+		for i := range numGoroutines {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
@@ -247,15 +248,15 @@ func TestEdgeCases(t *testing.T) {
 		defer service.Close()
 
 		entries, err := service.ListDomains()
-		assert.NoError(t, err)
-		assert.Empty(t, entries)
+		require.NoError(t, err)
+		require.Empty(t, entries)
 	})
 
 	t.Run("FileSystemErrors", func(t *testing.T) {
 		// Create a read-only directory
 		readOnlyDir := filepath.Join(tmpDir, "readonly")
 		err := os.MkdirAll(readOnlyDir, 0444)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		dc := &dehydrated.Config{
 			DehydratedConfig: pb.DehydratedConfig{
@@ -282,12 +283,12 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 
 	t.Run("InvalidPath", func(t *testing.T) {
 		_, err := NewFileWatcher("/nonexistent/path", nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("NilCallback", func(t *testing.T) {
 		_, err := NewFileWatcher(domainsFile, nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("FileDeletedAndRecreated", func(t *testing.T) {
@@ -299,10 +300,10 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 
 		// Create initial file
 		err := os.WriteFile(domainsFile, []byte("example.com"), 0644)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		watcher, err := NewFileWatcher(domainsFile, callback)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		defer watcher.Close()
 
 		// Start the watcher
@@ -313,14 +314,14 @@ func TestFileWatcherEdgeCases(t *testing.T) {
 
 		// Delete the file
 		err = os.Remove(domainsFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Give the watcher time to process the deletion
 		time.Sleep(200 * time.Millisecond)
 
 		// Recreate the file with different content
 		err = os.WriteFile(domainsFile, []byte("example2.com"), 0644)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Wait for the callback to be called with a timeout
 		select {
@@ -340,24 +341,24 @@ func TestDomainServiceCleanup(t *testing.T) {
 	t.Run("CleanupWithWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc, nil).WithFileWatcher()
-		assert.NotNil(t, service.watcher)
+		require.NotNil(t, service.watcher)
 
 		// Wait a bit for the watcher to initialize
 		time.Sleep(100 * time.Millisecond)
 
 		err := service.Close()
-		assert.NoError(t, err)
-		// Note: We can't assert service.watcher is nil because Close() only stops the watcher
+		require.NoError(t, err)
+		// Note: We can't require service.watcher is nil because Close() only stops the watcher
 		// but doesn't set it to nil. This is an implementation detail.
 	})
 
 	t.Run("CleanupWithoutWatcher", func(t *testing.T) {
 		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
 		service := NewDomainService(dc, nil)
-		assert.Nil(t, service.watcher)
+		require.Nil(t, service.watcher)
 
 		err := service.Close()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -376,7 +377,7 @@ func TestDomainServiceOperations(t *testing.T) {
 			Enabled: util.BoolPtr(true),
 		}
 		_, err := service.UpdateDomain("nonexistent.com", req)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("DeleteNonExistentDomain", func(t *testing.T) {
@@ -385,7 +386,7 @@ func TestDomainServiceOperations(t *testing.T) {
 		defer service.Close()
 
 		err := service.DeleteDomain("nonexistent.com")
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -420,7 +421,7 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new domain service with default config and empty registry
 			cfg := dehydrated.NewConfig()
-			reg := registry.NewRegistry(make(map[string]config.PluginConfig))
+			reg := registry.NewRegistry(make(map[string]config.PluginConfig), zap.NewNop())
 			service := NewDomainService(cfg, reg)
 
 			// Create a test domain
@@ -436,17 +437,17 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 			// Update the domain
 			updated, err := service.UpdateDomain(tt.domain, tt.req)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, updated)
 
 				// Verify the domain was updated
 				domain, err := service.GetDomain(tt.domain)
 				require.NoError(t, err)
-				assert.Equal(t, tt.domain, domain.Domain)
-				assert.Equal(t, util.StringSlice(tt.req.AlternativeNames), domain.AlternativeNames)
-				assert.Equal(t, util.Bool(tt.req.Enabled), domain.Enabled)
+				require.Equal(t, tt.domain, domain.Domain)
+				require.Equal(t, util.StringSlice(tt.req.AlternativeNames), domain.AlternativeNames)
+				require.Equal(t, util.Bool(tt.req.Enabled), domain.Enabled)
 			}
 		})
 	}

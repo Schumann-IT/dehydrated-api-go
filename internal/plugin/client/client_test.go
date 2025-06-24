@@ -11,7 +11,6 @@ import (
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +27,7 @@ func TestClient(t *testing.T) {
 
 	// Create a test configuration
 	cfg := &config.PluginConfig{
-		Config: map[string]interface{}{
+		Config: map[string]any{
 			"name": "example",
 		},
 	}
@@ -104,8 +103,8 @@ func TestClient(t *testing.T) {
 	}
 	resp, err := client.plugin.GetMetadata(ctx, req)
 	require.NoError(t, err)
-	assert.Equal(t, "example", resp.Metadata["name"].GetStringValue())
-	assert.Equal(t, "example_value", resp.Metadata["example_key"].GetStringValue())
-	assert.Equal(t, float64(42), resp.Metadata["example_number"].GetNumberValue())
-	assert.Equal(t, true, resp.Metadata["example_bool"].GetBoolValue())
+	require.Equal(t, "example", resp.Metadata["name"].GetStringValue())
+	require.Equal(t, "example_value", resp.Metadata["example_key"].GetStringValue())
+	require.Equal(t, float64(42), resp.Metadata["example_number"].GetNumberValue())
+	require.True(t, resp.Metadata["example_bool"].GetBoolValue())
 }

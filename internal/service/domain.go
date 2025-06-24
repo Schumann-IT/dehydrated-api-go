@@ -185,8 +185,17 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 			DomainEntry:      &entry.DomainEntry,
 			DehydratedConfig: s.DehydratedConfig.DomainSpecificConfig(entry.PathName()).ToProto(),
 		})
+
 		if err != nil {
-			return err
+			s.logger.Error("plugin request failed", zap.String("plugin", name), zap.String("domain", entry.Domain), zap.Error(err))
+			entry.Metadata.SetMap(name, map[string]string{"error": err.Error()})
+			continue
+		}
+
+		if resp.Error != "" {
+			s.logger.Error("plugin request failed", zap.String("plugin", name), zap.String("domain", entry.Domain), zap.Error(errors.New(resp.Error)))
+			entry.Metadata.SetMap(name, map[string]string{"error": resp.Error})
+			continue
 		}
 
 		if resp.Metadata != nil {
@@ -209,8 +218,7 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 		if entry.Domain == domain {
 			entryCopy := entry
 			if err := s.enrichMetadata(entryCopy); err != nil {
-				s.logger.Error("failed to enrich metadata", zap.Error(err))
-				return nil, err
+				s.logger.Error("failed to enrich metadata", zap.String("domain", entry.Domain), zap.Error(err))
 			}
 			return entryCopy, nil
 		}
@@ -235,7 +243,6 @@ func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 		entries[i] = entry
 		if err := s.enrichMetadata(entries[i]); err != nil {
 			s.logger.Error("failed to enrich metadata", zap.String("domain", entries[i].Domain), zap.Error(err))
-			return nil, err
 		}
 	}
 
