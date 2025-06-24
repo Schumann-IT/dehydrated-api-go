@@ -143,7 +143,7 @@ func (s *Server) Start() {
 	h.RegisterRoutes(s.app)
 
 	// Add Swagger documentation
-	s.app.Get("/swagger/*", swagger.HandlerDefault)
+	s.app.Get("/docs/*", swagger.HandlerDefault)
 
 	// add API group
 	g := s.app.Group("/api/v1")

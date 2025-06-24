@@ -277,11 +277,6 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Check if the API is running and healthy",
                 "consumes": [
                     "application/json"

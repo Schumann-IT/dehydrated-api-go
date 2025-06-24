@@ -27,7 +27,7 @@ ci-build: $(BINARY_NAME) ## Build binary (without generate)
 generate: clean-generate swag ## Generate code and documentation
 	@go generate ./...
 
-run: $(BINARY_NAME) ## Run the binary with example config
+run: $(BINARY_NAME) $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run the binary with example config
 	@./$(BINARY_NAME) -config examples/config.yaml
 
 release: ## Create a release with goreleaser

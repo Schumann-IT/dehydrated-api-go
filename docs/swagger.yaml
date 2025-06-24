@@ -334,8 +334,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.DomainsResponse'
-      security:
-      - BearerAuth: []
       summary: Health check
       tags:
       - health

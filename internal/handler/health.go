@@ -23,7 +23,6 @@ func (h *HealthHandler) RegisterRoutes(app *fiber.App) {
 // @Tags health
 // @Accept json
 // @Produce json
-// @Security BearerAuth
 // @Success 200 {object} model.DomainsResponse
 // @Router /health [get]
 // Health handles GET /health
