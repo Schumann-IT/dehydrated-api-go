@@ -24,21 +24,14 @@ build: generate $(BINARY_NAME) ## Build binary
 
 ci-build: $(BINARY_NAME) ## Build binary (without generate)
 
-generate: clean-generate swag ## Generate code and documentation
+generate: ## Generate code and documentation
 	@go generate ./...
 
-run: $(BINARY_NAME) $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run the binary with example config
+run: build $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run the binary with example config
 	@./$(BINARY_NAME) -config examples/config.yaml
 
 release: ## Create a release with goreleaser
 	@goreleaser release --snapshot --clean
-
-swag: ## Update swagger docs
-	@echo "Generating Swagger documentation..."
-	@$(HOME)/go/bin/swag init -g cmd/api/main.go --parseDependency --parseInternal
-	@echo "Swagger documentation generated successfully"
-
-build-example-plugin: $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Build example plugin
 
 #
 # Test
