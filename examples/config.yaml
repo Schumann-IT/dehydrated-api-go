@@ -1,0 +1,16 @@
+port: 3000
+dehydratedBaseDir: ./data
+enableWatcher: true
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""
+plugins:
+  example:
+    enabled: true
+    registry:
+      type: local
+      config:
+        path: ./examples/plugins/simple/simple
+    config:
+      name: example

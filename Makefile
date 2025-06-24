@@ -1,6 +1,9 @@
 # Main
 MAIN_FILE=cmd/api/main.go
 BINARY_NAME=dehydrated-api-go
+EXAMPLE_PLUGIN_DIR=examples/plugins
+EXAMPLE_PLUGIN_NAME=simple
+
 # Build flags
 LDFLAGS=-ldflags "-X main.Version=$(shell git describe --tags --always --dirty) -X main.Commit=$(shell git rev-parse --short HEAD) -X main.BuildTime=$(shell date -u '+%Y-%m-%d_%H:%M:%S')"
 
@@ -32,6 +35,8 @@ release: ## Create a release with goreleaser
 
 swag: ## Update swagger docs
 	@$(GOPATH)/bin/swag init -g cmd/api/main.go
+
+build-example-plugin: $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Build example plugin
 
 #
 # Test
@@ -84,6 +89,8 @@ clean: ## Clean build artifacts
 	@go clean
 	@rm -f proto/plugin/*.pb.go
 	@rm -f $(BINARY_NAME)
+	@rm -f $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME)
+	@rm -rf .dehydrated-api-go
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)
@@ -157,6 +164,9 @@ check-tools: ## Check if required tools are installed
 
 $(BINARY_NAME): ## Build the binary
 	@go build $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_FILE)
+
+$(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME): ## Build example plugin binary
+	@cd $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME) && go build -o $(EXAMPLE_PLUGIN_NAME)
 
 $(COVERAGE_FILE): ## Build coverage profile
 	@go test -v -race -coverprofile=$(COVERAGE_FILE) ./...

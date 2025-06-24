@@ -1,0 +1,30 @@
+port: 3000
+dehydratedBaseDir: ./data
+enableWatcher: false
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""
+
+# Azure AD authentication configuration using Microsoft Graph
+auth:
+  # The Azure AD tenant ID
+  tenantId: ""
+  # Microsoft Graph resource ID
+  clientId: ""
+  # The authority URL for Azure AD
+  authority: "https://login.microsoftonline.com/<tenantId>"
+  # List of allowed audience values in the JWT token
+  allowedAudiences:
+    - "https://graph.microsoft.com"
+    - "https://<valid-tenant-domain>/00000003-0000-0000-c000-000000000000"
+
+plugins:
+  example:
+    enabled: true
+    registry:
+      type: local
+      config:
+        path: ./examples/plugins/simple/simple
+    config:
+      name: example
