@@ -1,10 +1,13 @@
 # Git
 .git
 .gitignore
+.gitattributes
 
-# IDE
-.idea
-.vscode
+# Documentation
+README.md
+LICENSE
+docs/
+*.md
 
 # Build artifacts
 *.exe
@@ -15,22 +18,63 @@
 *.test
 *.out
 
+# Go specific
+vendor/
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
 # Test files
 *_test.go
-test/
-tests/
+testdata/
 
 # Temporary files
 tmp/
 temp/
+*.tmp
 
-# Documentation
-*.md
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Other
+# Logs
+logs/
 *.log
-.DS_Store 
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+coverage.txt
+coverage.html
+
+# Binary files
+bin/
+dist/
+build/
+
+# Makefile (if not needed in container)
+Makefile 

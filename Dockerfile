@@ -1,11 +1,15 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.22-alpine AS builder
+
+# Add build metadata
+LABEL maintainer="dehydrated-api-go"
+LABEL description="Dehydrated API Go - Multi-stage build stage"
 
 WORKDIR /build
 
 # Install build dependencies
 RUN apk add --no-cache git
 
-# Copy go mod and sum files
+# Copy go mod and sum files first for better layer caching
 COPY go.mod go.sum ./
 
 # Download dependencies
@@ -15,23 +19,11 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 go build -o /build/dehydrated-api-go ./cmd/api
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/dehydrated-api-go ./cmd/api
 
-FROM alpine:3.19
+FROM alpine:3.19 AS python-builder
 
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apk add --no-cache \
-      bash \
-      curl \
-      openssl \
-      ca-certificates \
-      tzdata \
-      dcron \
-      yq
-
-# Install python build tools
+# Install Python build dependencies
 RUN apk add --no-cache \
       python3 \
       py3-pip \
@@ -49,16 +41,55 @@ RUN python3 -m venv /opt/venv \
   && pip install --no-cache-dir azure-cli \
   && deactivate
 
+FROM alpine:3.19
+
+# Add runtime metadata
+LABEL maintainer="dehydrated-api-go"
+LABEL description="Dehydrated API Go - Runtime container"
+LABEL version="1.0.0"
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apk add --no-cache \
+      bash \
+      curl \
+      openssl \
+      ca-certificates \
+      tzdata \
+      dcron \
+      yq \
+      python3
+
+# Copy Python virtual environment from builder stage
+COPY --from=python-builder /opt/venv /opt/venv
+
+# Set Python environment
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN mkdir -p /app/scripts \
-    && mkdir -p /app/config
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
-# copy binaries, scripts and config
+# Create necessary directories and set ownership
+RUN mkdir -p /app/scripts \
+    && mkdir -p /app/config \
+    && mkdir -p /data/dehydrated \
+    && mkdir -p /tmp \
+    && chown -R appuser:appgroup /app \
+    && chown -R appuser:appgroup /data \
+    && chown -R appuser:appgroup /tmp
+
+# Copy binaries, scripts and config
 COPY --from=builder /build/dehydrated-api-go /app/
 COPY --from=builder /build/scripts/ /app/scripts/
 
-RUN chmod +x /app/scripts/*
+# Set proper permissions
+RUN chmod +x /app/scripts/* \
+    && chown -R appuser:appgroup /app/scripts
+
+# Switch to non-root user
+USER appuser
 
 # Set environment variables
 ENV PORT=3000
@@ -69,6 +100,12 @@ ENV ENABLE_OPENSSL_PLUGIN=false
 ENV EXTERNAL_PLUGINS="{\"openssl\":{\"enabled\":false}}"
 # Format: {"level":"<level>","encoding":"<console|json>","outputPath": "</path/to/logfile>"}
 ENV LOGGING="{\"level\":\"error\",\"encoding\":\"console\",\"outputPath\": \"\"}"
+
+# Expose port
+EXPOSE 3000
+
+# Define volume for persistent data
+VOLUME ["/data/dehydrated"]
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
