@@ -2,29 +2,7 @@
 
 A REST API server for managing domains with [dehydrated](https://github.com/dehydrated-io/dehydrated), the ACME client for Let's Encrypt certificates. This API provides a clean interface for domain management with optional authentication and a plugin system for extensibility.
 
-## 🏗️ Architecture
-
-### Core Components
-
-The application follows a clean architecture pattern with the following key components:
-
-```
-dehydrated-api-go/
-├── cmd/api/                 # Application entry point
-├── internal/                # Internal application logic
-│   ├── auth/               # Authentication middleware (Azure AD)
-│   ├── dehydrated/         # Dehydrated configuration management
-│   ├── handler/            # HTTP request handlers
-│   ├── logger/             # Structured logging with Zap
-│   ├── model/              # Data models and validation
-│   ├── plugin/             # Plugin system (gRPC-based)
-│   ├── server/             # HTTP server management
-│   └── service/            # Business logic layer
-├── plugin/                 # Plugin protocol definitions
-└── examples/               # Example configurations and plugins
-```
-
-### Key Features
+## Key Features
 
 - **RESTful API**: Full CRUD operations for domain management
 - **Authentication**: Optional Azure AD integration with JWT validation
@@ -35,7 +13,7 @@ dehydrated-api-go/
 - **Docker Support**: Containerized deployment with minimal runtime dependencies
 - **Health Checks**: Built-in health monitoring
 
-### Technology Stack
+## Technology Stack
 
 - **Framework**: [Fiber](https://gofiber.io/) - Fast HTTP framework
 - **Authentication**: Azure AD with JWT tokens
@@ -78,47 +56,45 @@ dehydrated-api-go/
 
 The API will be available at `http://localhost:3000`
 
-### Docker Deployment
+## 🐳 Docker
 
-The Docker distribution uses **release artifacts** from GitHub releases for faster builds and smaller images.
+### Docker Overview
 
-#### Option 1: Using Release Artifacts (Recommended)
+The Dockerfile is designed to use binary artifacts from goreleaser instead of building from source code. This approach provides several benefits:
 
-Build using a specific release version:
+- **Faster builds**: No compilation time required
+- **Consistent artifacts**: Uses the same binaries as official releases
+- **Smaller images**: No build tools or source code included
+- **Security**: Uses pre-built, tested binaries
+
+### Build Scenarios
+
+Build an image using a snapshot release:
 ```bash
-./scripts/docker-build.sh -v v1.0.0
+make docker-build
 ```
-
-Or build the latest release version:
-```bash
-make docker-build-release
-```
-
-#### Option 2: Using Snapshot Artifacts
-
-Build using goreleaser snapshot artifacts (for development):
-```bash
-make docker-build-local
-```
-
-#### Option 3: Using Docker Compose
 
 For easy local development:
 ```bash
 docker-compose up -d
 ```
 
-#### Running the Container
+### Running the Container
+
+#### Basic Usage
 
 ```bash
-# Basic usage
 docker run -d \
   --name dehydrated-api-go \
   -p 3000:3000 \
   -v /path/to/config.yaml:/app/config/config.yaml \
   -v /path/to/data:/data/dehydrated \
   dehydrated-api-go:latest
+```
 
+#### Using docker-compose
+
+```bash
 # Using docker-compose
 docker-compose up -d
 
@@ -126,31 +102,22 @@ docker-compose up -d
 make docker-run
 ```
 
-#### Docker Commands
+### Environment Variables
 
-```bash
-# Build Docker image with snapshot artifacts
-make docker-build-local
+The container supports the following environment variables:
 
-# Build specific release version
-make docker-build-release
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 3000 | HTTP server port |
 
-# Build with custom version
-./scripts/docker-build.sh -v v1.0.0
+### Development Workflow
 
-# Run container
-make docker-run
+For development, you can use the snapshot build:
 
-# Stop container
-make docker-stop
-
-# View logs
-make docker-logs
-```
-
-**Note**: When building from release artifacts, a specific version is required. Use `make docker-build-local` to build with goreleaser snapshot artifacts for development.
-
-For detailed Docker documentation, see [docs/DOCKER.md](docs/DOCKER.md).
+1. Make your changes
+2. Build the local binary: `make build`
+3. Build the Docker image: `docker build --build-arg VERSION=snapshot -t dehydrated-api-go:dev .`
+4. Test your changes: `docker run dehydrated-api-go:dev`
 
 ## 📖 Configuration
 
@@ -333,45 +300,6 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 go install github.com/swaggo/swag/cmd/swag@latest
 ```
 
-## 🐳 Docker
-
-### Environment Variables
-
-The Docker container supports the following environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 3000 | HTTP server port |
-| `BASE_DIR` | `/data/dehydrated` | Dehydrated base directory |
-| `ENABLE_WATCHER` | false | Enable file watcher |
-| `LOGGING` | `{"level":"error","encoding":"console"}` | Logging configuration |
-| `EXTERNAL_PLUGINS` | `{"openssl":{"enabled":false}}` | Plugin configuration |
-
-### Docker Compose
-
-Create a `docker-compose.yml` file:
-
-```yaml
-version: '3.8'
-services:
-  dehydrated-api:
-    image: schumann-it/dehydrated-api-go:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./data:/data/dehydrated
-      - ./config.yaml:/app/config.yaml
-    environment:
-      - PORT=3000
-      - BASE_DIR=/data/dehydrated
-      - ENABLE_WATCHER=true
-    healthcheck:
-      test: ["CMD", "/app/scripts/healthcheck.sh"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-```
-
 ## 📋 Makefile Commands
 
 The project includes a comprehensive Makefile with the following commands:
@@ -446,11 +374,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For support and questions:
 
 - Create an issue on GitHub
-- Check the [documentation](docs/)
 - Review the [examples](examples/)
-
-## 🔗 Related Projects
-
-- [dehydrated](https://github.com/dehydrated-io/dehydrated) - ACME client for Let's Encrypt
-- [Fiber](https://gofiber.io/) - Fast HTTP framework
-- [Zap](https://github.com/uber-go/zap) - Structured logging
