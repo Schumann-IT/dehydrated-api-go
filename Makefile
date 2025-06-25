@@ -10,11 +10,7 @@ LDFLAGS=-ldflags "-X main.Version=$(shell git describe --tags --always --dirty) 
 # Test
 COVERAGE_FILE=coverage.out
 
-# Docker
-DOCKER_IMAGE=schumann-it/dehydrated-api-go
-DOCKER_CONTAINER=dehydrated-api-go
-
-.PHONY: build run test test-scripts test-coverage clean lint generate release help docker-build docker-run docker-stop docker-logs docker-shell docker-clean check-tools
+.PHONY: build run test test-scripts test-coverage clean lint generate release help check-tools docker-build docker-build-local docker-build-release docker-run docker-stop docker-logs
 
 #
 # Build and run
@@ -58,27 +54,14 @@ lint-fix: ## Run linter (and fix issues if possible)
 # Docker
 #
 
-docker-build: generate ## Build Docker image
-	@docker build -t $(DOCKER_IMAGE) .
-
-docker-run: ## Run Docker container
-	@docker run -d --name $(DOCKER_CONTAINER) -p 3000:3000 $(DOCKER_IMAGE)
-
-docker-stop: ## Stop Docker container
-	@docker stop $(DOCKER_CONTAINER)
-	@docker rm $(DOCKER_CONTAINER)
-
-docker-logs: ## View Docker container logs
-	@docker logs $(DOCKER_CONTAINER)
-
-docker-shell: ## Open shell in Docker container
-	@docker exec -it $(DOCKER_CONTAINER) /bin/sh
+docker-build: release ## Build Docker image using release artifacts
+	@docker build -t dehydrated-api-go .
 
 #
 # Cleanup
 #
 
-clean-all: clean clean-test clean-dist clean-docker ## Cleanup everything
+clean-all: clean clean-test clean-dist ## Cleanup everything
 
 clean: ## Clean build artifacts
 	@go clean
@@ -86,6 +69,7 @@ clean: ## Clean build artifacts
 	@rm -f $(BINARY_NAME)
 	@rm -f $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME)
 	@rm -rf .dehydrated-api-go
+	@rm -f plugin/proto/*.pb.go
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)
@@ -93,14 +77,6 @@ clean-test: ## Clean test
 
 clean-dist: ## Clean dist
 	@rm -rf dist
-
-clean-docker: ## Remove Docker container and image
-	@docker stop $(DOCKER_CONTAINER) 2>/dev/null || true
-	@docker rm $(DOCKER_CONTAINER) 2>/dev/null || true
-	@docker rmi $(DOCKER_IMAGE) 2>/dev/null || true
-
-clean-generate: ## Clean generated files
-	@rm -f plugin/proto/*.pb.go
 
 #
 # Help
@@ -165,6 +141,3 @@ $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME): ## Build ex
 
 $(COVERAGE_FILE): ## Build coverage profile
 	@go test -v -race -coverprofile=$(COVERAGE_FILE) ./...
-
-$(GOPATH)/bin/swag:
-	@go install github.com/swaggo/swag/cmd/swag@latest

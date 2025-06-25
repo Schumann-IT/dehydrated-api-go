@@ -1,115 +1,58 @@
-FROM golang:1.22-alpine AS builder
-
-# Add build metadata
-LABEL maintainer="dehydrated-api-go"
-LABEL description="Dehydrated API Go - Multi-stage build stage"
+# Stage 1: Download and extract the snapshot binary
+FROM alpine:3.19 AS downloader
 
 WORKDIR /build
 
-# Install build dependencies
-RUN apk add --no-cache git
+COPY dist/ /build/
 
-# Copy go mod and sum files first for better layer caching
-COPY go.mod go.sum ./
+RUN ARCH=$(uname -m) && \
+    case "$ARCH" in \
+      x86_64) ARCH="x86_64" ;; \
+      aarch64) ARCH="arm64" ;; \
+      armv7l) ARCH="armv7" ;; \
+      i386 | i686) ARCH="386" ;; \
+      *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac && \
+    OS=$(uname -s) && \
+    tar -zxf dehydrated-api-go_${OS}_${ARCH}.tar.gz
 
-# Download dependencies
-RUN go mod download
+RUN ./dehydrated-api-go -version
 
-# Copy source code
-COPY . .
-
-# Build the application
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/dehydrated-api-go ./cmd/api
-
-FROM alpine:3.19 AS python-builder
-
-# Install Python build dependencies
-RUN apk add --no-cache \
-      python3 \
-      py3-pip \
-      gcc \
-      musl-dev \
-      python3-dev \
-      libffi-dev \
-      openssl-dev \
-      cargo
-
-# Create and activate a virtual environment for Azure CLI
-RUN python3 -m venv /opt/venv \
-  && . /opt/venv/bin/activate \
-  && pip install --upgrade pip \
-  && pip install --no-cache-dir azure-cli \
-  && deactivate
-
+# Stage 2: Create the final minimal image
 FROM alpine:3.19
 
-# Add runtime metadata
-LABEL maintainer="dehydrated-api-go"
-LABEL description="Dehydrated API Go - Runtime container"
-LABEL version="1.0.0"
-
-WORKDIR /app
-
-# Install runtime dependencies only
-RUN apk add --no-cache \
-      bash \
-      curl \
-      openssl \
-      ca-certificates \
-      tzdata \
-      dcron \
-      yq \
-      python3
-
-# Copy Python virtual environment from builder stage
-COPY --from=python-builder /opt/venv /opt/venv
-
-# Set Python environment
-ENV PATH="/opt/venv/bin:$PATH"
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata
 
 # Create non-root user
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+RUN addgroup -g 1000 appuser && \
+    adduser -D -s /bin/sh -u 1000 -G appuser appuser
 
-# Create necessary directories and set ownership
-RUN mkdir -p /app/scripts \
-    && mkdir -p /app/config \
-    && mkdir -p /data/dehydrated \
-    && mkdir -p /tmp \
-    && chown -R appuser:appgroup /app \
-    && chown -R appuser:appgroup /data \
-    && chown -R appuser:appgroup /tmp
+# Create necessary directories
+RUN mkdir -p /app /data/dehydrated /app/config && \
+    chown -R appuser:appuser /app /data
 
-# Copy binaries, scripts and config
-COPY --from=builder /build/dehydrated-api-go /app/
-COPY --from=builder /build/scripts/ /app/scripts/
+# Copy the binary from the downloader stage
+COPY --from=downloader /build/dehydrated-api-go /app/dehydrated-api-go
 
-# Set proper permissions
-RUN chmod +x /app/scripts/* \
-    && chown -R appuser:appgroup /app/scripts
+# Set ownership
+RUN chown appuser:appuser /app/dehydrated-api-go
 
 # Switch to non-root user
 USER appuser
 
-# Set environment variables
-ENV PORT=3000
-ENV BASE_DIR=/data/dehydrated
-ENV ENABLE_WATCHER=false
-ENV ENABLE_OPENSSL_PLUGIN=false
-# Format: {"<plugin_name>":{"enabled":<true|false>,"path":"</path/to/plugin|empty>"}}
-ENV EXTERNAL_PLUGINS="{\"openssl\":{\"enabled\":false}}"
-# Format: {"level":"<level>","encoding":"<console|json>","outputPath": "</path/to/logfile>"}
-ENV LOGGING="{\"level\":\"error\",\"encoding\":\"console\",\"outputPath\": \"\"}"
+# Set working directory
+WORKDIR /app
 
-# Expose port
+# Expose the default port
 EXPOSE 3000
 
-# Define volume for persistent data
-VOLUME ["/data/dehydrated"]
-
-# Add healthcheck
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD /app/scripts/healthcheck.sh
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-# Set the entrypoint to the startup script
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+# Default command
+ENTRYPOINT ["/app/dehydrated-api-go"]
+
+# Default arguments (can be overridden)
+CMD ["--config", "/app/config/config.yaml"]

@@ -1,13 +1,64 @@
 # Git
 .git
 .gitignore
-.gitattributes
 
 # Documentation
 README.md
 LICENSE
 docs/
 *.md
+
+# Test files
+*_test.go
+coverage.out
+testdata/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Go specific
+go.sum
+vendor/
+
+# Scripts (not needed in container)
+scripts/
+
+# Examples (not needed in container)
+examples/
+
+# Makefile (not needed in container)
+Makefile
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local development
+.env
+.env.local
+.env.*.local
 
 # Build artifacts
 *.exe
@@ -18,49 +69,21 @@ docs/
 *.test
 *.out
 
-# Go specific
-vendor/
-*.log
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
 # OS generated files
-.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db
 
 # Docker
 Dockerfile*
 docker-compose*
 .dockerignore
 
-# CI/CD
-.github/
-.gitlab-ci.yml
-.travis.yml
-.circleci/
-
-# Test files
-*_test.go
-testdata/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Logs
-logs/
-*.log
+# IDE and editor files
+*.swp
+*.swo
 
 # Environment files
 .env
@@ -73,8 +96,4 @@ coverage.html
 
 # Binary files
 bin/
-dist/
-build/
-
-# Makefile (if not needed in container)
-Makefile 
+build/ 

@@ -1,0 +1,26 @@
+services:
+  dehydrated-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dehydrated-api-go
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./examples/config.yaml:/app/config/config.yaml:ro
+      - ./examples/data:/data/dehydrated
+    environment:
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - dehydrated-network
+
+networks:
+  dehydrated-network:
+    driver: bridge 

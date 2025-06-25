@@ -1,6 +1,16 @@
+# Simple configuration file for dehydrated-api-go (no plugins)
+# Mount this file to /data/dehydrated/config.yaml in the container
+
+# Server configuration
 port: 3000
+
+# Dehydrated base directory (where certificates and data are stored)
 dehydratedBaseDir: ./data
+
+# Enable file watcher for automatic reloading
 enableWatcher: false
+
+# Logging configuration
 logging:
   level: debug
   encoding: console
@@ -18,13 +28,3 @@ auth:
   allowedAudiences:
     - "https://graph.microsoft.com"
     - "https://schumann-it.com/00000003-0000-0000-c000-000000000000"
-
-plugins:
-  example:
-    enabled: true
-    registry:
-      type: local
-      config:
-        path: ./examples/plugins/simple/simple
-    config:
-      name: example

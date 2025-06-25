@@ -32,7 +32,7 @@ dehydrated-api-go/
 - **File Watching**: Real-time domain configuration monitoring
 - **Structured Logging**: Comprehensive logging with Zap
 - **Swagger Documentation**: Auto-generated API documentation
-- **Docker Support**: Containerized deployment
+- **Docker Support**: Containerized deployment with minimal runtime dependencies
 - **Health Checks**: Built-in health monitoring
 
 ### Technology Stack
@@ -80,20 +80,77 @@ The API will be available at `http://localhost:3000`
 
 ### Docker Deployment
 
-1. **Build the Docker image**:
-   ```bash
-   make docker-build
-   ```
+The Docker distribution uses **release artifacts** from GitHub releases for faster builds and smaller images.
 
-2. **Run the container**:
-   ```bash
-   make docker-run
-   ```
+#### Option 1: Using Release Artifacts (Recommended)
 
-3. **View logs**:
-   ```bash
-   make docker-logs
-   ```
+Build using a specific release version:
+```bash
+./scripts/docker-build.sh -v v1.0.0
+```
+
+Or build the latest release version:
+```bash
+make docker-build-release
+```
+
+#### Option 2: Using Snapshot Artifacts
+
+Build using goreleaser snapshot artifacts (for development):
+```bash
+make docker-build-local
+```
+
+#### Option 3: Using Docker Compose
+
+For easy local development:
+```bash
+docker-compose up -d
+```
+
+#### Running the Container
+
+```bash
+# Basic usage
+docker run -d \
+  --name dehydrated-api-go \
+  -p 3000:3000 \
+  -v /path/to/config.yaml:/app/config/config.yaml \
+  -v /path/to/data:/data/dehydrated \
+  dehydrated-api-go:latest
+
+# Using docker-compose
+docker-compose up -d
+
+# Using Makefile
+make docker-run
+```
+
+#### Docker Commands
+
+```bash
+# Build Docker image with snapshot artifacts
+make docker-build-local
+
+# Build specific release version
+make docker-build-release
+
+# Build with custom version
+./scripts/docker-build.sh -v v1.0.0
+
+# Run container
+make docker-run
+
+# Stop container
+make docker-stop
+
+# View logs
+make docker-logs
+```
+
+**Note**: When building from release artifacts, a specific version is required. Use `make docker-build-local` to build with goreleaser snapshot artifacts for development.
+
+For detailed Docker documentation, see [docs/DOCKER.md](docs/DOCKER.md).
 
 ## 📖 Configuration
 
@@ -330,7 +387,8 @@ The project includes a comprehensive Makefile with the following commands:
 - `make lint` - Run linter
 
 ### Docker Commands
-- `make docker-build` - Build Docker image
+- `make docker-build-local` - Build Docker image with snapshot artifacts
+- `make docker-build-release` - Build Docker image for latest release
 - `make docker-run` - Run Docker container
 - `make docker-stop` - Stop Docker container
 - `make docker-logs` - View Docker logs
@@ -395,4 +453,4 @@ For support and questions:
 
 - [dehydrated](https://github.com/dehydrated-io/dehydrated) - ACME client for Let's Encrypt
 - [Fiber](https://gofiber.io/) - Fast HTTP framework
-- [Zap](https://github.com/uber-go/zap) - Structured logging 
+- [Zap](https://github.com/uber-go/zap) - Structured logging

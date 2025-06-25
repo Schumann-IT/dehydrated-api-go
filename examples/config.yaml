@@ -1,16 +1,14 @@
+# Server configuration
 port: 3000
-dehydratedBaseDir: ./data
-enableWatcher: true
+
+# Dehydrated base directory (where certificates and data are stored)
+dehydratedBaseDir: /data/dehydrated
+
+# Enable file watcher for automatic reloading
+enableWatcher: false
+
+# Logging configuration
 logging:
   level: debug
   encoding: console
   outputPath: ""
-plugins:
-  example:
-    enabled: true
-    registry:
-      type: local
-      config:
-        path: ./examples/plugins/simple/simple
-    config:
-      name: example
