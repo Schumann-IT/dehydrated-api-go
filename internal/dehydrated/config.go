@@ -71,7 +71,13 @@ func (c *Config) WithBaseDir(baseDir string) *Config {
 // WithConfigFile sets the path to the config file.
 // This file will be used to load configuration settings for dehydrated.
 func (c *Config) WithConfigFile(configFile string) *Config {
-	c.ConfigFile = configFile
+	if filepath.IsAbs(configFile) {
+		c.ConfigFile = configFile
+	} else {
+		// If the config file is relative, resolve it against the base directory
+		c.ConfigFile = filepath.Join(c.BaseDir, configFile)
+	}
+
 	return c
 }
 

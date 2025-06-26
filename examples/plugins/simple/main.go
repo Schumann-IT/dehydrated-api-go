@@ -45,6 +45,7 @@ func (p *ExamplePlugin) GetMetadata(ctx context.Context, req *proto.GetMetadataR
 		metadata.Set("example_key", "example_value")
 		metadata.Set("example_number", 42)
 		metadata.Set("example_bool", true)
+		metadata.SetMap("config", req.GetDehydratedConfig())
 	}
 
 	return metadata.ToGetMetadataResponse()

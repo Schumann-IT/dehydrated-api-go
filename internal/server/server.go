@@ -89,7 +89,10 @@ func (s *Server) WithLogger() *Server {
 }
 
 func (s *Server) WithDomainService() *Server {
-	cfg := dehydrated.NewConfig().WithBaseDir(s.Config.DehydratedBaseDir).Load()
+	cfg := dehydrated.NewConfig().
+		WithBaseDir(s.Config.DehydratedBaseDir).
+		WithConfigFile(s.Config.DehydratedConfigFile).
+		Load()
 
 	// Create domain service
 	s.Logger.Debug("Creating domain service",

@@ -62,4 +62,4 @@ internal/plugin/grpc/testdata/test-plugin/test-plugin
 dehydrated-api-go
 .dehydrated-api-go
 
-local-config-*
+local-config*
