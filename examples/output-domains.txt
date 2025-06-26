@@ -1,0 +1,2 @@
+vpn.hq.schumann-it.com
+vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa

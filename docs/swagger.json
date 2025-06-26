@@ -127,6 +127,12 @@
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -180,6 +186,12 @@
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     },
                     {
                         "description": "Domain update request",
@@ -242,6 +254,12 @@
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     }
                 ],
                 "responses": {

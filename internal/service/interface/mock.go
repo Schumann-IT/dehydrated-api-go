@@ -20,6 +20,11 @@ func (m *MockErrDomainService) GetDomain(domain string) (*model.DomainEntry, err
 	return nil, fmt.Errorf("mock error")
 }
 
+// GetDomainByAlias returns a mock domain entry for testing.
+func (m *MockErrDomainService) GetDomainByAlias(domain string, alias string) (*model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
 // CreateDomain creates a mock domain entry for testing.
 func (m *MockErrDomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
 	return nil, fmt.Errorf("mock error")
@@ -30,8 +35,18 @@ func (m *MockErrDomainService) UpdateDomain(domain string, req model.UpdateDomai
 	return nil, fmt.Errorf("mock error")
 }
 
+// UpdateDomainByAlias updates a mock domain entry for testing.
+func (m *MockErrDomainService) UpdateDomainByAlias(domain string, alias string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
+	return nil, fmt.Errorf("mock error")
+}
+
 // DeleteDomain simulates deleting a domain entry for testing.
 func (m *MockErrDomainService) DeleteDomain(domain string) error {
+	return fmt.Errorf("mock error")
+}
+
+// DeleteDomainByAlias simulates deleting a domain entry for testing.
+func (m *MockErrDomainService) DeleteDomainByAlias(domain string, alias string) error {
 	return fmt.Errorf("mock error")
 }
 

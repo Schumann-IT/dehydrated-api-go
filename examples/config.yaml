@@ -2,7 +2,7 @@
 port: 3000
 
 # Dehydrated base directory (where certificates and data are stored)
-dehydratedBaseDir: /data/dehydrated
+dehydratedBaseDir: ./data
 
 # Enable file watcher for automatic reloading
 enableWatcher: false

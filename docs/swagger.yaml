@@ -226,6 +226,10 @@ paths:
         name: domain
         required: true
         type: string
+      - description: Optional alias to uniquely identify the domain entry
+        in: query
+        name: alias
+        type: string
       produces:
       - application/json
       responses:
@@ -257,6 +261,10 @@ paths:
         in: path
         name: domain
         required: true
+        type: string
+      - description: Optional alias to uniquely identify the domain entry
+        in: query
+        name: alias
         type: string
       produces:
       - application/json
@@ -291,6 +299,10 @@ paths:
         in: path
         name: domain
         required: true
+        type: string
+      - description: Optional alias to uniquely identify the domain entry
+        in: query
+        name: alias
         type: string
       - description: Domain update request
         in: body

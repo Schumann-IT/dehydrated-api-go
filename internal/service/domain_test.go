@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -451,4 +452,181 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetDomainByAlias tests the GetDomainByAlias functionality
+func TestGetDomainByAlias(t *testing.T) {
+	// Create a temporary directory for test files
+	tmpDir := t.TempDir()
+
+	// Create a new dehydrated config
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+	// Create domain service
+	s := NewDomainService(dc, nil)
+	defer s.Close()
+
+	// Create test domains with the same domain but different aliases
+	testDomains := []model.CreateDomainRequest{
+		{
+			Domain:  "vpn.hq.schumann-it.com",
+			Alias:   "",
+			Enabled: true,
+		},
+		{
+			Domain:  "vpn.hq.schumann-it.com",
+			Alias:   "vpn.hq.schumann-it.com-rsa",
+			Enabled: true,
+		},
+	}
+
+	// Create the domains
+	for _, req := range testDomains {
+		_, err := s.CreateDomain(req)
+		require.NoError(t, err)
+	}
+
+	t.Run("GetDomainByAlias with empty alias returns first match", func(t *testing.T) {
+		entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "")
+		require.NoError(t, err)
+		require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
+		require.Equal(t, "", entry.Alias) // Should return the first entry (no alias)
+	})
+
+	t.Run("GetDomainByAlias with specific alias returns correct entry", func(t *testing.T) {
+		entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-rsa")
+		require.NoError(t, err)
+		require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
+		require.Equal(t, "vpn.hq.schumann-it.com-rsa", entry.Alias)
+	})
+
+	t.Run("GetDomainByAlias with non-existent alias returns error", func(t *testing.T) {
+		_, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "non-existent-alias")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "domain with specified alias not found")
+	})
+
+	t.Run("GetDomainByAlias with non-existent domain returns error", func(t *testing.T) {
+		_, err := s.GetDomainByAlias("non-existent.com", "")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "domain not found")
+	})
+}
+
+func TestUpdateDomainByAliasEditsCorrectLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	domainsFile := filepath.Join(tmpDir, "domains.txt")
+
+	// Prepare initial domains.txt content
+	initialContent := `vpn.hq.schumann-it.com
+vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa
+`
+	require.NoError(t, os.WriteFile(domainsFile, []byte(initialContent), 0644))
+
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+	s := NewDomainService(dc, nil)
+	defer s.Close()
+
+	require.NoError(t, s.Reload())
+
+	// Update the alias entry
+	updateReq := model.UpdateDomainRequest{
+		Comment: util.StringPtr("Updated RSA entry"),
+	}
+	_, err := s.UpdateDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-rsa", updateReq)
+	require.NoError(t, err)
+
+	// Read the file back
+	data, err := os.ReadFile(domainsFile)
+	require.NoError(t, err)
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	require.Len(t, lines, 2)
+
+	// The first line should be unchanged
+	require.Equal(t, "vpn.hq.schumann-it.com", lines[0])
+	// The second line should have the updated comment
+	require.Equal(t, "vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa # Updated RSA entry", lines[1])
+}
+
+func TestGetDomainByAliasSelectsCorrectLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	domainsFile := filepath.Join(tmpDir, "domains.txt")
+
+	// Prepare initial domains.txt content with different comments to distinguish entries
+	initialContent := `vpn.hq.schumann-it.com # Default entry
+vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa # RSA entry
+`
+	require.NoError(t, os.WriteFile(domainsFile, []byte(initialContent), 0644))
+
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+	s := NewDomainService(dc, nil)
+	defer s.Close()
+
+	require.NoError(t, s.Reload())
+
+	// Test getting the default entry (no alias)
+	entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "")
+	require.NoError(t, err)
+	require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
+	require.Equal(t, "", entry.Alias)
+	require.Equal(t, "Default entry", entry.Comment)
+
+	// Test getting the RSA entry (with alias)
+	entry, err = s.GetDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-rsa")
+	require.NoError(t, err)
+	require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
+	require.Equal(t, "vpn.hq.schumann-it.com-rsa", entry.Alias)
+	require.Equal(t, "RSA entry", entry.Comment)
+
+	// Test getting non-existent alias
+	_, err = s.GetDomainByAlias("vpn.hq.schumann-it.com", "non-existent-alias")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "domain with specified alias not found")
+}
+
+func TestDeleteDomainByAliasRemovesCorrectLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	domainsFile := filepath.Join(tmpDir, "domains.txt")
+
+	// Prepare initial domains.txt content
+	initialContent := `vpn.hq.schumann-it.com # Default entry
+vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa # RSA entry
+vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-ecdsa # ECDSA entry
+`
+	require.NoError(t, os.WriteFile(domainsFile, []byte(initialContent), 0644))
+
+	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+	s := NewDomainService(dc, nil)
+	defer s.Close()
+
+	require.NoError(t, s.Reload())
+
+	// Delete the RSA entry
+	err := s.DeleteDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-rsa")
+	require.NoError(t, err)
+
+	// Read the file back
+	data, err := os.ReadFile(domainsFile)
+	require.NoError(t, err)
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	require.Len(t, lines, 2)
+
+	// The first line should remain unchanged
+	require.Equal(t, "vpn.hq.schumann-it.com # Default entry", lines[0])
+	// The third line should remain unchanged (now second line)
+	require.Equal(t, "vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-ecdsa # ECDSA entry", lines[1])
+
+	// Verify the RSA entry is gone by trying to get it
+	_, err = s.GetDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-rsa")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "domain with specified alias not found")
+
+	// Verify other entries still exist
+	entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "")
+	require.NoError(t, err)
+	require.Equal(t, "Default entry", entry.Comment)
+
+	entry, err = s.GetDomainByAlias("vpn.hq.schumann-it.com", "vpn.hq.schumann-it.com-ecdsa")
+	require.NoError(t, err)
+	require.Equal(t, "ECDSA entry", entry.Comment)
 }

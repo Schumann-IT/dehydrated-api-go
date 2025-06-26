@@ -133,6 +133,12 @@ const docTemplate = `{
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -186,6 +192,12 @@ const docTemplate = `{
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     },
                     {
                         "description": "Domain update request",
@@ -248,6 +260,12 @@ const docTemplate = `{
                         "name": "domain",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional alias to uniquely identify the domain entry",
+                        "name": "alias",
+                        "in": "query"
                     }
                 ],
                 "responses": {
