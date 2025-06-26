@@ -421,7 +421,7 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new domain service with default config and empty registry
 			cfg := dehydrated.NewConfig()
-			reg := registry.NewRegistry(make(map[string]config.PluginConfig), zap.NewNop())
+			reg := registry.NewRegistry("", make(map[string]config.PluginConfig), zap.NewNop())
 			service := NewDomainService(cfg, reg)
 
 			// Create a test domain

@@ -16,10 +16,10 @@ type Registry struct {
 	logger  *zap.Logger
 }
 
-func NewRegistry(cfg map[string]config.PluginConfig, logger *zap.Logger) *Registry {
+func NewRegistry(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger) *Registry {
 	r := &Registry{
 		clients: make(map[string]*client.Client),
-		manager: manager.NewManager(logger, ""),
+		manager: manager.NewManager(logger, baseDir),
 		logger:  logger,
 	}
 

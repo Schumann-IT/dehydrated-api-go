@@ -39,7 +39,7 @@ func TestRegistry(t *testing.T) {
 	// Create logger for testing
 	logger := zap.NewNop()
 
-	r := NewRegistry(cfg, logger)
+	r := NewRegistry("", cfg, logger)
 	defer r.Close()
 
 	// Test that plugins are available
