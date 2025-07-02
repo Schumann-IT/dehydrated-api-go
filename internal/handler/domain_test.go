@@ -22,35 +22,34 @@ import (
 // TestDomainHandler tests the complete domain handler functionality.
 // It verifies all CRUD operations for domain entries through the HTTP API.
 func TestDomainHandler(t *testing.T) {
-	// Create a temporary directory for test files
-	tmpDir := t.TempDir()
-
-	// Create a new Fiber app
-	app := fiber.New()
-
-	// load dehydrated config
-	dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
-
-	// Create domain service
-	s := service.NewDomainService(dc, nil)
-	defer s.Close()
-
-	// Create a new domain handler
-	handler := NewDomainHandler(s)
-
-	// register routes
-	app.Post("/api/v1/domains", handler.CreateDomain)
-	app.Get("/api/v1/domains", handler.ListDomains)
-	app.Get("/api/v1/domains/:domain", handler.GetDomain)
-	app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
-	app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
-
 	// Test CreateDomain
 	t.Run("CreateDomain", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
 		req := model.CreateDomainRequest{
-			Domain:           "example.com",
+			Domain:           "example-create.com",
 			AlternativeNames: []string{"www.example.com"},
-			Alias:            "*.example.com",
 			Enabled:          true,
 		}
 		body, _ := json.Marshal(req)
@@ -75,13 +74,36 @@ func TestDomainHandler(t *testing.T) {
 		if !response.Success {
 			t.Error("Expected success to be true")
 		}
-		if response.Data.Domain != "example.com" {
-			t.Errorf("Expected domain example.com, got %s", response.Data.Domain)
+		if response.Data.Domain != "example-create.com" {
+			t.Errorf("Expected domain example-create.com, got %s", response.Data.Domain)
 		}
 	})
 
 	// Test CreateInvalidDomain
 	t.Run("CreateInvalidDomain", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
 		req := model.CreateDomainRequest{
 			Domain: "invalid..com",
 		}
@@ -102,7 +124,55 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test GetDomain
 	t.Run("GetDomain", func(t *testing.T) {
-		resp := httptest.NewRequest("GET", "/api/v1/domains/example.com", http.NoBody)
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// First create the domain to ensure it exists
+		createReq := model.CreateDomainRequest{
+			Domain:           "example-get.com",
+			AlternativeNames: []string{"www.example.com"},
+			Enabled:          true,
+		}
+		createBody, _ := json.Marshal(createReq)
+
+		createResp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(createBody))
+		createResp.Header.Set("Content-Type", "application/json")
+
+		createResult, err := app.Test(createResp)
+		if err != nil {
+			t.Fatalf("Failed to create domain for test: %v", err)
+		}
+		if createResult.StatusCode != fiber.StatusCreated {
+			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Now get the domain
+		resp := httptest.NewRequest("GET", "/api/v1/domains/example-get.com", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {
@@ -111,6 +181,7 @@ func TestDomainHandler(t *testing.T) {
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+			return
 		}
 
 		var response model.DomainResponse
@@ -121,13 +192,36 @@ func TestDomainHandler(t *testing.T) {
 		if !response.Success {
 			t.Error("Expected success to be true")
 		}
-		if response.Data.Domain != "example.com" {
-			t.Errorf("Expected domain example.com, got %s", response.Data.Domain)
+		if response.Data.Domain != "example-get.com" {
+			t.Errorf("Expected domain example-get.com, got %s", response.Data.Domain)
 		}
 	})
 
 	// Test GetNonExistentDomain
 	t.Run("GetNonExistentDomain", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
 		resp := httptest.NewRequest("GET", "/api/v1/domains/nonexistent.com", http.NoBody)
 
 		result, err := app.Test(resp)
@@ -142,6 +236,29 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test ListDomains
 	t.Run("ListDomains", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
 		resp := httptest.NewRequest("GET", "/api/v1/domains", http.NoBody)
 
 		result, err := app.Test(resp)
@@ -158,20 +275,68 @@ func TestDomainHandler(t *testing.T) {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
 
-		if len(response.Data) != 1 {
-			t.Errorf("Expected 1 domain, got %d", len(response.Data))
+		if len(response.Data) != 0 {
+			t.Errorf("Expected 0 domains, got %d", len(response.Data))
 		}
 	})
 
 	// Test UpdateDomain
 	t.Run("UpdateDomain", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// First create the domain to ensure it exists
+		createReq := model.CreateDomainRequest{
+			Domain:           "example-update.com",
+			AlternativeNames: []string{"www.example.com"},
+			Enabled:          true,
+		}
+		createBody, _ := json.Marshal(createReq)
+
+		createResp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(createBody))
+		createResp.Header.Set("Content-Type", "application/json")
+
+		createResult, err := app.Test(createResp)
+		if err != nil {
+			t.Fatalf("Failed to create domain for test: %v", err)
+		}
+		if createResult.StatusCode != fiber.StatusCreated {
+			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Now update the domain
 		req := model.UpdateDomainRequest{
 			AlternativeNames: util.StringSlicePtr([]string{"www.example.com", "api.example.com"}),
 			Enabled:          util.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 
-		resp := httptest.NewRequest("PUT", "/api/v1/domains/example.com", bytes.NewReader(body))
+		resp := httptest.NewRequest("PUT", "/api/v1/domains/example-update.com", bytes.NewReader(body))
 		resp.Header.Set("Content-Type", "application/json")
 
 		result, err := app.Test(resp)
@@ -181,6 +346,7 @@ func TestDomainHandler(t *testing.T) {
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+			return
 		}
 
 		var response model.DomainResponse
@@ -196,14 +362,62 @@ func TestDomainHandler(t *testing.T) {
 		}
 	})
 
-	// Test UpdateDomain
+	// Test UpdateDomainWithoutOverwritingEmptyFields
 	t.Run("UpdateDomainWithoutOverwritingEmptyFields", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// First create the domain to ensure it exists
+		createReq := model.CreateDomainRequest{
+			Domain:           "example-update-empty.com",
+			AlternativeNames: []string{"www.example.com", "api.example.com"},
+			Enabled:          true,
+		}
+		createBody, _ := json.Marshal(createReq)
+
+		createResp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(createBody))
+		createResp.Header.Set("Content-Type", "application/json")
+
+		createResult, err := app.Test(createResp)
+		if err != nil {
+			t.Fatalf("Failed to create domain for test: %v", err)
+		}
+		if createResult.StatusCode != fiber.StatusCreated {
+			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Now update the domain
 		req := model.UpdateDomainRequest{
 			Enabled: util.BoolPtr(true),
 		}
 		body, _ := json.Marshal(req)
 
-		resp := httptest.NewRequest("PUT", "/api/v1/domains/example.com", bytes.NewReader(body))
+		resp := httptest.NewRequest("PUT", "/api/v1/domains/example-update-empty.com", bytes.NewReader(body))
 		resp.Header.Set("Content-Type", "application/json")
 
 		result, err := app.Test(resp)
@@ -231,7 +445,55 @@ func TestDomainHandler(t *testing.T) {
 
 	// Test DeleteDomain
 	t.Run("DeleteDomain", func(t *testing.T) {
-		resp := httptest.NewRequest("DELETE", "/api/v1/domains/example.com", http.NoBody)
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// First create the domain to ensure it exists
+		createReq := model.CreateDomainRequest{
+			Domain:           "example-delete.com",
+			AlternativeNames: []string{"www.example.com"},
+			Enabled:          true,
+		}
+		createBody, _ := json.Marshal(createReq)
+
+		createResp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(createBody))
+		createResp.Header.Set("Content-Type", "application/json")
+
+		createResult, err := app.Test(createResp)
+		if err != nil {
+			t.Fatalf("Failed to create domain for test: %v", err)
+		}
+		if createResult.StatusCode != fiber.StatusCreated {
+			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Now delete the domain
+		resp := httptest.NewRequest("DELETE", "/api/v1/domains/example-delete.com", http.NoBody)
 
 		result, err := app.Test(resp)
 		if err != nil {

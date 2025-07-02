@@ -201,8 +201,8 @@ API=v2
 	if cfg.ConfigD != "/etc/dehydrated/conf.d" {
 		t.Errorf("Expected ConfigD to be /etc/dehydrated/conf.d, got %s", cfg.ConfigD)
 	}
-	if cfg.ChainCache != "chains" {
-		t.Errorf("Expected ChainCache to be chains, got %s", cfg.ChainCache)
+	if cfg.ChainCache != filepath.Join(baseDir, "chains") {
+		t.Errorf("Expected ChainCache to be %s, got %s", filepath.Join(baseDir, "chains"), cfg.ChainCache)
 	}
 	if cfg.Api != "v2" {
 		t.Errorf("Expected Api to be v2, got %s", cfg.Api)

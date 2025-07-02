@@ -277,6 +277,7 @@ func (c *Config) resolvePaths() {
 	c.AccountsDir = c.ensureAbs(c.AccountsDir)
 	c.ChallengesDir = c.ensureAbs(c.ChallengesDir)
 	c.DomainsFile = c.ensureAbs(c.DomainsFile)
+	c.ChainCache = c.ensureAbs(c.ChainCache)
 
 	if c.HookScript != "" {
 		c.HookScript = c.ensureAbs(c.HookScript)
