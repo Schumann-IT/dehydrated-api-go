@@ -18,7 +18,7 @@ COVERAGE_FILE=coverage.out
 
 build: generate $(BINARY_NAME) ## Build binary
 
-ci-build: $(BINARY_NAME) ## Build binary (without generate)
+pre-commit: build clean ## Prepare for commit
 
 generate: ## Generate code and documentation
 	@go generate ./...
@@ -33,15 +33,16 @@ release: ## Create a release with goreleaser
 # Test
 #
 
-test: $(COVERAGE_FILE) test-scripts ## Run all tests
+test-all: test test-scripts ## Run all tests
 
-ci-test:
-	@go test -v -race ./... ## Run tests (without coverage)
+test: ## Run unit tests
+	@go test -v ./...
 
 test-scripts: ## Run script tests
 	@./scripts/test-update-config.sh
 
 test-coverage: $(COVERAGE_FILE) ## Show coverage report
+	@go test -v -coverprofile=$(COVERAGE_FILE) -coverpkg=./cmd/...,./internal/...,./plugin/proto/config.go,./plugin/proto/metadata.go,./plugin/server/...
 	@go tool cover -html=$(COVERAGE_FILE)
 
 lint: ## Run linter
@@ -61,22 +62,27 @@ docker-build: release ## Build Docker image using release artifacts
 # Cleanup
 #
 
-clean-all: clean clean-test clean-dist ## Cleanup everything
+clean-all: clean clean-test clean-dist clean-gen generate ## Cleanup everything
 
 clean: ## Clean build artifacts
 	@go clean
-	@rm -f proto/plugin/*.pb.go
 	@rm -f $(BINARY_NAME)
 	@rm -f $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME)
 	@rm -rf .dehydrated-api-go
-	@rm -f plugin/proto/*.pb.go
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)
-	@rm -f $(TEST_PLUGIN)
+	@for f in $(shell find . -name 'domains.txt' | grep -v "examples/data"); do \
+		rm -f $$f; \
+	done
+	@rm -f api
 
 clean-dist: ## Clean dist
 	@rm -rf dist
+
+clean-gen: ## Clean generated files
+	@rm -rf plugin/plugin*.go
+	@rm -rf docs
 
 #
 # Help
@@ -138,6 +144,3 @@ $(BINARY_NAME): ## Build the binary
 
 $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME): ## Build example plugin binary
 	@cd $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME) && go build -o $(EXAMPLE_PLUGIN_NAME)
-
-$(COVERAGE_FILE): ## Build coverage profile
-	@go test -v -race -coverprofile=$(COVERAGE_FILE) ./...

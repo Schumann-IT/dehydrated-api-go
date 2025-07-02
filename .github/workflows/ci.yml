@@ -28,7 +28,13 @@ jobs:
       run: go mod download
 
     - name: Run tests
-      run: go test -v -race ./...
+      run: go test -v -coverprofile=coverage.txt -coverpkg=./cmd/...,./internal/...,./plugin/proto/config.go,./plugin/proto/metadata.go,./plugin/server/...
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Schumann-IT/dehydrated-api-go
 
   lint:
     name: Lint

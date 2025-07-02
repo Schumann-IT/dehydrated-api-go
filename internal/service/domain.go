@@ -91,7 +91,7 @@ func (s *DomainService) Reload() error {
 	// Convert entries to pointers
 	pointerEntries := make([]*model.DomainEntry, len(entries))
 	for i := range entries {
-		pointerEntries[i] = &entries[i]
+		pointerEntries[i] = entries[i]
 	}
 
 	s.mutex.Lock()
@@ -139,9 +139,9 @@ func (s *DomainService) findDomainEntry(domain string, alias string) (*model.Dom
 // writeCacheToFile writes the current cache to the domains file.
 // It converts pointer entries to values for file writing.
 func (s *DomainService) writeCacheToFile() error {
-	entries := make([]model.DomainEntry, len(s.cache))
-	for i, entry := range s.cache {
-		entries[i] = model.DomainEntry{
+	entries := make(model.DomainEntries, 0, len(s.cache))
+	for _, entry := range s.cache {
+		entries = append(entries, &model.DomainEntry{
 			DomainEntry: pb.DomainEntry{
 				Domain:           entry.Domain,
 				AlternativeNames: entry.AlternativeNames,
@@ -149,7 +149,7 @@ func (s *DomainService) writeCacheToFile() error {
 				Enabled:          entry.Enabled,
 				Comment:          entry.Comment,
 			},
-		}
+		})
 	}
 
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
@@ -160,9 +160,9 @@ func (s *DomainService) writeCacheToFile() error {
 // It converts pointer entries to values for file writing.
 func (s *DomainService) writeEntriesToFile(entries []*model.DomainEntry) error {
 	// Convert pointers to values for file writing
-	valueEntries := make([]model.DomainEntry, len(entries))
-	for i, entry := range entries {
-		valueEntries[i] = model.DomainEntry{
+	valueEntries := make(model.DomainEntries, 0, len(entries))
+	for _, entry := range entries {
+		valueEntries = append(valueEntries, &model.DomainEntry{
 			DomainEntry: pb.DomainEntry{
 				Domain:           entry.Domain,
 				AlternativeNames: entry.AlternativeNames,
@@ -170,7 +170,7 @@ func (s *DomainService) writeEntriesToFile(entries []*model.DomainEntry) error {
 				Enabled:          entry.Enabled,
 				Comment:          entry.Comment,
 			},
-		}
+		})
 	}
 
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(entries)))
@@ -184,9 +184,9 @@ func (s *DomainService) enrichMetadataWithErrorHandling(entry *model.DomainEntry
 	}
 }
 
-// buildUpdatedEntry creates a new domain entry with updated fields from the request.
+// updateEntry creates a new domain entry with updated fields from the request.
 // It preserves existing values for fields that are not provided in the request.
-func (s *DomainService) buildUpdatedEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model.DomainEntry {
+func (s *DomainService) updateEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model.DomainEntry {
 	alt := entry.AlternativeNames
 	if req.AlternativeNames != nil {
 		alt = util.StringSlice(req.AlternativeNames)
@@ -213,9 +213,9 @@ func (s *DomainService) buildUpdatedEntry(entry *model.DomainEntry, req model.Up
 	}
 }
 
-// deleteDomainFromCache removes a domain entry from the cache and returns the updated cache.
+// entriesWithout retrieves all domain entries from the cache except for the specified domain and alias.
 // It also returns whether the domain was found and removed.
-func (s *DomainService) deleteDomainFromCache(domain string, alias string) ([]*model.DomainEntry, bool) {
+func (s *DomainService) entriesWithout(domain string, alias string) ([]*model.DomainEntry, bool) {
 	found := false
 	newEntries := make([]*model.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
@@ -402,7 +402,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 		return nil, errors.New("domain without specified alias not found")
 	}
 
-	updatedEntry := s.buildUpdatedEntry(entry, req)
+	updatedEntry := s.updateEntry(entry, req)
 
 	// Validate the updated entry
 	if !model.IsValidDomainEntry(updatedEntry) {
@@ -438,7 +438,7 @@ func (s *DomainService) UpdateDomainByAlias(domain string, alias string, req mod
 		return nil, errors.New("domain with specified alias not found")
 	}
 
-	updatedEntry := s.buildUpdatedEntry(entry, req)
+	updatedEntry := s.updateEntry(entry, req)
 
 	// Validate the updated entry
 	if !model.IsValidDomainEntry(updatedEntry) {
@@ -467,7 +467,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	newEntries, found := s.deleteDomainFromCache(domain, "")
+	newEntries, found := s.entriesWithout(domain, "")
 	if !found {
 		s.logger.Error("Domain without alias not found", zap.String("domain", domain))
 		return errors.New("domain without specified alias not found")
@@ -496,7 +496,7 @@ func (s *DomainService) DeleteDomainByAlias(domain string, alias string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	newEntries, found := s.deleteDomainFromCache(domain, alias)
+	newEntries, found := s.entriesWithout(domain, alias)
 	if !found {
 		s.logger.Error("Domain with alias not found", zap.String("domain", domain), zap.String("alias", alias))
 		return errors.New("domain with specified alias not found")

@@ -18,7 +18,7 @@ func TestFileOperations(t *testing.T) {
 	domainsFile := filepath.Join(tmpDir, "domains.txt")
 
 	// Test data
-	testEntries := []model.DomainEntry{
+	testEntries := model.DomainEntries{
 		{
 			DomainEntry: pb.DomainEntry{
 				Domain:           "example.com",
@@ -161,7 +161,7 @@ func TestComplexDomainsFile(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "complex_domains.txt")
 
 	// Complex test entries matching the original test
-	complexEntries := []model.DomainEntry{
+	complexEntries := model.DomainEntries{
 		{DomainEntry: pb.DomainEntry{Domain: "example.org", AlternativeNames: []string{"www.example.org"}, Enabled: true}},
 		{DomainEntry: pb.DomainEntry{Domain: "example.com", AlternativeNames: []string{"www.example.com", "wiki.example.com"}, Enabled: true}},
 		{DomainEntry: pb.DomainEntry{Domain: "example.net", AlternativeNames: []string{"www.example.net"}, Alias: "certalias", Enabled: true}},

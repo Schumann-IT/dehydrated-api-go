@@ -1,5 +1,147 @@
 basePath: /
 definitions:
+  dehydrated.Config:
+    properties:
+      accept_terms:
+        description: Whether to accept Let's Encrypt terms of service.
+        type: boolean
+      accounts_dir:
+        description: Directory for ACME account data.
+        type: string
+      alpn_dir:
+        description: Directory for TLS-ALPN-01 challenges.
+        type: string
+      api:
+        description: API version to use (e.g., "v2").
+        type: string
+      auto_cleanup:
+        description: Whether to automatically clean up old files.
+        type: boolean
+      base_dir:
+        description: Base directories for dehydrated operation.
+        type: string
+      ca:
+        description: ACME settings for Let's Encrypt integration.
+        type: string
+      cert_dir:
+        description: Directory for certificates.
+        type: string
+      chain_cache:
+        description: Directory for certificate chain cache.
+        type: string
+      challenge_type:
+        description: Challenge settings for domain validation.
+        type: string
+      challenges_dir:
+        description: Directory for ACME challenges.
+        type: string
+      config_d:
+        description: Additional config directory for extensions.
+        type: string
+      config_file:
+        description: Path to the dehydrated config file.
+        type: string
+      contact_email:
+        description: Contact email for Let's Encrypt notifications.
+        type: string
+      curl_opts:
+        description: Additional curl options for HTTP requests.
+        type: string
+      domains_dir:
+        description: Directory for domain configurations.
+        type: string
+      domains_file:
+        description: File paths for dehydrated operation.
+        type: string
+      force_renew:
+        description: Whether to force renewal regardless of expiration.
+        type: boolean
+      force_validation:
+        description: Whether to force domain validation.
+        type: boolean
+      full_chain:
+        description: Whether to include full certificate chain.
+        type: boolean
+      group:
+        type: string
+      hook_chain:
+        description: Whether to chain hook calls for efficiency.
+        type: boolean
+      hook_script:
+        description: Path to the hook script.
+        type: string
+      ipv4:
+        description: Whether to use IPv4 for challenges.
+        type: boolean
+      ipv6:
+        description: Whether to use IPv6 for challenges.
+        type: boolean
+      keep_going:
+        description: Whether to continue processing on errors.
+        type: boolean
+      key_algo:
+        description: Certificate settings for generation and renewal.
+        type: string
+      key_size:
+        description: RSA key size in bits (e.g., 2048, 4096).
+        type: integer
+      lock_file:
+        description: Path to the lock file.
+        type: string
+      no_lock:
+        description: Other settings.
+        type: boolean
+      ocsp:
+        description: Whether to enable OCSP stapling.
+        type: boolean
+      ocsp_days:
+        description: Days to keep OCSP responses (e.g., 7).
+        type: integer
+      ocsp_fetch:
+        description: Whether to fetch OCSP responses.
+        type: boolean
+      ocsp_must_staple:
+        description: OCSP settings for certificate status.
+        type: boolean
+      old_ca:
+        description: Old Certificate Authority URL for migration.
+        type: string
+      openssl:
+        description: Path to OpenSSL binary.
+        type: string
+      openssl_config:
+        description: OpenSSL settings for certificate generation.
+        type: string
+      preferred_chain:
+        description: Preferred certificate chain (e.g., "ISRG Root X1").
+        type: string
+      private_key_renew:
+        description: Whether to renew private keys with certificates.
+        type: boolean
+      private_key_rollover:
+        description: Whether to use key rollover for smoother transitions.
+        type: boolean
+      renew_days:
+        description: Days before renewal (e.g., 30).
+        type: integer
+      user:
+        description: User and group settings for file permissions.
+        type: string
+      well_known_dir:
+        description: Directory for HTTP-01 challenges.
+        type: string
+    type: object
+  model.ConfigResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dehydrated.Config'
+      error:
+        example: Failed to load config
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
   model.CreateDomainRequest:
     description: Request to create a new domain entry
     properties:
@@ -334,6 +476,32 @@ paths:
       summary: Update a domain
       tags:
       - domains
+  /config:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the current dehydrated configuration settings including
+        paths, certificates, and operational parameters
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration retrieved successfully
+          schema:
+            $ref: '#/definitions/model.ConfigResponse'
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          schema:
+            $ref: '#/definitions/model.ConfigResponse'
+        "500":
+          description: Internal Server Error - Failed to retrieve configuration
+          schema:
+            $ref: '#/definitions/model.ConfigResponse'
+      security:
+      - BearerAuth: []
+      summary: Get dehydrated configuration
+      tags:
+      - config
   /health:
     get:
       consumes:

@@ -142,8 +142,7 @@ func (s *Server) Start() {
 	s.app.Use(cors.New())
 
 	// Add health handler
-	h := handler.NewHealthHandler()
-	h.RegisterRoutes(s.app)
+	handler.NewHealthHandler().RegisterRoutes(s.app)
 
 	// Add Swagger documentation
 	s.app.Get("/docs/*", swagger.HandlerDefault)
@@ -164,8 +163,8 @@ func (s *Server) Start() {
 
 	// Add domain handler to the api group
 	if s.domainService != nil {
-		d := handler.NewDomainHandler(s.domainService)
-		d.RegisterRoutes(g)
+		handler.NewDomainHandler(s.domainService).RegisterRoutes(g)
+		handler.NewConfigHandler(s.domainService.DehydratedConfig).RegisterRoutes(s.app)
 	}
 
 	// Start the server

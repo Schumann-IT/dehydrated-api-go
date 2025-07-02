@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
-
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
+	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
 
 // ReadDomainsFile reads a domains.txt file and returns a slice of DomainEntry.
@@ -16,17 +15,17 @@ import (
 // - Aliases using the '>' syntax
 // - Comments using '#' prefix or inline
 // - Disabled entries (prefixed with '#')
-func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
+func ReadDomainsFile(filename string) (model.DomainEntries, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []model.DomainEntry{}, nil
+			return model.DomainEntries{}, nil
 		}
 		return nil, err
 	}
 	defer file.Close()
 
-	var entries []model.DomainEntry
+	var entries model.DomainEntries
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -77,7 +76,7 @@ func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 
 		// Only add valid domain entries
 		if model.IsValidDomainEntry(&entry) {
-			entries = append(entries, entry)
+			entries = append(entries, &entry)
 		}
 	}
 
@@ -94,12 +93,16 @@ func ReadDomainsFile(filename string) ([]model.DomainEntry, error) {
 // - Alternative names are space-separated
 // - Aliases are added with ' > ' separator
 // - Comments are added with ' # ' separator
-func WriteDomainsFile(filename string, entries []model.DomainEntry) error {
+// - Entries are automatically sorted alphabetically before writing using the DomainEntries.Sort() method
+func WriteDomainsFile(filename string, entries model.DomainEntries) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+
+	// Sort the entries
+	entries.Sort()
 
 	writer := bufio.NewWriter(file)
 	for _, entry := range entries {
@@ -136,5 +139,9 @@ func WriteDomainsFile(filename string, entries []model.DomainEntry) error {
 		}
 	}
 
-	return writer.Flush()
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
+	return nil
 }
