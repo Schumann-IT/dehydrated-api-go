@@ -134,12 +134,13 @@ func (c *GithubCache) downloadAsset(asset *GitHubAsset) {
 		strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".zip")
 
 	if isArchive {
-		f := c.handleArchiveDownload(resp)
+		archiveFile, tmpFile := c.handleArchiveDownload(resp)
 		if strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".zip") {
-			extractZip(f, filepath.Dir(c.currentFile))
+			extractZip(archiveFile, filepath.Dir(c.currentFile))
 		} else if strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tar.gz") || strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tgz") {
-			extractTarGz(f, filepath.Dir(c.currentFile))
+			extractTarGz(archiveFile, filepath.Dir(c.currentFile))
 		}
+		os.RemoveAll(tmpFile)
 	} else {
 		// If not an archive, handle as a regular file
 		c.handleRegularDownload(resp)
@@ -147,13 +148,12 @@ func (c *GithubCache) downloadAsset(asset *GitHubAsset) {
 }
 
 // handleArchiveDownload handles downloading and extracting compressed archives
-func (c *GithubCache) handleArchiveDownload(resp *http.Response) string {
+func (c *GithubCache) handleArchiveDownload(resp *http.Response) (string, string) {
 	// Create a temporary directory for extraction
 	tempDir, err := os.MkdirTemp("", "dehydrated-api-plugin-*")
 	if err != nil {
 		panic("failed to create temp directory for archive: " + err.Error())
 	}
-	defer os.RemoveAll(tempDir) // Clean up temp directory
 
 	// Create temporary archive file
 	tempArchive := filepath.Join(tempDir, "archive")
@@ -170,7 +170,7 @@ func (c *GithubCache) handleArchiveDownload(resp *http.Response) string {
 
 	archiveFile.Close()
 
-	return tempArchive
+	return tempArchive, tempDir
 }
 
 // handleRegularDownload handles downloading regular files

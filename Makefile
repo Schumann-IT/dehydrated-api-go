@@ -35,7 +35,7 @@ release: ## Create a release with goreleaser
 
 test-all: test test-scripts ## Run all tests
 
-test: ## Run unit tests
+test: $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run unit tests
 	@go test -v ./...
 
 test-scripts: ## Run script tests
@@ -67,15 +67,17 @@ clean-all: clean clean-test clean-dist clean-gen generate ## Cleanup everything
 clean: ## Clean build artifacts
 	@go clean
 	@rm -f $(BINARY_NAME)
-	@rm -f $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME)
 	@rm -rf .dehydrated-api-go
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)
+	@rm -f $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME)
 	@for f in $(shell find . -name 'domains.txt' | grep -v "examples/data"); do \
 		rm -f $$f; \
 	done
-	@rm -f api
+	@for d in $(shell find . -type d -name '.dehydrated-api-go' | grep -v "examples/data"); do \
+		rm -rf $$d; \
+	done
 
 clean-dist: ## Clean dist
 	@rm -rf dist

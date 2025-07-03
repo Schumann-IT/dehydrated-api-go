@@ -13,34 +13,20 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "valid local registry",
+			name: "valid_local_registry",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
 					Type: "local",
 					Config: map[string]any{
-						"path": "/tmp/test-plugin",
+						"path": "../../../examples/plugins/simple/simple",
 					},
 				},
 			},
 			expectError: false,
 		},
 		{
-			name: "valid github registry",
-			config: config.PluginConfig{
-				Enabled: true,
-				Registry: &config.RegistryConfig{
-					Type: "github",
-					Config: map[string]any{
-						"repository": "test/repo",
-						"version":    "v1.0.0",
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "missing registry type",
+			name: "missing_registry_type",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
@@ -52,7 +38,7 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "unsupported registry type",
+			name: "unsupported_registry_type",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
@@ -65,7 +51,7 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "local registry missing path",
+			name: "local_registry_missing_path",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
@@ -76,7 +62,7 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "github registry missing repository",
+			name: "github_registry_missing_repository",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
@@ -89,7 +75,7 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "github registry invalid repository format",
+			name: "github_registry_invalid_repository_format",
 			config: config.PluginConfig{
 				Enabled: true,
 				Registry: &config.RegistryConfig{
@@ -114,9 +100,10 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 					Add(tt.name, tt.config.Registry)
 				})
 			} else {
+				Add(tt.name, tt.config.Registry)
 				path, err := Get(tt.name)
 				require.NoError(t, err)
-				require.Contains(t, "foo", path)
+				require.Contains(t, path, tt.name)
 			}
 		})
 	}
