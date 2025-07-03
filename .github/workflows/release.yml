@@ -6,6 +6,13 @@ on:
       - main
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        required: false
+        default: 'main'
+        type: string
 
 permissions:
   contents: write
@@ -90,3 +97,4 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
