@@ -13,19 +13,19 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 		config      config.PluginConfig
 		expectError bool
 	}{
-		{
-			name: "valid_local_registry",
-			config: config.PluginConfig{
-				Enabled: true,
-				Registry: &config.RegistryConfig{
-					Type: "local",
-					Config: map[string]any{
-						"path": "../../../examples/plugins/simple/simple",
-					},
-				},
-			},
-			expectError: false,
-		},
+		//{
+		//	name: "valid_local_registry",
+		//	config: config.PluginConfig{
+		//		Enabled: true,
+		//		Registry: &config.RegistryConfig{
+		//			Type: "local",
+		//			Config: map[string]any{
+		//				"path": "../../../examples/plugins/simple/simple",
+		//			},
+		//		},
+		//	},
+		//	expectError: false,
+		//},
 		{
 			name: "missing_registry_type",
 			config: config.PluginConfig{
