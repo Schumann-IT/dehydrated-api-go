@@ -2,24 +2,25 @@ package registry
 
 import (
 	"context"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/client"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/manager"
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 	"go.uber.org/zap"
 )
 
 type Registry struct {
 	clients map[string]*client.Client
-	manager *manager.Manager
 	logger  *zap.Logger
 }
 
-func NewRegistry(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger) *Registry {
+func New(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger) *Registry {
+	cache.Prepare(baseDir)
+
 	r := &Registry{
 		clients: make(map[string]*client.Client),
-		manager: manager.NewManager(logger, baseDir),
 		logger:  logger,
 	}
 
@@ -27,37 +28,30 @@ func NewRegistry(baseDir string, cfg map[string]config.PluginConfig, logger *zap
 		if !c.Enabled {
 			continue
 		}
-		r.register(n, c)
+
+		cache.Add(n, c.Registry)
+
+		pluginConfig, err := c.ToProto()
+		if err != nil {
+			r.logger.Error("Failed to convert plugin config to proto",
+				zap.String("plugin", n),
+				zap.Error(err))
+			panic("Failed to convert plugin config to proto: " + err.Error())
+		}
+		r.register(n, pluginConfig)
 	}
 
 	return r
 }
 
-func (r *Registry) register(name string, pluginConfig config.PluginConfig) {
-	// Validate plugin configuration
-	if err := pluginConfig.Validate(); err != nil {
-		r.logger.Error("Invalid plugin configuration",
-			zap.String("plugin", name),
-			zap.Error(err))
-		panic("Invalid plugin config: " + err.Error())
-	}
-
+func (r *Registry) register(name string, cfg map[string]*structpb.Value) {
 	// Get plugin path using the new registry system or fallback to old system
-	pluginPath, err := r.getPluginPath(pluginConfig)
+	pluginPath, err := cache.Get(name)
 	if err != nil {
 		r.logger.Error("Failed to get plugin path",
 			zap.String("plugin", name),
 			zap.Error(err))
 		panic("Failed to get plugin path: " + err.Error())
-	}
-
-	// Convert config to proto format
-	cfg, err := pluginConfig.ToProto()
-	if err != nil {
-		r.logger.Error("Invalid plugin config",
-			zap.String("plugin", name),
-			zap.Error(err))
-		panic("Invalid plugin config: " + err.Error())
 	}
 
 	// Create a new client
@@ -74,21 +68,6 @@ func (r *Registry) register(name string, pluginConfig config.PluginConfig) {
 	r.logger.Info("Plugin registered successfully",
 		zap.String("plugin", name),
 		zap.String("path", pluginPath))
-}
-
-// getPluginPath gets the plugin path using the new registry system or falls back to the old system
-func (r *Registry) getPluginPath(pluginConfig config.PluginConfig) (string, error) {
-	// If new registry configuration is provided, use it
-	if pluginConfig.Registry != nil {
-		pluginRegistry, err := NewPluginRegistry(*pluginConfig.Registry, r.logger, r.manager)
-		if err != nil {
-			return "", err
-		}
-		return pluginRegistry.GetPluginPath()
-	}
-
-	// Fallback to old system
-	return r.manager.GetPluginPath(pluginConfig)
 }
 
 func (r *Registry) Plugins() map[string]pb.PluginClient {

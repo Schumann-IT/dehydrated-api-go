@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
+	pluginregistry "github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
@@ -101,7 +101,7 @@ func (s *Server) WithDomainService() *Server {
 		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 	)
 
-	r := registry.NewRegistry(cfg.BaseDir, s.Config.Plugins, s.Logger)
+	r := pluginregistry.New(cfg.BaseDir, s.Config.Plugins, s.Logger)
 	domainService := service.NewDomainService(cfg, r)
 
 	if s.Logger != nil {

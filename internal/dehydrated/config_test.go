@@ -92,8 +92,8 @@ API=v2
 	if cfg.CertDir != "/etc/certs/override" {
 		t.Errorf("Expected CertDir to be /etc/certs/override, got %s", cfg.CertDir)
 	}
-	if cfg.DomainsDir != filepath.Join(baseDir, "domains/override") {
-		t.Errorf("Expected DomainsDir to be %s, got %s", filepath.Join(baseDir, "domains/override"), cfg.DomainsDir)
+	if cfg.DomainsDir != filepath.Join(baseDir, "domains", "override") {
+		t.Errorf("Expected DomainsDir to be %s, got %s", filepath.Join(baseDir, "domains", "override"), cfg.DomainsDir)
 	}
 	if cfg.KeyAlgo != "prime256v1" {
 		t.Errorf("Expected KeyAlgo to be prime256v1, got %s", cfg.KeyAlgo)
@@ -105,10 +105,10 @@ API=v2
 		t.Errorf("Expected ChallengeType to be dns-01, got %s", cfg.ChallengeType)
 	}
 
-	if cfg.AccountsDir != filepath.Join(baseDir, "accounts/override") {
+	if cfg.AccountsDir != filepath.Join(baseDir, "accounts", "override") {
 		t.Errorf("Expected AccountsDir to be %s, got %s", filepath.Join(baseDir, "accounts"), cfg.AccountsDir)
 	}
-	if cfg.ChallengesDir != filepath.Join(baseDir, "challenges/override") {
+	if cfg.ChallengesDir != filepath.Join(baseDir, "challenges", "override") {
 		t.Errorf("Expected ChallengesDir to be %s, got %s", filepath.Join(baseDir, "challenges"), cfg.ChallengesDir)
 	}
 	if cfg.DomainsFile != filepath.Join(baseDir, "domains.txt") {
@@ -261,17 +261,17 @@ API=v2
 	if cfg.CertDir != "/etc/certs/override" {
 		t.Errorf("Expected CertDir to be /etc/certs/override, got %s", cfg.CertDir)
 	}
-	if cfg.DomainsDir != filepath.Join("/test/base", "domains/override") {
-		t.Errorf("Expected DomainsDir to be %s, got %s", filepath.Join("/test/base", "domains/override"), cfg.DomainsDir)
+	if cfg.DomainsDir != filepath.Join("/test", "base", "domains", "override") {
+		t.Errorf("Expected DomainsDir to be %s, got %s", filepath.Join("/test", "base", "domains", "override"), cfg.DomainsDir)
 	}
-	if cfg.AccountsDir != filepath.Join("/test/base", "accounts/override") {
-		t.Errorf("Expected AccountsDir to be %s, got %s", filepath.Join("/test/base", "accounts/override"), cfg.AccountsDir)
+	if cfg.AccountsDir != filepath.Join("/test", "base", "accounts", "override") {
+		t.Errorf("Expected AccountsDir to be %s, got %s", filepath.Join("/test", "base", "accounts", "override"), cfg.AccountsDir)
 	}
-	if cfg.ChallengesDir != filepath.Join("/test/base", "challenges/override") {
-		t.Errorf("Expected ChallengesDir to be %s, got %s", filepath.Join("/test/base", "challenges/override"), cfg.ChallengesDir)
+	if cfg.ChallengesDir != filepath.Join("/test", "base", "challenges", "override") {
+		t.Errorf("Expected ChallengesDir to be %s, got %s", filepath.Join("/test", "base", "challenges", "override"), cfg.ChallengesDir)
 	}
-	if cfg.DomainsFile != filepath.Join("/test/base", "domains.txt") {
-		t.Errorf("Expected DomainsFile to be %s, got %s", filepath.Join("/test/base", "domains.txt"), cfg.DomainsFile)
+	if cfg.DomainsFile != filepath.Join("/test", "base", "domains.txt") {
+		t.Errorf("Expected DomainsFile to be %s, got %s", filepath.Join("/test", "base", "domains.txt"), cfg.DomainsFile)
 	}
 	if cfg.HookScript != "/test/base/hook.sh" {
 		t.Errorf("Expected HookScript to be /test/base/hook.sh, got %s", cfg.HookScript)
