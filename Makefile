@@ -67,7 +67,7 @@ clean-all: clean clean-test clean-dist clean-gen generate ## Cleanup everything
 clean: ## Clean build artifacts
 	@go clean
 	@rm -f $(BINARY_NAME)
-	@rm -rf .dehydrated-api-go
+	@rm -f api #@TODO check how this file is generated
 
 clean-test: ## Clean test
 	@rm -f $(COVERAGE_FILE)

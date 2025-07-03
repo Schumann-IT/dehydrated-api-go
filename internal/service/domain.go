@@ -122,14 +122,8 @@ func (s *DomainService) Close() error {
 // If alias is empty, it looks for entries without an alias.
 func (s *DomainService) findDomainEntry(domain, alias string) (*model.DomainEntry, int) {
 	for i, entry := range s.cache {
-		if alias != "" {
-			if entry.Domain == domain && entry.Alias == alias {
-				return entry, i
-			}
-		} else {
-			if entry.Domain == domain && entry.Alias == "" {
-				return entry, i
-			}
+		if entry.Domain == domain && entry.Alias == alias {
+			return entry, i
 		}
 	}
 	return nil, -1
@@ -207,12 +201,12 @@ func updateEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model
 
 // entriesWithout retrieves all domain entries from the cache except for the specified domain and alias.
 // It also returns whether the domain was found and removed.
-func (s *DomainService) entriesWithout(domain, alias string) ([]*model.DomainEntry, bool) {
+func (s *DomainService) entriesWithout(domain string, alias *string) ([]*model.DomainEntry, bool) {
 	found := false
 	newEntries := make([]*model.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
-		if alias != "" {
-			if entry.Domain == domain && entry.Alias == alias {
+		if alias != nil && *alias != "" {
+			if entry.Domain == domain && entry.Alias == *alias {
 				found = true
 				continue
 			}
@@ -230,7 +224,11 @@ func (s *DomainService) entriesWithout(domain, alias string) ([]*model.DomainEnt
 // CreateDomain adds a new domain entry to the domains file.
 // It validates the entry, checks for duplicates, and updates both the cache and file.
 func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.DomainEntry, error) {
-	s.logger.Info("Creating domain", zap.Any("domain", req))
+	s.logger.Info("Creating domain", zap.Any("domain", req.Domain), zap.Any("req", req))
+
+	if s.watcher != nil {
+		s.watcher.Disable()
+	}
 
 	entry := &model.DomainEntry{
 		DomainEntry: pb.DomainEntry{
@@ -251,12 +249,10 @@ func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.Dom
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// Check if domain with same alias already exists
-	for _, existing := range s.cache {
-		if existing.Domain == entry.Domain && existing.Alias == entry.Alias {
-			s.logger.Error("Domain with same alias already exists", zap.Any("entry", entry))
-			return nil, errors.New("domain with same alias already exists")
-		}
+	existing, _ := s.findDomainEntry(req.Domain, req.Alias)
+	if existing != nil {
+		s.logger.Error("Domain already exists", zap.Any("entry", entry))
+		return nil, errors.New("domain exists")
 	}
 
 	// Add the new entry
@@ -268,6 +264,10 @@ func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.Dom
 		s.cache = s.cache[:len(s.cache)-1]
 		s.logger.Error("Failed to write domains file", zap.Error(err))
 		return nil, err
+	}
+
+	if s.watcher != nil {
+		s.watcher.Enable()
 	}
 
 	return entry, nil
@@ -307,51 +307,16 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) {
 
 // GetDomain retrieves a domain entry by its domain name.
 // It returns a copy of the entry with metadata enriched from plugins.
-func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
-	s.logger.Info("Load domain", zap.String("domain", domain))
+func (s *DomainService) GetDomain(domain, alias string) (*model.DomainEntry, error) {
+	s.logger.Info("Load domain", zap.String("domain", domain), zap.Any("alias", alias))
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-
-	entry, _ := s.findDomainEntry(domain, "")
-	if entry == nil {
-		s.logger.Error("Domain without alias not found", zap.String("domain", domain))
-		return nil, errors.New("domain without alias not found")
-	}
-
-	entryCopy := entry
-	s.enrichMetadata(entryCopy)
-	return entryCopy, nil
-}
-
-// GetDomainByAlias retrieves a domain entry by its domain name and optional alias.
-// This is useful when multiple entries exist with the same domain but different aliases.
-// If alias is empty, behaves the same as GetDomain.
-// It returns a copy of the entry with metadata enriched from plugins.
-func (s *DomainService) GetDomainByAlias(domain, alias string) (*model.DomainEntry, error) {
-	s.logger.Info("Load domain by alias", zap.String("domain", domain), zap.String("alias", alias))
-
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
-	// First check if the domain exists at all
-	domainExists := false
-	for _, entry := range s.cache {
-		if entry.Domain == domain {
-			domainExists = true
-			break
-		}
-	}
-
-	if !domainExists {
-		s.logger.Error("Domain not found", zap.String("domain", domain))
-		return nil, errors.New("domain not found")
-	}
 
 	entry, _ := s.findDomainEntry(domain, alias)
 	if entry == nil {
-		s.logger.Error("Domain with alias not found", zap.String("domain", domain), zap.String("alias", alias))
-		return nil, errors.New("domain with specified alias not found")
+		s.logger.Error("Domain not found", zap.String("domain", domain), zap.Any("alias", alias))
+		return nil, errors.New("domain not found")
 	}
 
 	entryCopy := entry
@@ -384,49 +349,21 @@ func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
 	s.logger.Info("Update domain", zap.String("domain", domain), zap.Any("req", req))
 
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	entry, index := s.findDomainEntry(domain, "")
-	if entry == nil {
-		s.logger.Error("Domain without alias not found", zap.String("domain", domain))
-		return nil, errors.New("domain without specified alias not found")
+	if s.watcher != nil {
+		s.watcher.Disable()
 	}
-
-	updatedEntry := updateEntry(entry, req)
-
-	// Validate the updated entry
-	if !model.IsValidDomainEntry(updatedEntry) {
-		s.logger.Error("Invalid domain entry", zap.Any("entry", updatedEntry))
-		return nil, errors.New("invalid domain entry")
-	}
-
-	s.cache[index] = updatedEntry
-
-	// Write back to file
-	if err := s.writeCacheToFile(); err != nil {
-		s.logger.Error("Failed to write domains file", zap.Error(err))
-		return nil, err
-	}
-
-	s.logger.Info("Updated domain", zap.String("domain", domain))
-
-	return updatedEntry, nil
-}
-
-// UpdateDomainByAlias updates an existing domain entry by its domain name and optional alias.
-// This is useful when multiple entries exist with the same domain but different aliases.
-// If alias is empty, behaves the same as UpdateDomain.
-func (s *DomainService) UpdateDomainByAlias(domain, alias string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
-	s.logger.Info("Update domain by alias", zap.String("domain", domain), zap.String("alias", alias), zap.Any("req", req))
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	alias := ""
+	if req.Alias != nil {
+		alias = *req.Alias
+	}
 	entry, index := s.findDomainEntry(domain, alias)
 	if entry == nil {
-		s.logger.Error("Domain with alias not found", zap.String("domain", domain), zap.String("alias", alias))
-		return nil, errors.New("domain with specified alias not found")
+		s.logger.Error("Domain not found", zap.String("domain", domain), zap.Any("req", req))
+		return nil, errors.New("domain not found")
 	}
 
 	updatedEntry := updateEntry(entry, req)
@@ -437,30 +374,42 @@ func (s *DomainService) UpdateDomainByAlias(domain, alias string, req model.Upda
 		return nil, errors.New("invalid domain entry")
 	}
 
-	s.cache[index] = updatedEntry
+	if !updatedEntry.Equals(entry) {
+		s.cache[index] = updatedEntry
 
-	// Write back to file
-	if err := s.writeCacheToFile(); err != nil {
-		s.logger.Error("Failed to write domains file", zap.Error(err))
-		return nil, err
+		// Write back to file
+		if err := s.writeCacheToFile(); err != nil {
+			s.logger.Error("Failed to write domains file", zap.Error(err))
+			return nil, err
+		}
+
+		s.logger.Info("Updated domain", zap.String("domain", domain), zap.Any("req", req))
+	} else {
+		s.logger.Info("No changes detected for domain", zap.String("domain", domain), zap.Any("req", req))
 	}
 
-	s.logger.Info("Updated domain", zap.String("domain", domain), zap.String("alias", alias))
+	if s.watcher != nil {
+		s.watcher.Enable()
+	}
 
 	return updatedEntry, nil
 }
 
 // DeleteDomain removes a domain entry from both the cache and the domains file.
 // It returns an error if the domain is not found.
-func (s *DomainService) DeleteDomain(domain string) error {
-	s.logger.Info("Delete domain", zap.String("domain", domain))
+func (s *DomainService) DeleteDomain(domain string, req model.DeleteDomainRequest) error {
+	s.logger.Info("Delete domain", zap.String("domain", domain), zap.Any("req", req))
+
+	if s.watcher != nil {
+		s.watcher.Disable()
+	}
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	newEntries, found := s.entriesWithout(domain, "")
+	newEntries, found := s.entriesWithout(domain, req.Alias)
 	if !found {
-		s.logger.Error("Domain without alias not found", zap.String("domain", domain))
+		s.logger.Error("Domain without alias not found", zap.String("domain", domain), zap.Any("req", req))
 		return errors.New("domain without specified alias not found")
 	}
 
@@ -473,36 +422,11 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	// Update cache only after successful write
 	s.cache = newEntries
 
-	s.logger.Info("Deleted domain", zap.String("domain", domain))
+	s.logger.Info("Deleted domain", zap.String("domain", domain), zap.Any("req", req))
 
-	return nil
-}
-
-// DeleteDomainByAlias removes a domain entry by its domain name and optional alias.
-// This is useful when multiple entries exist with the same domain but different aliases.
-// If alias is empty, behaves the same as DeleteDomain.
-func (s *DomainService) DeleteDomainByAlias(domain, alias string) error {
-	s.logger.Info("Delete domain by alias", zap.String("domain", domain), zap.String("alias", alias))
-
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	newEntries, found := s.entriesWithout(domain, alias)
-	if !found {
-		s.logger.Error("Domain with alias not found", zap.String("domain", domain), zap.String("alias", alias))
-		return errors.New("domain with specified alias not found")
+	if s.watcher != nil {
+		s.watcher.Enable()
 	}
-
-	// Write back to file
-	if err := s.writeEntriesToFile(newEntries); err != nil {
-		s.logger.Error("Failed to write domains file", zap.Error(err))
-		return err
-	}
-
-	// Update cache only after successful write
-	s.cache = newEntries
-
-	s.logger.Info("Deleted domain", zap.String("domain", domain), zap.String("alias", alias))
 
 	return nil
 }

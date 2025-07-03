@@ -116,9 +116,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Get details of a specific domain",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -194,12 +191,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Optional alias to uniquely identify the domain entry",
-                        "name": "alias",
-                        "in": "query"
-                    },
-                    {
                         "description": "Domain update request",
                         "name": "request",
                         "in": "body",
@@ -262,10 +253,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Optional alias to uniquely identify the domain entry",
-                        "name": "alias",
-                        "in": "query"
+                        "description": "Domain delete request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteDomainRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -587,6 +581,17 @@ const docTemplate = `{
                     "description": "Enabled indicates whether the domain should be active.\n@Description Whether the domain is enabled for certificate issuance",
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "model.DeleteDomainRequest": {
+            "description": "Request to delete an existing domain entry",
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "description": "Alias is an optional alternative identifier.\n@Description Optional alternative identifier for the domain",
+                    "type": "string",
+                    "example": "my-domain"
                 }
             }
         },

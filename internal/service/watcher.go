@@ -22,6 +22,7 @@ type FileWatcher struct {
 	debounceMap map[string]time.Time // Map for tracking last event time per file
 	done        chan struct{}        // Channel for signaling shutdown
 	logger      *zap.Logger          // Logger for the file watcher
+	suspended   bool                 // Flag to indicate if the watcher is suspended
 }
 
 // NewFileWatcher creates a new FileWatcher instance for the specified file.
@@ -40,6 +41,7 @@ func NewFileWatcher(filePath string, onChange func() error) (*FileWatcher, error
 		debounceMap: make(map[string]time.Time),
 		done:        make(chan struct{}),
 		logger:      zap.NewNop(),
+		suspended:   false,
 	}
 
 	// Watch both the file and its parent directory
@@ -60,6 +62,16 @@ func (fw *FileWatcher) Watch() {
 	go fw.watch()
 }
 
+func (fw *FileWatcher) Disable() {
+	fw.suspended = true
+	fw.logger.Debug("Disabled file watcher")
+}
+
+func (fw *FileWatcher) Enable() {
+	fw.suspended = false
+	fw.logger.Debug("Enabled file watcher")
+}
+
 // watch monitors the file for changes and triggers the callback when appropriate.
 // It implements debouncing to prevent multiple rapid callbacks for the same file change.
 // The method runs in a goroutine and continues until the watcher is closed.
@@ -76,6 +88,14 @@ func (fw *FileWatcher) watch() {
 		case event, ok := <-fw.watcher.Events:
 			if !ok {
 				return
+			}
+
+			// If the watcher is suspended, skip processing events
+			if fw.suspended {
+				fw.logger.Debug("Watcher is suspended, ignoring event",
+					zap.String("event", event.Op.String()),
+					zap.String("file", event.Name))
+				continue
 			}
 
 			// Normalize paths for comparison

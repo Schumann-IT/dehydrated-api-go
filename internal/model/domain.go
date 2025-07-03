@@ -73,6 +73,31 @@ func (e *DomainEntry) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (e *DomainEntry) Equals(entry *DomainEntry) bool {
+	if e == nil || entry == nil {
+		return false
+	}
+
+	if e.Domain != entry.Domain ||
+		e.Alias != entry.Alias ||
+		e.Enabled != entry.Enabled ||
+		e.Comment != entry.Comment {
+		return false
+	}
+
+	if len(e.AlternativeNames) != len(entry.AlternativeNames) {
+		return false
+	}
+
+	for i, name := range e.AlternativeNames {
+		if name != entry.AlternativeNames[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (e *DomainEntry) SetMetadata(m *pb.Metadata) {
 	e.Metadata = m
 }
@@ -131,6 +156,15 @@ type UpdateDomainRequest struct {
 	// Comment is an optional description.
 	// @Description Optional description or comment for the domain
 	Comment *string `json:"comment,omitempty" example:"Production domain for web application"`
+}
+
+// DeleteDomainRequest represents a request to delete an existing domain entry.
+// An optional alias can be provided to uniquely identify the domain entry.
+// @Description Request to delete an existing domain entry
+type DeleteDomainRequest struct {
+	// Alias is an optional alternative identifier.
+	// @Description Optional alternative identifier for the domain
+	Alias *string `json:"alias,omitempty" example:"my-domain"`
 }
 
 // DomainResponse represents a response containing a single domain entry.
