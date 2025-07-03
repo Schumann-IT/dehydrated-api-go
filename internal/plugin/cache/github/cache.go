@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/cacheinterface"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/cacheinterface"
 )
 
 type GithubCache struct {
@@ -134,10 +135,11 @@ func (c *GithubCache) downloadAsset(asset *GitHubAsset) {
 		strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".zip")
 
 	if isArchive {
-		archiveFile, tmpFile := c.handleArchiveDownload(resp)
+		archiveFile, tmpFile := handleArchiveDownload(resp)
 		if strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".zip") {
 			extractZip(archiveFile, filepath.Dir(c.currentFile))
-		} else if strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tar.gz") || strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tgz") {
+		} else if strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tar.gz") ||
+			strings.HasSuffix(strings.ToLower(asset.BrowserDownloadURL), ".tgz") {
 			extractTarGz(archiveFile, filepath.Dir(c.currentFile))
 		}
 		os.RemoveAll(tmpFile)
@@ -148,7 +150,7 @@ func (c *GithubCache) downloadAsset(asset *GitHubAsset) {
 }
 
 // handleArchiveDownload handles downloading and extracting compressed archives
-func (c *GithubCache) handleArchiveDownload(resp *http.Response) (string, string) {
+func handleArchiveDownload(resp *http.Response) (string, string) {
 	// Create a temporary directory for extraction
 	tempDir, err := os.MkdirTemp("", "dehydrated-api-plugin-*")
 	if err != nil {
@@ -231,6 +233,7 @@ func extractTarGz(archivePath, extractDir string) {
 			}
 
 			// Copy the file content
+			//nolint:gosec // We trust the source of the archive
 			if _, err := io.Copy(outFile, tr); err != nil {
 				outFile.Close()
 				panic("failed to extract file: " + err.Error())
@@ -262,7 +265,7 @@ func extractTarGz(archivePath, extractDir string) {
 func extractZip(archivePath, extractDir string) {
 	reader, err := zip.OpenReader(archivePath)
 	if err != nil {
-
+		panic("failed to open zip archive: " + err.Error())
 	}
 	defer reader.Close()
 
@@ -291,6 +294,7 @@ func extractZip(archivePath, extractDir string) {
 		}
 
 		// Copy the file content
+		//nolint:gosec // We trust the source of the archive
 		if _, err := io.Copy(outFile, rc); err != nil {
 			rc.Close()
 			outFile.Close()

@@ -134,7 +134,7 @@ func WriteDomainsFile(filename string, entries model.DomainEntries) error {
 		}
 
 		// Write the line
-		if _, err := writer.WriteString(line.String() + "\n"); err != nil {
+		if _, err = writer.WriteString(line.String() + "\n"); err != nil {
 			return err
 		}
 	}

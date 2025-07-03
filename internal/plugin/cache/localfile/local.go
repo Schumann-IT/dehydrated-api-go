@@ -3,10 +3,11 @@ package localfile
 import (
 	"encoding/json"
 	"errors"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/cacheinterface"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/cacheinterface"
 )
 
 type LocalCache struct {

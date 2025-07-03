@@ -1,3 +1,4 @@
+// nolint: revive // This is a mock
 package serviceinterface
 
 import (

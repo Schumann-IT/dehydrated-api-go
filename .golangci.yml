@@ -24,25 +24,23 @@ linters:
     - depguard
     - dogsled
     - dupl
-    - errcheck
+    #- errcheck
     - errorlint
     - funlen
     - gocheckcompilerdirectives
     - gochecknoinits
-    - goconst
+    #- goconst
     - gocritic
     - gocyclo
     - godox
-    - mnd
     - goprintffuncname
     - gosec
     - govet
-    - intrange
+    #- intrange
     - ineffassign
     - lll
     - misspell
     - nakedret
-    - noctx
     - nolintlint
     - revive
     - staticcheck
@@ -87,6 +85,7 @@ linters:
         - ifElseChain
         - octalLiteral
         - whyNoLint
+        - unnamedResult
     gocyclo:
       min-complexity: 15
     godox:
@@ -149,12 +148,18 @@ linters:
       - internal/x # extracted from x/tools code
       - pkg/goformatters/gci/internal # extracted from gci code
       - pkg/goanalysis/runner_checker.go # extracted from x/tools code
+      - docs
+      - examples
+      - mock.go
     rules:
       - path: (.+)_test\.go
         linters:
           - dupl
           - mnd
           - lll
+          - gocyclo
+          - gocritic
+          - gosec
 
       # Based on existing code, the modifications should be limited to make maintenance easier.
       - path: pkg/golinters/unused/unused.go

@@ -1,9 +1,10 @@
 package cache
 
 import (
+	"testing"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestPluginConfig_NewRegistry(t *testing.T) {

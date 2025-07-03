@@ -167,9 +167,10 @@ func (s *Server) Start() {
 		handler.NewConfigHandler(s.domainService.DehydratedConfig).RegisterRoutes(s.app)
 	}
 
+	s.wg.Add(1)
+
 	// Start the server
 	go func() {
-		s.wg.Add(1)
 		defer s.wg.Done()
 		host := "0.0.0.0" // Listen on all interfaces
 

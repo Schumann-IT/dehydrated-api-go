@@ -25,6 +25,8 @@ func TestDefaultConfig(t *testing.T) {
 // TestLoadConfig tests loading configuration from a config file.
 // It creates a temporary config file with various settings and verifies
 // that they are correctly loaded into the Config struct.
+//
+//nolint:funlen // This test is intentionally long to cover many config options.
 func TestLoadConfig(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
@@ -211,6 +213,8 @@ API=v2
 
 // TestLoadConfigFromShellScript tests loading configuration from a shell script.
 // It verifies that the script is correctly parsed and the settings are loaded.
+//
+//nolint:funlen // This test is intentionally long to cover many config options.
 func TestLoadConfigFromShellScript(t *testing.T) {
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()

@@ -198,6 +198,9 @@ func (cv *PluginConfigValue) GetMap() (map[string]any, error) {
 }
 
 // GetStruct converts the value to the given struct type
+// @TODO: Refactor if needed.
+//
+//nolint:gocyclo // This function is intentionally complex to handle various types and conversions.
 func (cv *PluginConfigValue) GetStruct(target any) error {
 	if m, ok := cv.value.(map[string]any); ok {
 		val := reflect.ValueOf(target)

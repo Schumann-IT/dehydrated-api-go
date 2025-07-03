@@ -41,6 +41,7 @@ func NewDomainService(cfg *dehydrated.Config, r *registry.Registry) *DomainServi
 			panic(err)
 		}
 		// Create an empty domains file
+		//nolint:gosec // This is a safe operation, we just want to ensure the file exists
 		if err := os.WriteFile(cfg.DomainsFile, []byte{}, 0644); err != nil {
 			panic(err)
 		}
@@ -175,13 +176,6 @@ func (s *DomainService) writeEntriesToFile(entries []*model.DomainEntry) error {
 	return WriteDomainsFile(s.DehydratedConfig.DomainsFile, valueEntries)
 }
 
-// enrichMetadataWithErrorHandling enriches a domain entry with metadata and handles errors gracefully.
-func (s *DomainService) enrichMetadataWithErrorHandling(entry *model.DomainEntry) {
-	if err := s.enrichMetadata(entry); err != nil {
-		s.logger.Error("failed to enrich metadata", zap.String("domain", entry.Domain), zap.Error(err))
-	}
-}
-
 // updateEntry creates a new domain entry with updated fields from the request.
 // It preserves existing values for fields that are not provided in the request.
 func updateEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model.DomainEntry {
@@ -281,7 +275,7 @@ func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.Dom
 
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
 // It calls each plugin's GetMetadata method and merges the results into the entry.
-func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+func (s *DomainService) enrichMetadata(entry *model.DomainEntry) {
 	if entry.Metadata == nil {
 		entry.Metadata = pb.NewMetadata()
 	}
@@ -299,7 +293,8 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 		}
 
 		if resp.Error != "" {
-			s.logger.Error("plugin request failed", zap.String("plugin", name), zap.String("domain", entry.Domain), zap.Error(errors.New(resp.Error)))
+			s.logger.Error("plugin request failed", zap.String("plugin", name),
+				zap.String("domain", entry.Domain), zap.Error(errors.New(resp.Error)))
 			entry.Metadata.SetMap(name, map[string]string{"error": resp.Error})
 			continue
 		}
@@ -308,8 +303,6 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 			entry.Metadata.FromProto(name, resp.Metadata)
 		}
 	}
-
-	return nil
 }
 
 // GetDomain retrieves a domain entry by its domain name.
@@ -327,7 +320,7 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	}
 
 	entryCopy := entry
-	s.enrichMetadataWithErrorHandling(entryCopy)
+	s.enrichMetadata(entryCopy)
 	return entryCopy, nil
 }
 
@@ -362,7 +355,7 @@ func (s *DomainService) GetDomainByAlias(domain, alias string) (*model.DomainEnt
 	}
 
 	entryCopy := entry
-	s.enrichMetadataWithErrorHandling(entryCopy)
+	s.enrichMetadata(entryCopy)
 	return entryCopy, nil
 }
 
@@ -378,7 +371,7 @@ func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 	entries := make([]*model.DomainEntry, len(s.cache))
 	for i, entry := range s.cache {
 		entries[i] = entry
-		s.enrichMetadataWithErrorHandling(entries[i])
+		s.enrichMetadata(entries[i])
 	}
 
 	s.logger.Info("Loaded domains", zap.Int("count", len(entries)))

@@ -91,11 +91,12 @@ func TestIsValidDomainEntry(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := &tests[i] // Capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			result := IsValidDomainEntry(&tt.entry)
 			if result != tt.expected {
-				t.Errorf("IsValidDomainEntry(%v) = %v; want %v", tt.entry, result, tt.expected)
+				t.Errorf("IsValidDomainEntry(%v) = %v; want %v", &tt.entry, result, tt.expected)
 			}
 		})
 	}

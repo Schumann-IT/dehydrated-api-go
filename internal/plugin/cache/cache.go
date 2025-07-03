@@ -1,12 +1,13 @@
 package cache
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/cacheinterface"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/github"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache/localfile"
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/config"
-	"os"
-	"path/filepath"
 )
 
 var (
@@ -43,10 +44,8 @@ func Add(name string, sourceRegistry *config.RegistryConfig) cacheinterface.Plug
 	switch sourceRegistry.Type {
 	case config.PluginSourceTypeLocal:
 		c = localCache
-		break
 	case config.PluginSourceTypeGitHub:
 		c = githubCache
-		break
 	default:
 		panic("unsupported registry type: " + sourceRegistry.Type)
 	}

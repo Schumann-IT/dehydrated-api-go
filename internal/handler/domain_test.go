@@ -61,6 +61,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusCreated {
 			t.Errorf("Expected status %d, got %d", fiber.StatusCreated, result.StatusCode)
@@ -116,6 +117,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusBadRequest {
 			t.Errorf("Expected status %d, got %d", fiber.StatusBadRequest, result.StatusCode)
@@ -162,12 +164,13 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create domain for test: %v", err)
 		}
+		defer createResult.Body.Close()
 		if createResult.StatusCode != fiber.StatusCreated {
 			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
 		}
 
 		// Reload the service to ensure the cache is updated
-		if err := s.Reload(); err != nil {
+		if err = s.Reload(); err != nil {
 			t.Fatalf("Failed to reload service: %v", err)
 		}
 
@@ -178,6 +181,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
@@ -228,6 +232,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusNotFound {
 			t.Errorf("Expected status %d, got %d", fiber.StatusNotFound, result.StatusCode)
@@ -265,6 +270,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
@@ -320,12 +326,13 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create domain for test: %v", err)
 		}
+		defer createResult.Body.Close()
 		if createResult.StatusCode != fiber.StatusCreated {
 			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
 		}
 
 		// Reload the service to ensure the cache is updated
-		if err := s.Reload(); err != nil {
+		if err = s.Reload(); err != nil {
 			t.Fatalf("Failed to reload service: %v", err)
 		}
 
@@ -343,7 +350,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
-
+		defer result.Body.Close()
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
 			return
@@ -402,12 +409,13 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create domain for test: %v", err)
 		}
+		defer createResult.Body.Close()
 		if createResult.StatusCode != fiber.StatusCreated {
 			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
 		}
 
 		// Reload the service to ensure the cache is updated
-		if err := s.Reload(); err != nil {
+		if err = s.Reload(); err != nil {
 			t.Fatalf("Failed to reload service: %v", err)
 		}
 
@@ -424,6 +432,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 
 		if result.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
@@ -483,12 +492,13 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create domain for test: %v", err)
 		}
+		defer createResult.Body.Close()
 		if createResult.StatusCode != fiber.StatusCreated {
 			t.Fatalf("Failed to create domain, got status %d", createResult.StatusCode)
 		}
 
 		// Reload the service to ensure the cache is updated
-		if err := s.Reload(); err != nil {
+		if err = s.Reload(); err != nil {
 			t.Fatalf("Failed to reload service: %v", err)
 		}
 
@@ -499,7 +509,7 @@ func TestDomainHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
-
+		defer result.Body.Close()
 		if result.StatusCode != fiber.StatusNoContent {
 			t.Errorf("Expected status %d, got %d", fiber.StatusNoContent, result.StatusCode)
 		}
@@ -574,6 +584,7 @@ func TestServiceErrors(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 		if result.StatusCode != fiber.StatusInternalServerError {
 			t.Errorf("Expected status %d, got %d", fiber.StatusInternalServerError, result.StatusCode)
 		}
@@ -592,6 +603,7 @@ func TestServiceErrors(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to test request: %v", err)
 		}
+		defer result.Body.Close()
 		if result.StatusCode != fiber.StatusBadRequest {
 			t.Errorf("Expected status %d, got %d", fiber.StatusBadRequest, result.StatusCode)
 		}

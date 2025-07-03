@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"google.golang.org/protobuf/types/known/structpb"
 
