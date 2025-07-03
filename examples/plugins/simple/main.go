@@ -18,14 +18,14 @@ type ExamplePlugin struct {
 }
 
 // Initialize implements the plugin.Plugin interface
-func (p *ExamplePlugin) Initialize(ctx context.Context, req *proto.InitializeRequest) (*proto.InitializeResponse, error) {
+func (p *ExamplePlugin) Initialize(_ context.Context, req *proto.InitializeRequest) (*proto.InitializeResponse, error) {
 	p.logger.Debug("Initialize called")
 	p.config.FromProto(req.Config)
 	return &proto.InitializeResponse{}, nil
 }
 
 // GetMetadata implements the plugin.Plugin interface
-func (p *ExamplePlugin) GetMetadata(ctx context.Context, req *proto.GetMetadataRequest) (*proto.GetMetadataResponse, error) {
+func (p *ExamplePlugin) GetMetadata(_ context.Context, req *proto.GetMetadataRequest) (*proto.GetMetadataResponse, error) {
 	p.logger.Debug("GetMetadata called")
 
 	// Create a new Metadata for the response
@@ -52,7 +52,7 @@ func (p *ExamplePlugin) GetMetadata(ctx context.Context, req *proto.GetMetadataR
 }
 
 // Close implements the plugin.Plugin interface
-func (p *ExamplePlugin) Close(ctx context.Context, req *proto.CloseRequest) (*proto.CloseResponse, error) {
+func (p *ExamplePlugin) Close(_ context.Context, _ *proto.CloseRequest) (*proto.CloseResponse, error) {
 	p.logger.Debug("Close called")
 	return &proto.CloseResponse{}, nil
 }

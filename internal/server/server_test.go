@@ -275,8 +275,10 @@ enableWatcher: false
 		time.Sleep(100 * time.Millisecond)
 
 		// Verify server is stopped
-		_, err = http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
+		//nolint:bodyclose // the resp is empty here
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
 		require.Error(t, err)
+		require.Nil(t, resp)
 	})
 
 	t.Run("StartWithInvalidPort", func(t *testing.T) {
@@ -348,10 +350,10 @@ enableWatcher: true
 		resp.Body.Close()
 
 		for _, domain := range existingDomains.Data {
-			req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), http.NoBody)
-			require.NoError(t, err)
-			resp, err = client.Do(req)
-			require.NoError(t, err)
+			req, err2 := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), http.NoBody)
+			require.NoError(t, err2)
+			resp, err2 = client.Do(req)
+			require.NoError(t, err2)
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 			resp.Body.Close()
 		}
@@ -363,6 +365,7 @@ enableWatcher: true
 		resp, err = client.Do(createReq)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		resp.Body.Close()
 
 		// Get domains
 		resp, err = http.Get(baseURL + "/domains")
@@ -371,6 +374,7 @@ enableWatcher: true
 
 		var domainsResp model.DomainsResponse
 		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
+		resp.Body.Close()
 		require.NoError(t, err)
 		require.True(t, domainsResp.Success)
 		require.Len(t, domainsResp.Data, 1)

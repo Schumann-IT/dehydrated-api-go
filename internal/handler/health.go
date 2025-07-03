@@ -6,11 +6,13 @@ import (
 )
 
 // HealthHandler handles HTTP requests for health operations
-type HealthHandler struct{}
+type HealthHandler struct {
+	status bool
+}
 
 // NewHealthHandler creates a new HealthHandler instance
 func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+	return &HealthHandler{status: true}
 }
 
 // RegisterRoutes registers all health-related routes
@@ -28,6 +30,6 @@ func (h *HealthHandler) RegisterRoutes(app *fiber.App) {
 // Health handles GET /health
 func (h *HealthHandler) Health(c *fiber.Ctx) error {
 	return c.JSON(model.DomainsResponse{
-		Success: true,
+		Success: h.status,
 	})
 }

@@ -29,7 +29,12 @@ func TestRegistry(t *testing.T) {
 	cfg := map[string]config.PluginConfig{
 		"simple": {
 			Enabled: true,
-			Path:    pluginPath,
+			Registry: &config.RegistryConfig{
+				Type: config.PluginSourceTypeLocal,
+				Config: map[string]any{
+					"path": pluginPath,
+				},
+			},
 			Config: map[string]any{
 				"name": "example",
 			},
@@ -39,7 +44,7 @@ func TestRegistry(t *testing.T) {
 	// Create logger for testing
 	logger := zap.NewNop()
 
-	r := NewRegistry("", cfg, logger)
+	r := New("", cfg, logger)
 	defer r.Close()
 
 	// Test that plugins are available

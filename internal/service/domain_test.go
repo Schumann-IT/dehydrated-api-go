@@ -56,7 +56,7 @@ func TestDomainService(t *testing.T) {
 				req := model.CreateDomainRequest{
 					Domain: "example.com",
 				}
-				entry, err := service.CreateDomain(req)
+				entry, err := service.CreateDomain(&req)
 				require.NoError(t, err)
 				require.Equal(t, "example.com", entry.Domain)
 			})
@@ -66,7 +66,7 @@ func TestDomainService(t *testing.T) {
 				req := model.CreateDomainRequest{
 					Domain: "invalid..domain",
 				}
-				_, err := service.CreateDomain(req)
+				_, err := service.CreateDomain(&req)
 				require.Error(t, err)
 			})
 
@@ -75,7 +75,7 @@ func TestDomainService(t *testing.T) {
 				req := model.CreateDomainRequest{
 					Domain: "example.com",
 				}
-				_, err := service.CreateDomain(req)
+				_, err := service.CreateDomain(&req)
 				require.Error(t, err)
 			})
 
@@ -212,7 +212,7 @@ func TestConcurrentOperations(t *testing.T) {
 				req := model.CreateDomainRequest{
 					Domain: domain,
 				}
-				_, err := service.CreateDomain(req)
+				_, err := service.CreateDomain(&req)
 				if err != nil {
 					t.Errorf("Unexpected error creating domain: %v", err)
 				}
@@ -422,12 +422,12 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new domain service with default config and empty registry
 			cfg := dehydrated.NewConfig()
-			reg := registry.NewRegistry("", make(map[string]config.PluginConfig), zap.NewNop())
+			reg := registry.New("", make(map[string]config.PluginConfig), zap.NewNop())
 			service := NewDomainService(cfg, reg)
 
 			// Create a test domain
 			if tt.domain == "example.com" {
-				_, err := service.CreateDomain(model.CreateDomainRequest{
+				_, err := service.CreateDomain(&model.CreateDomainRequest{
 					Domain:           tt.domain,
 					AlternativeNames: []string{"www.example.com"},
 					Enabled:          true,
@@ -482,7 +482,7 @@ func TestGetDomainByAlias(t *testing.T) {
 
 	// Create the domains
 	for _, req := range testDomains {
-		_, err := s.CreateDomain(req)
+		_, err := s.CreateDomain(&req)
 		require.NoError(t, err)
 	}
 
@@ -490,7 +490,7 @@ func TestGetDomainByAlias(t *testing.T) {
 		entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "")
 		require.NoError(t, err)
 		require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
-		require.Equal(t, "", entry.Alias) // Should return the first entry (no alias)
+		require.Empty(t, entry.Alias) // Should return the first entry (no alias)
 	})
 
 	t.Run("GetDomainByAlias with specific alias returns correct entry", func(t *testing.T) {
@@ -568,7 +568,7 @@ vpn.hq.schumann-it.com > vpn.hq.schumann-it.com-rsa # RSA entry
 	entry, err := s.GetDomainByAlias("vpn.hq.schumann-it.com", "")
 	require.NoError(t, err)
 	require.Equal(t, "vpn.hq.schumann-it.com", entry.Domain)
-	require.Equal(t, "", entry.Alias)
+	require.Empty(t, entry.Alias)
 	require.Equal(t, "Default entry", entry.Comment)
 
 	// Test getting the RSA entry (with alias)

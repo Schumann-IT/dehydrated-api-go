@@ -1,5 +1,7 @@
 // Package main provides the entry point for the dehydrated-api-go application.
 // It initializes the server with configuration from a YAML file and handles graceful shutdown.
+//
+//nolint:lll // mostly docs
 package main
 
 import (

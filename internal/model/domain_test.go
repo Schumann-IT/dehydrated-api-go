@@ -240,7 +240,7 @@ func TestDomainsResponse(t *testing.T) {
 			name: "Successful response",
 			response: DomainsResponse{
 				Success: true,
-				Data: []*DomainEntry{
+				Data: DomainEntries{
 					{
 						DomainEntry: pb.DomainEntry{
 							Domain: "example1.com",
@@ -276,4 +276,89 @@ func TestDomainsResponse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDomainEntries_Sort(t *testing.T) {
+	// Create test domains with mixed order
+	entries := DomainEntries{
+		{DomainEntry: pb.DomainEntry{Domain: "vpn.hq.schumann-it.com", Alias: "vpn.hq.schumann-it.com-rsa", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "vpn.lg.schumann-it.com", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "vpn.lg.schumann-it.com", Alias: "vpn.lg.schumann-it.com-rsa", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "foo.hq.schumann-it.com", Comment: "sdcsdc", Enabled: true}},
+		{DomainEntry: pb.DomainEntry{Domain: "foo.hq.schumann-it.com", Alias: "foo.hq.schumann-it.com-rsa", Enabled: false}},
+	}
+
+	// Test sorting
+	t.Run("Sort", func(t *testing.T) {
+		// Sort the entries
+		entries.Sort()
+
+		// Verify the sorted order
+		expectedOrder := []string{
+			"foo.hq.schumann-it.com", // No alias first
+			"foo.hq.schumann-it.com", // With alias (disabled)
+			"vpn.hq.schumann-it.com", // With alias
+			"vpn.lg.schumann-it.com", // No alias first
+			"vpn.lg.schumann-it.com", // With alias
+		}
+
+		if len(entries) != len(expectedOrder) {
+			t.Errorf("Expected %d entries, got %d", len(expectedOrder), len(entries))
+			return
+		}
+
+		for i, entry := range entries {
+			if entry.Domain != expectedOrder[i] {
+				t.Errorf("Entry %d: Expected domain %s, got %s", i, expectedOrder[i], entry.Domain)
+			}
+		}
+
+		// Verify the new sorting behavior: domains grouped together, no alias first within each group
+		// Expected order:
+		// 0: foo.hq.schumann-it.com (no alias)
+		// 1: foo.hq.schumann-it.com (with alias)
+		// 2: vpn.hq.schumann-it.com (with alias)
+		// 3: vpn.lg.schumann-it.com (no alias)
+		// 4: vpn.lg.schumann-it.com (with alias)
+
+		// Check that foo.hq.schumann-it.com entries are grouped together
+		if entries[0].Domain != "foo.hq.schumann-it.com" || entries[0].Alias != "" {
+			t.Errorf("Entry 0 should be foo.hq.schumann-it.com without alias, got %s (alias: %s)", entries[0].Domain, entries[0].Alias)
+		}
+		if entries[1].Domain != "foo.hq.schumann-it.com" || entries[1].Alias == "" {
+			t.Errorf("Entry 1 should be foo.hq.schumann-it.com with alias, got %s (alias: %s)", entries[1].Domain, entries[1].Alias)
+		}
+
+		// Check that vpn.hq.schumann-it.com entry is in the middle
+		if entries[2].Domain != "vpn.hq.schumann-it.com" || entries[2].Alias == "" {
+			t.Errorf("Entry 2 should be vpn.hq.schumann-it.com with alias, got %s (alias: %s)", entries[2].Domain, entries[2].Alias)
+		}
+
+		// Check that vpn.lg.schumann-it.com entries are grouped together at the end
+		if entries[3].Domain != "vpn.lg.schumann-it.com" || entries[3].Alias != "" {
+			t.Errorf("Entry 3 should be vpn.lg.schumann-it.com without alias, got %s (alias: %s)", entries[3].Domain, entries[3].Alias)
+		}
+		if entries[4].Domain != "vpn.lg.schumann-it.com" || entries[4].Alias == "" {
+			t.Errorf("Entry 4 should be vpn.lg.schumann-it.com with alias, got %s (alias: %s)", entries[4].Domain, entries[4].Alias)
+		}
+	})
+
+	// Test sorting with same domains but different aliases
+	t.Run("SortWithSameDomains", func(t *testing.T) {
+		sameDomainEntries := DomainEntries{
+			{DomainEntry: pb.DomainEntry{Domain: "example.com", Alias: "alias2", Enabled: true}},
+			{DomainEntry: pb.DomainEntry{Domain: "example.com", Enabled: true}},
+			{DomainEntry: pb.DomainEntry{Domain: "example.com", Alias: "alias1", Enabled: true}},
+		}
+
+		sameDomainEntries.Sort()
+
+		// Should be sorted: no alias first, then aliases alphabetically
+		expectedAliases := []string{"", "alias1", "alias2"}
+		for i, entry := range sameDomainEntries {
+			if entry.Alias != expectedAliases[i] {
+				t.Errorf("Entry %d: Expected alias %s, got %s", i, expectedAliases[i], entry.Alias)
+			}
+		}
+	})
 }

@@ -1,3 +1,5 @@
+//nolint:unused-receiver,revive // this file contains required, but unsupported methods
+
 package client
 
 import (
@@ -17,11 +19,10 @@ import (
 
 // Client represents a plugin client
 type Client struct {
-	client     *plugin.Client
-	rpcClient  plugin.ClientProtocol
-	plugin     pb.PluginClient
-	logger     hclog.Logger
-	socketPath string
+	client    *plugin.Client
+	rpcClient plugin.ClientProtocol
+	plugin    pb.PluginClient
+	logger    hclog.Logger
 }
 
 // GRPCPlugin is the plugin implementation for go-plugin
@@ -30,28 +31,28 @@ type GRPCPlugin struct {
 }
 
 // GRPCServer is required by the go-plugin interface
-func (p *GRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+func (p *GRPCPlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	pb.RegisterPluginServer(s, &pb.UnimplementedPluginServer{})
 	return nil
 }
 
 // GRPCClient is required by the go-plugin interface
-func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
+func (p *GRPCPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return pb.NewPluginClient(c), nil
 }
 
 // Server is required by the go-plugin interface
-func (p *GRPCPlugin) Server(broker *plugin.MuxBroker) (any, error) {
+func (p *GRPCPlugin) Server(_ *plugin.MuxBroker) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
 
 // Client is required by the go-plugin interface
-func (p *GRPCPlugin) Client(broker *plugin.MuxBroker, rpcClient *rpc.Client) (any, error) {
+func (p *GRPCPlugin) Client(_ *plugin.MuxBroker, _ *rpc.Client) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
 
 // NewClient creates a new plugin client
-func NewClient(ctx context.Context, pluginName string, pluginPath string, config map[string]*structpb.Value) (*Client, error) {
+func NewClient(ctx context.Context, pluginName, pluginPath string, config map[string]*structpb.Value) (*Client, error) {
 	// Create logger
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   fmt.Sprintf("plugin-client-%s", pluginName),

@@ -18,7 +18,7 @@ type DomainService interface {
 	GetDomainByAlias(domain string, alias string) (*model.DomainEntry, error)
 
 	// CreateDomain creates a new domain entry with the given configuration.
-	CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error)
+	CreateDomain(req *model.CreateDomainRequest) (*model.DomainEntry, error)
 
 	// UpdateDomain updates an existing domain entry with the given configuration.
 	UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error)

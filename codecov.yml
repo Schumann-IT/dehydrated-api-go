@@ -1,0 +1,5 @@
+ignore:
+  - "docs"
+  - "examples"
+  - "scripts"
+  - "**/*.pb.go"

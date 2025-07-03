@@ -126,7 +126,7 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	entry, err := h.service.CreateDomain(req)
+	entry, err := h.service.CreateDomain(&req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(model.DomainResponse{
 			Success: false,

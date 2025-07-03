@@ -4,9 +4,40 @@ package model
 
 import (
 	"encoding/json"
+	"sort"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/dehydrated"
 
 	pb "github.com/schumann-it/dehydrated-api-go/plugin/proto"
 )
+
+// DomainEntries is a slice of DomainEntry pointers that provides convenient methods for manipulation.
+type DomainEntries []*DomainEntry
+
+// Sort sorts the domain entries alphabetically by domain name.
+// Entries for the same domain are grouped together, with non-aliased entries first,
+// followed by aliased entries for that domain.
+// The sorting considers only the domain name and alias, ignoring alternative names and comments.
+// This method modifies the slice in-place.
+func (e DomainEntries) Sort() {
+	sort.Slice(e, func(i, j int) bool {
+		// Primary sort: domain name
+		if e[i].Domain != e[j].Domain {
+			return e[i].Domain < e[j].Domain
+		}
+
+		// Secondary sort: within same domain, no alias comes first
+		hasAliasI := e[i].Alias != ""
+		hasAliasJ := e[j].Alias != ""
+
+		if hasAliasI != hasAliasJ {
+			return !hasAliasI // No alias comes first
+		}
+
+		// Tertiary sort: if both have aliases, sort by alias name
+		return e[i].Alias < e[j].Alias
+	})
+}
 
 // DomainEntry represents a domain configuration entry in the dehydrated system.
 // It contains all the necessary information for managing a domain's SSL certificate.
@@ -129,9 +160,17 @@ type DomainsResponse struct {
 
 	// Data contains the list of domain entries if the operation was successful.
 	// @Description List of domain entries if the operation was successful
-	Data []*DomainEntry `json:"data,omitempty"`
+	Data DomainEntries `json:"data,omitempty"`
 
 	// Error contains an error message if the operation failed.
 	// @Description Error message if the operation failed
 	Error string `json:"error,omitempty" example:"Failed to load domains"`
+}
+
+type ConfigResponse struct {
+	Success bool `json:"success" example:"true"`
+
+	Data *dehydrated.Config `json:"data,omitempty"`
+
+	Error string `json:"error,omitempty" example:"Failed to load config"`
 }

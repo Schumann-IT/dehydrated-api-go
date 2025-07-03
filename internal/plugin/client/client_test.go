@@ -105,6 +105,7 @@ func TestClient(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "example", resp.Metadata["name"].GetStringValue())
 	require.Equal(t, "example_value", resp.Metadata["example_key"].GetStringValue())
+	//nolint:testifylint // This is a test, so we can use the example number directly
 	require.Equal(t, float64(42), resp.Metadata["example_number"].GetNumberValue())
 	require.True(t, resp.Metadata["example_bool"].GetBoolValue())
 }

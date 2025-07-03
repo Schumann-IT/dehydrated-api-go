@@ -33,7 +33,7 @@ type DomainService struct {
 // NewDomainService creates a new DomainService instance with the provided configuration.
 // It initializes the dehydrated client, sets up the plugin registry, and optionally
 // enables file watching for automatic updates.
-func NewDomainService(cfg *dehydrated.Config, registry *registry.Registry) *DomainService {
+func NewDomainService(cfg *dehydrated.Config, r *registry.Registry) *DomainService {
 	// Ensure the domains file exists
 	if _, err := os.Stat(cfg.DomainsFile); err != nil {
 		// Create the directory if it doesn't exist
@@ -41,6 +41,7 @@ func NewDomainService(cfg *dehydrated.Config, registry *registry.Registry) *Doma
 			panic(err)
 		}
 		// Create an empty domains file
+		//nolint:gosec // This is a safe operation, we just want to ensure the file exists
 		if err := os.WriteFile(cfg.DomainsFile, []byte{}, 0644); err != nil {
 			panic(err)
 		}
@@ -48,7 +49,7 @@ func NewDomainService(cfg *dehydrated.Config, registry *registry.Registry) *Doma
 
 	s := &DomainService{
 		logger:           zap.NewNop(),
-		registry:         registry,
+		registry:         r,
 		DehydratedConfig: cfg,
 	}
 
@@ -90,9 +91,7 @@ func (s *DomainService) Reload() error {
 
 	// Convert entries to pointers
 	pointerEntries := make([]*model.DomainEntry, len(entries))
-	for i := range entries {
-		pointerEntries[i] = &entries[i]
-	}
+	copy(pointerEntries, entries)
 
 	s.mutex.Lock()
 	s.cache = pointerEntries
@@ -121,7 +120,7 @@ func (s *DomainService) Close() error {
 
 // findDomainEntry finds a domain entry in the cache by domain and optional alias.
 // If alias is empty, it looks for entries without an alias.
-func (s *DomainService) findDomainEntry(domain string, alias string) (*model.DomainEntry, int) {
+func (s *DomainService) findDomainEntry(domain, alias string) (*model.DomainEntry, int) {
 	for i, entry := range s.cache {
 		if alias != "" {
 			if entry.Domain == domain && entry.Alias == alias {
@@ -139,9 +138,9 @@ func (s *DomainService) findDomainEntry(domain string, alias string) (*model.Dom
 // writeCacheToFile writes the current cache to the domains file.
 // It converts pointer entries to values for file writing.
 func (s *DomainService) writeCacheToFile() error {
-	entries := make([]model.DomainEntry, len(s.cache))
-	for i, entry := range s.cache {
-		entries[i] = model.DomainEntry{
+	entries := make(model.DomainEntries, 0, len(s.cache))
+	for _, entry := range s.cache {
+		entries = append(entries, &model.DomainEntry{
 			DomainEntry: pb.DomainEntry{
 				Domain:           entry.Domain,
 				AlternativeNames: entry.AlternativeNames,
@@ -149,7 +148,7 @@ func (s *DomainService) writeCacheToFile() error {
 				Enabled:          entry.Enabled,
 				Comment:          entry.Comment,
 			},
-		}
+		})
 	}
 
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(s.cache)))
@@ -160,9 +159,9 @@ func (s *DomainService) writeCacheToFile() error {
 // It converts pointer entries to values for file writing.
 func (s *DomainService) writeEntriesToFile(entries []*model.DomainEntry) error {
 	// Convert pointers to values for file writing
-	valueEntries := make([]model.DomainEntry, len(entries))
-	for i, entry := range entries {
-		valueEntries[i] = model.DomainEntry{
+	valueEntries := make(model.DomainEntries, 0, len(entries))
+	for _, entry := range entries {
+		valueEntries = append(valueEntries, &model.DomainEntry{
 			DomainEntry: pb.DomainEntry{
 				Domain:           entry.Domain,
 				AlternativeNames: entry.AlternativeNames,
@@ -170,23 +169,16 @@ func (s *DomainService) writeEntriesToFile(entries []*model.DomainEntry) error {
 				Enabled:          entry.Enabled,
 				Comment:          entry.Comment,
 			},
-		}
+		})
 	}
 
 	s.logger.Info("Dumping domains to disk", zap.Int("count", len(entries)))
 	return WriteDomainsFile(s.DehydratedConfig.DomainsFile, valueEntries)
 }
 
-// enrichMetadataWithErrorHandling enriches a domain entry with metadata and handles errors gracefully.
-func (s *DomainService) enrichMetadataWithErrorHandling(entry *model.DomainEntry) {
-	if err := s.enrichMetadata(entry); err != nil {
-		s.logger.Error("failed to enrich metadata", zap.String("domain", entry.Domain), zap.Error(err))
-	}
-}
-
-// buildUpdatedEntry creates a new domain entry with updated fields from the request.
+// updateEntry creates a new domain entry with updated fields from the request.
 // It preserves existing values for fields that are not provided in the request.
-func (s *DomainService) buildUpdatedEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model.DomainEntry {
+func updateEntry(entry *model.DomainEntry, req model.UpdateDomainRequest) *model.DomainEntry {
 	alt := entry.AlternativeNames
 	if req.AlternativeNames != nil {
 		alt = util.StringSlice(req.AlternativeNames)
@@ -213,9 +205,9 @@ func (s *DomainService) buildUpdatedEntry(entry *model.DomainEntry, req model.Up
 	}
 }
 
-// deleteDomainFromCache removes a domain entry from the cache and returns the updated cache.
+// entriesWithout retrieves all domain entries from the cache except for the specified domain and alias.
 // It also returns whether the domain was found and removed.
-func (s *DomainService) deleteDomainFromCache(domain string, alias string) ([]*model.DomainEntry, bool) {
+func (s *DomainService) entriesWithout(domain, alias string) ([]*model.DomainEntry, bool) {
 	found := false
 	newEntries := make([]*model.DomainEntry, 0, len(s.cache))
 	for _, entry := range s.cache {
@@ -237,7 +229,7 @@ func (s *DomainService) deleteDomainFromCache(domain string, alias string) ([]*m
 
 // CreateDomain adds a new domain entry to the domains file.
 // It validates the entry, checks for duplicates, and updates both the cache and file.
-func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.DomainEntry, error) {
+func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.DomainEntry, error) {
 	s.logger.Info("Creating domain", zap.Any("domain", req))
 
 	entry := &model.DomainEntry{
@@ -283,7 +275,7 @@ func (s *DomainService) CreateDomain(req model.CreateDomainRequest) (*model.Doma
 
 // enrichMetadata enriches the domain entry with metadata from all enabled plugins.
 // It calls each plugin's GetMetadata method and merges the results into the entry.
-func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
+func (s *DomainService) enrichMetadata(entry *model.DomainEntry) {
 	if entry.Metadata == nil {
 		entry.Metadata = pb.NewMetadata()
 	}
@@ -301,7 +293,8 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 		}
 
 		if resp.Error != "" {
-			s.logger.Error("plugin request failed", zap.String("plugin", name), zap.String("domain", entry.Domain), zap.Error(errors.New(resp.Error)))
+			s.logger.Error("plugin request failed", zap.String("plugin", name),
+				zap.String("domain", entry.Domain), zap.Error(errors.New(resp.Error)))
 			entry.Metadata.SetMap(name, map[string]string{"error": resp.Error})
 			continue
 		}
@@ -310,8 +303,6 @@ func (s *DomainService) enrichMetadata(entry *model.DomainEntry) error {
 			entry.Metadata.FromProto(name, resp.Metadata)
 		}
 	}
-
-	return nil
 }
 
 // GetDomain retrieves a domain entry by its domain name.
@@ -329,7 +320,7 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 	}
 
 	entryCopy := entry
-	s.enrichMetadataWithErrorHandling(entryCopy)
+	s.enrichMetadata(entryCopy)
 	return entryCopy, nil
 }
 
@@ -337,7 +328,7 @@ func (s *DomainService) GetDomain(domain string) (*model.DomainEntry, error) {
 // This is useful when multiple entries exist with the same domain but different aliases.
 // If alias is empty, behaves the same as GetDomain.
 // It returns a copy of the entry with metadata enriched from plugins.
-func (s *DomainService) GetDomainByAlias(domain string, alias string) (*model.DomainEntry, error) {
+func (s *DomainService) GetDomainByAlias(domain, alias string) (*model.DomainEntry, error) {
 	s.logger.Info("Load domain by alias", zap.String("domain", domain), zap.String("alias", alias))
 
 	s.mutex.RLock()
@@ -364,7 +355,7 @@ func (s *DomainService) GetDomainByAlias(domain string, alias string) (*model.Do
 	}
 
 	entryCopy := entry
-	s.enrichMetadataWithErrorHandling(entryCopy)
+	s.enrichMetadata(entryCopy)
 	return entryCopy, nil
 }
 
@@ -380,7 +371,7 @@ func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
 	entries := make([]*model.DomainEntry, len(s.cache))
 	for i, entry := range s.cache {
 		entries[i] = entry
-		s.enrichMetadataWithErrorHandling(entries[i])
+		s.enrichMetadata(entries[i])
 	}
 
 	s.logger.Info("Loaded domains", zap.Int("count", len(entries)))
@@ -402,7 +393,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 		return nil, errors.New("domain without specified alias not found")
 	}
 
-	updatedEntry := s.buildUpdatedEntry(entry, req)
+	updatedEntry := updateEntry(entry, req)
 
 	// Validate the updated entry
 	if !model.IsValidDomainEntry(updatedEntry) {
@@ -426,7 +417,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 // UpdateDomainByAlias updates an existing domain entry by its domain name and optional alias.
 // This is useful when multiple entries exist with the same domain but different aliases.
 // If alias is empty, behaves the same as UpdateDomain.
-func (s *DomainService) UpdateDomainByAlias(domain string, alias string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
+func (s *DomainService) UpdateDomainByAlias(domain, alias string, req model.UpdateDomainRequest) (*model.DomainEntry, error) {
 	s.logger.Info("Update domain by alias", zap.String("domain", domain), zap.String("alias", alias), zap.Any("req", req))
 
 	s.mutex.Lock()
@@ -438,7 +429,7 @@ func (s *DomainService) UpdateDomainByAlias(domain string, alias string, req mod
 		return nil, errors.New("domain with specified alias not found")
 	}
 
-	updatedEntry := s.buildUpdatedEntry(entry, req)
+	updatedEntry := updateEntry(entry, req)
 
 	// Validate the updated entry
 	if !model.IsValidDomainEntry(updatedEntry) {
@@ -467,7 +458,7 @@ func (s *DomainService) DeleteDomain(domain string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	newEntries, found := s.deleteDomainFromCache(domain, "")
+	newEntries, found := s.entriesWithout(domain, "")
 	if !found {
 		s.logger.Error("Domain without alias not found", zap.String("domain", domain))
 		return errors.New("domain without specified alias not found")
@@ -490,13 +481,13 @@ func (s *DomainService) DeleteDomain(domain string) error {
 // DeleteDomainByAlias removes a domain entry by its domain name and optional alias.
 // This is useful when multiple entries exist with the same domain but different aliases.
 // If alias is empty, behaves the same as DeleteDomain.
-func (s *DomainService) DeleteDomainByAlias(domain string, alias string) error {
+func (s *DomainService) DeleteDomainByAlias(domain, alias string) error {
 	s.logger.Info("Delete domain by alias", zap.String("domain", domain), zap.String("alias", alias))
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	newEntries, found := s.deleteDomainFromCache(domain, alias)
+	newEntries, found := s.entriesWithout(domain, alias)
 	if !found {
 		s.logger.Error("Domain with alias not found", zap.String("domain", domain), zap.String("alias", alias))
 		return errors.New("domain with specified alias not found")
