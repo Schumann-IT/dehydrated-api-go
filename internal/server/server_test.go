@@ -371,10 +371,10 @@ enableWatcher: true
 		resp, err = http.Get(baseURL + "/domains")
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
 
 		var domainsResp model.DomainsResponse
 		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
+		resp.Body.Close()
 		require.NoError(t, err)
 		require.True(t, domainsResp.Success)
 		require.Len(t, domainsResp.Data, 1)
