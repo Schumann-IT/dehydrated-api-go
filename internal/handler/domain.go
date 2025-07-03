@@ -119,7 +119,7 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 // CreateDomain handles POST /api/v1/domains
 func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 	var req model.CreateDomainRequest
-	if err := c.BodyParser(req); err != nil {
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(model.DomainResponse{
 			Success: false,
 			Error:   "invalid request body",
