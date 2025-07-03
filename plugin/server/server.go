@@ -1,5 +1,3 @@
-//nolint: revive // This file contains unsupported but required methods
-
 package server
 
 import (

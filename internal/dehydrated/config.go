@@ -1,6 +1,5 @@
 // Package dehydrated provides functionality for working with the dehydrated ACME client.
 // It includes configuration management, path resolution, and integration with the dehydrated script.
-//nolint: govet // String returns a string representation of the Config.
 
 package dehydrated
 
@@ -295,10 +294,13 @@ func (c *Config) resolvePaths() {
 func (c *Config) String() string {
 	var lines []string
 
+	//nolint: govet // We use reflection to iterate over fields
 	t := reflect.TypeOf(*c)
 	for i := 0; i < t.NumField(); i++ {
+		//nolint: govet // We use reflection to iterate over fields
 		value := reflect.ValueOf(*c).Field(i)
 		if value.String() != "" {
+			//nolint: govet // We use reflection to iterate over fields
 			lines = append(lines, fmt.Sprintf("%s=%v", strings.ToUpper(t.Field(i).Name), reflect.ValueOf(*c).Field(i).Interface()))
 		}
 	}

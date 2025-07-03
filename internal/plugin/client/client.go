@@ -1,4 +1,4 @@
-//nolint: revive // This method is not supported in this plugin implementation
+//nolint:unused-receiver,revive // this file contains required, but unsupported methods
 
 package client
 
