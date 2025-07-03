@@ -5,7 +5,7 @@ port: 3000
 dehydratedBaseDir: ./data
 
 # Enable file watcher for automatic reloading
-enableWatcher: false
+enableWatcher: true
 
 # Logging configuration
 logging:

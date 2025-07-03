@@ -183,6 +183,16 @@ definitions:
     required:
     - domain
     type: object
+  model.DeleteDomainRequest:
+    description: Request to delete an existing domain entry
+    properties:
+      alias:
+        description: |-
+          Alias is an optional alternative identifier.
+          @Description Optional alternative identifier for the domain
+        example: my-domain
+        type: string
+    type: object
   model.DomainEntry:
     description: Domain configuration entry for SSL certificate management
     properties:
@@ -368,10 +378,12 @@ paths:
         name: domain
         required: true
         type: string
-      - description: Optional alias to uniquely identify the domain entry
-        in: query
-        name: alias
-        type: string
+      - description: Domain delete request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteDomainRequest'
       produces:
       - application/json
       responses:
@@ -395,8 +407,6 @@ paths:
       tags:
       - domains
     get:
-      consumes:
-      - application/json
       description: Get details of a specific domain
       parameters:
       - description: Domain name
@@ -441,10 +451,6 @@ paths:
         in: path
         name: domain
         required: true
-        type: string
-      - description: Optional alias to uniquely identify the domain entry
-        in: query
-        name: alias
         type: string
       - description: Domain update request
         in: body

@@ -10,12 +10,7 @@ type DomainService interface {
 
 	// GetDomain retrieves a specific domain entry by its domain name.
 	// If multiple entries exist with the same domain, returns the first match.
-	GetDomain(domain string) (*model.DomainEntry, error)
-
-	// GetDomainByAlias retrieves a specific domain entry by its domain name and optional alias.
-	// This is useful when multiple entries exist with the same domain but different aliases.
-	// If alias is empty, behaves the same as GetDomain.
-	GetDomainByAlias(domain string, alias string) (*model.DomainEntry, error)
+	GetDomain(domain, alias string) (*model.DomainEntry, error)
 
 	// CreateDomain creates a new domain entry with the given configuration.
 	CreateDomain(req *model.CreateDomainRequest) (*model.DomainEntry, error)
@@ -23,18 +18,8 @@ type DomainService interface {
 	// UpdateDomain updates an existing domain entry with the given configuration.
 	UpdateDomain(domain string, req model.UpdateDomainRequest) (*model.DomainEntry, error)
 
-	// UpdateDomainByAlias updates an existing domain entry by its domain name and optional alias.
-	// This is useful when multiple entries exist with the same domain but different aliases.
-	// If alias is empty, behaves the same as UpdateDomain.
-	UpdateDomainByAlias(domain string, alias string, req model.UpdateDomainRequest) (*model.DomainEntry, error)
-
 	// DeleteDomain removes a domain entry by its domain name.
-	DeleteDomain(domain string) error
-
-	// DeleteDomainByAlias removes a domain entry by its domain name and optional alias.
-	// This is useful when multiple entries exist with the same domain but different aliases.
-	// If alias is empty, behaves the same as DeleteDomain.
-	DeleteDomainByAlias(domain string, alias string) error
+	DeleteDomain(domain string, req model.DeleteDomainRequest) error
 
 	// Close performs any necessary cleanup when the service is no longer needed.
 	Close() error
