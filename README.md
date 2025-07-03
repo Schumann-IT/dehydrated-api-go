@@ -1,6 +1,8 @@
 # Dehydrated API Go
 
-A REST API server for managing domains with [dehydrated](https://github.com/dehydrated-io/dehydrated), the ACME client for Let's Encrypt certificates. This API provides a clean interface for domain management with optional authentication and a plugin system for extensibility.
+A REST API server for managing domains with [dehydrated](https://github.com/dehydrated-io/dehydrated), the ACME client
+for Let's Encrypt certificates. This API provides a clean interface for domain management with optional authentication
+and a plugin system for extensibility.
 
 ## Key Features
 
@@ -60,7 +62,8 @@ The API will be available at `http://localhost:3000`
 
 ### Docker Overview
 
-The Dockerfile is designed to use binary artifacts from goreleaser instead of building from source code. This approach provides several benefits:
+The Dockerfile is designed to use binary artifacts from goreleaser instead of building from source code. This approach
+provides several benefits:
 
 - **Faster builds**: No compilation time required
 - **Consistent artifacts**: Uses the same binaries as official releases
@@ -70,11 +73,13 @@ The Dockerfile is designed to use binary artifacts from goreleaser instead of bu
 ### Build Scenarios
 
 Build an image using a snapshot release:
+
 ```bash
 make docker-build
 ```
 
 For easy local development:
+
 ```bash
 docker-compose up -d
 ```
@@ -106,9 +111,9 @@ make docker-run
 
 The container supports the following environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 3000 | HTTP server port |
+| Variable | Default | Description      |
+|----------|---------|------------------|
+| `PORT`   | 3000    | HTTP server port |
 
 ### Development Workflow
 
@@ -160,14 +165,14 @@ auth:
 
 ### Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `port` | int | 3000 | HTTP server port |
-| `dehydratedBaseDir` | string | `./data` | Base directory for dehydrated data |
-| `enableWatcher` | bool | false | Enable file system watching |
-| `logging.level` | string | `info` | Log level (debug, info, warn, error) |
-| `logging.encoding` | string | `console` | Log encoding (console, json) |
-| `logging.outputPath` | string | `""` | Log file path (empty for stdout) |
+| Option               | Type   | Default   | Description                          |
+|----------------------|--------|-----------|--------------------------------------|
+| `port`               | int    | 3000      | HTTP server port                     |
+| `dehydratedBaseDir`  | string | `./data`  | Base directory for dehydrated data   |
+| `enableWatcher`      | bool   | false     | Enable file system watching          |
+| `logging.level`      | string | `info`    | Log level (debug, info, warn, error) |
+| `logging.encoding`   | string | `console` | Log encoding (console, json)         |
+| `logging.outputPath` | string | `""`      | Log file path (empty for stdout)     |
 
 ## 🔌 Plugin System
 
@@ -211,9 +216,11 @@ The API includes auto-generated Swagger documentation available at:
 ### API Endpoints
 
 #### Health Check
+
 - `GET /health` - Health check endpoint
 
 #### Domain Management
+
 - `GET /api/v1/domains` - List all domains
 - `GET /api/v1/domains/{domain}` - Get specific domain
 - `POST /api/v1/domains` - Create new domain
@@ -305,16 +312,19 @@ go install github.com/swaggo/swag/cmd/swag@latest
 The project includes a comprehensive Makefile with the following commands:
 
 ### Build Commands
+
 - `make build` - Build the binary
 - `make generate` - Generate code and documentation
 - `make swag` - Update Swagger documentation
 
 ### Test Commands
+
 - `make test` - Run all tests
 - `make test-coverage` - Show coverage report
 - `make lint` - Run linter
 
 ### Docker Commands
+
 - `make docker-build-local` - Build Docker image with snapshot artifacts
 - `make docker-build-release` - Build Docker image for latest release
 - `make docker-run` - Run Docker container
@@ -322,6 +332,7 @@ The project includes a comprehensive Makefile with the following commands:
 - `make docker-logs` - View Docker logs
 
 ### Utility Commands
+
 - `make clean` - Clean build artifacts
 - `make help` - Show help message
 - `make check-tools` - Check required tools
