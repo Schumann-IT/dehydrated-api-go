@@ -1,5 +1,7 @@
 // Package dehydrated provides functionality for working with the dehydrated ACME client.
 // It includes configuration management, path resolution, and integration with the dehydrated script.
+//nolint: govet // String returns a string representation of the Config.
+
 package dehydrated
 
 import (
@@ -289,7 +291,7 @@ func (c *Config) resolvePaths() {
 	}
 }
 
-// nolint: govet // String returns a string representation of the Config.
+// String returns a string representation of the Config.
 func (c *Config) String() string {
 	var lines []string
 

@@ -1,3 +1,5 @@
+//nolint: revive // This file contains unsupported but required methods
+
 package server
 
 import (
@@ -51,19 +53,16 @@ func (p *GRPCPlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 }
 
 // GRPCClient is required by the go-plugin interface
-// nolint: revive // This method is not supported in this plugin implementation
 func (p *GRPCPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return pb.NewPluginClient(c), nil
 }
 
 // Client is required by the go-plugin interface
-// nolint: revive // This method is not supported in this plugin implementation
 func (p *GRPCPlugin) Client(_ *plugin.MuxBroker, _ *rpc.Client) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
 
 // Server is required by the go-plugin interface
-// nolint: revive // This method is not supported in this plugin implementation
 func (p *GRPCPlugin) Server(_ *plugin.MuxBroker) (any, error) {
 	return nil, fmt.Errorf("net/rpc not supported")
 }
