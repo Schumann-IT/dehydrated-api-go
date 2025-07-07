@@ -13,13 +13,3 @@ logging:
   level: debug
   encoding: console
   outputPath: ""
-
-plugins:
-  simple:
-    enabled: true
-    registry:
-      type: local
-      config:
-        path: "./examples/plugins/simple/simple"
-    config:
-      name: "Simple Plugin"

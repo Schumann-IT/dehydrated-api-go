@@ -1,0 +1,33 @@
+# Server configuration
+port: 3000
+
+# Dehydrated base directory (where certificates and data are stored)
+dehydratedBaseDir: ./data
+dehydratedConfigFile: config
+
+# Enable file watcher for automatic reloading
+enableWatcher: false
+
+# Logging configuration
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""
+
+plugins:
+  simple:
+    enabled: true
+    registry:
+      type: local
+      config:
+        path: "./examples/plugins/simple/simple"
+    config:
+      name: "Simple Plugin"
+  openssl:
+    enabled: true
+    registry:
+      type: github
+      config:
+        repository: "Schumann-IT/dehydrated-api-metadata-plugin-openssl"
+        version: "v0.2.0"
+    config: { }
