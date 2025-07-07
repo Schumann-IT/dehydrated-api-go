@@ -55,7 +55,7 @@ func (p *GRPCPlugin) Client(_ *plugin.MuxBroker, _ *rpc.Client) (any, error) {
 func NewClient(ctx context.Context, pluginName, pluginPath string, config map[string]*structpb.Value) (*Client, error) {
 	// Create logger
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:   fmt.Sprintf("plugin-client"),
+		Name:   "plugin-client",
 		Level:  hclog.Trace,
 		Output: os.Stdout,
 	})
