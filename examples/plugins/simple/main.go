@@ -26,7 +26,7 @@ func (p *ExamplePlugin) Initialize(_ context.Context, req *proto.InitializeReque
 
 // GetMetadata implements the plugin.Plugin interface
 func (p *ExamplePlugin) GetMetadata(_ context.Context, req *proto.GetMetadataRequest) (*proto.GetMetadataResponse, error) {
-	p.logger.Debug("GetMetadata called")
+	p.logger.Debug("GetMetadata called", "domain", req.GetDomainEntry().GetDomain())
 
 	// Create a new Metadata for the response
 	metadata := proto.NewMetadata()
@@ -60,9 +60,10 @@ func (p *ExamplePlugin) Close(_ context.Context, _ *proto.CloseRequest) (*proto.
 func main() {
 	// Create logger
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:   "example-plugin",
-		Level:  hclog.Trace,
-		Output: os.Stdout,
+		Name:       "example-plugin",
+		Level:      hclog.Trace,
+		Output:     os.Stderr,
+		JSONFormat: true,
 	})
 
 	// Create plugin instance
