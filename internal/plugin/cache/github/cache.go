@@ -75,6 +75,11 @@ func (c *GithubCache) Add(name string, s any) {
 	}
 
 	c.currentFile = filepath.Join(c.path, gcfg.getOrg(), gcfg.getName(), name, gcfg.getVersion(), gcfg.getPlatform(), gcfg.getName())
+	if _, err = os.Stat(c.currentFile); err == nil {
+		c.files[name] = c.currentFile
+		return
+	}
+
 	err = os.MkdirAll(filepath.Dir(c.currentFile), 0755)
 	if err != nil {
 		panic("failed to create plugin directory: " + err.Error())
