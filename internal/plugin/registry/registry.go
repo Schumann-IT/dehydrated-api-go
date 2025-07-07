@@ -86,6 +86,9 @@ func (r *Registry) Plugins() map[string]pb.PluginClient {
 func (r *Registry) Close() {
 	for name, c := range r.clients {
 		r.logger.Debug("Closing plugin client", zap.String("plugin", name))
-		c.Close()
+		err := c.Close()
+		if err != nil {
+			r.logger.Error("Failed to close plugin client", zap.String("plugin", name))
+		}
 	}
 }

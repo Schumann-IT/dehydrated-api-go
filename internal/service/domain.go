@@ -113,6 +113,10 @@ func (s *DomainService) Close() error {
 		}
 	}
 
+	if s.registry != nil {
+		s.registry.Close()
+	}
+
 	s.logger.Sync()
 
 	return nil
