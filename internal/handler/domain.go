@@ -58,7 +58,6 @@ func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
 // @Summary Get a domain
 // @Description Get details of a specific domain
 // @Tags domains
-// @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param domain path string true "Domain name"
@@ -78,19 +77,7 @@ func (h *DomainHandler) GetDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get optional alias from query parameter
-	alias := c.Query("alias")
-
-	var entry *model.DomainEntry
-	var err error
-
-	if alias != "" {
-		// Use the new method that supports alias filtering
-		entry, err = h.service.GetDomainByAlias(domain, alias)
-	} else {
-		// Use the original method for backward compatibility
-		entry, err = h.service.GetDomain(domain)
-	}
+	entry, err := h.service.GetDomain(domain, c.Query("alias"))
 
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
@@ -147,7 +134,6 @@ func (h *DomainHandler) CreateDomain(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param domain path string true "Domain name"
-// @Param alias query string false "Optional alias to uniquely identify the domain entry"
 // @Param request body model.UpdateDomainRequest true "Domain update request"
 // @Success 200 {object} model.DomainResponse
 // @Failure 400 {object} model.DomainResponse "Bad Request - Invalid request body or domain parameter"
@@ -172,20 +158,10 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get optional alias from query parameter
-	alias := c.Query("alias")
-
 	var entry *model.DomainEntry
 	var err error
 
-	if alias != "" {
-		// Use the new method that supports alias filtering
-		entry, err = h.service.UpdateDomainByAlias(domain, alias, req)
-	} else {
-		// Use the original method for backward compatibility
-		entry, err = h.service.UpdateDomain(domain, req)
-	}
-
+	entry, err = h.service.UpdateDomain(domain, req)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
@@ -206,7 +182,7 @@ func (h *DomainHandler) UpdateDomain(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param domain path string true "Domain name"
-// @Param alias query string false "Optional alias to uniquely identify the domain entry"
+// @Param request body model.DeleteDomainRequest true "Domain delete request"
 // @Success 204 "No Content"
 // @Failure 400 {object} model.DomainResponse "Bad Request - Invalid domain parameter"
 // @Failure 401 {object} model.DomainResponse "Unauthorized - Invalid or missing authentication token"
@@ -222,19 +198,20 @@ func (h *DomainHandler) DeleteDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get optional alias from query parameter
-	alias := c.Query("alias")
-
-	var err error
-
-	if alias != "" {
-		// Use the new method that supports alias filtering
-		err = h.service.DeleteDomainByAlias(domain, alias)
+	var req model.DeleteDomainRequest
+	if len(c.Body()) > 0 {
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(model.DomainResponse{
+				Success: false,
+				Error:   "invalid request body",
+			})
+		}
 	} else {
-		// Use the original method for backward compatibility
-		err = h.service.DeleteDomain(domain)
+		// If no body is provided, use an empty DeleteDomainRequest
+		req = model.DeleteDomainRequest{}
 	}
 
+	err := h.service.DeleteDomain(domain, req)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(model.DomainResponse{
 			Success: false,
