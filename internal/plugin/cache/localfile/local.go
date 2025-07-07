@@ -24,8 +24,6 @@ func New(basePath string) cacheinterface.PluginCache {
 func (c *LocalCache) Add(name string, s any) {
 	if c.files == nil {
 		c.files = map[string]string{}
-	} else if _, exists := c.files[name]; exists {
-		return
 	}
 
 	b, err := json.Marshal(s)
@@ -54,6 +52,11 @@ func (c *LocalCache) Add(name string, s any) {
 	}
 
 	path = filepath.Join(path, i.Name())
+	if _, err = os.Stat(path); err == nil {
+		c.files[name] = path
+		return
+	}
+
 	tio, err := os.Create(path)
 	if err != nil {
 		panic("cannot create target: " + path + " from source: " + cfg.Path + ": " + err.Error())
