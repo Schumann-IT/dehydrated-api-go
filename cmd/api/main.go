@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"os"
 	"os/signal"
 	"syscall"
@@ -49,6 +50,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
 	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
 	showInfo := flag.Bool("info", false, "Show parsed config")
+	clean := flag.Bool("clean", false, "Clean up the cache directory and exit")
 	flag.Parse()
 
 	// load server config
@@ -57,6 +59,11 @@ func main() {
 		WithConfig(*configPath).
 		WithLogger().
 		WithDomainService()
+
+	if *clean {
+		cache.Clean()
+		os.Exit(0)
+	}
 
 	s.PrintInfo(*showVersion, *showInfo)
 

@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	localCache  cacheinterface.PluginCache
-	githubCache cacheinterface.PluginCache
+	cacheBasePath string
+	localCache    cacheinterface.PluginCache
+	githubCache   cacheinterface.PluginCache
 )
 
 func Prepare(basePath string) {
@@ -26,11 +27,11 @@ func Prepare(basePath string) {
 		}
 	}
 
-	basePath, err = filepath.Abs(filepath.Join(basePath, ".dehydrated-api-go", "plugins"))
+	cacheBasePath, err = filepath.Abs(filepath.Join(basePath, ".dehydrated-api-go"))
 	if err != nil {
-		panic("Failed to resolve absolute path for plugin cache: " + err.Error())
+		panic("Failed to resolve absolute path for cache: " + err.Error())
 	}
-
+	basePath = filepath.Join(cacheBasePath, "plugins")
 	if err = os.MkdirAll(basePath, 0755); err != nil {
 		panic("Failed to create plugin cache directory: " + err.Error())
 	}
@@ -72,4 +73,17 @@ func Get(name string) (string, error) {
 	}
 
 	panic("plugin not found in any cache: " + name)
+}
+
+func Clean() {
+	if localCache != nil {
+		localCache.Clean()
+		localCache = nil
+	}
+	if githubCache != nil {
+		githubCache.Clean()
+		githubCache = nil
+	}
+
+	_ = os.RemoveAll(cacheBasePath)
 }

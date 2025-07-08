@@ -17,7 +17,7 @@ type LocalCache struct {
 
 func New(basePath string) cacheinterface.PluginCache {
 	return &LocalCache{
-		path: basePath,
+		path: filepath.Join(basePath, "local"),
 	}
 }
 
@@ -83,4 +83,8 @@ func (c *LocalCache) Path(name string) (string, error) {
 	}
 
 	return c.files[name], nil
+}
+
+func (c *LocalCache) Clean() {
+	_ = os.RemoveAll(c.path)
 }

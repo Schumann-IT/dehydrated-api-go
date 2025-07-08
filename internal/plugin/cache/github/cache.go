@@ -27,7 +27,7 @@ type GithubCache struct {
 
 func New(basePath string) cacheinterface.PluginCache {
 	return &GithubCache{
-		path: basePath,
+		path: filepath.Join(basePath, "github"),
 		client: &http.Client{
 			Timeout: 30 * time.Second, // Shorter timeout for API calls
 		},
@@ -326,4 +326,8 @@ func extractZip(archivePath, extractDir string) {
 	if err := os.Chmod(mainExecutable, 0755); err != nil {
 		panic("failed to make file executable: " + err.Error())
 	}
+}
+
+func (c *GithubCache) Clean() {
+	_ = os.RemoveAll(c.path)
 }

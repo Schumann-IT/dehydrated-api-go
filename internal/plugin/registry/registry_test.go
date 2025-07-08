@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,4 +72,6 @@ func TestRegistry(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Metadata)
+
+	cache.Clean()
 }

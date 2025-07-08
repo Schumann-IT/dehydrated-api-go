@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"os"
 	"path/filepath"
 	"sync"
@@ -452,6 +453,8 @@ func TestDomainService_UpdateDomain(t *testing.T) {
 			}
 		})
 	}
+
+	cache.Clean()
 }
 
 // TestGetDomainByAlias tests the GetDomainByAlias functionality

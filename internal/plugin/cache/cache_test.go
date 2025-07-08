@@ -108,4 +108,6 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 			}
 		})
 	}
+
+	Clean()
 }

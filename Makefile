@@ -26,7 +26,7 @@ generate: ## Generate code and documentation
 run: build $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run the binary with example config
 	@./$(BINARY_NAME) -config examples/config.yaml
 
-release: ## Create a release with goreleaser
+release: clean-all ## Create a release with goreleaser
 	@goreleaser release --snapshot --clean
 
 #

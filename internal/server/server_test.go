@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -84,6 +85,8 @@ enableWatcher: false
 
 	// Give the server time to start
 	time.Sleep(100 * time.Millisecond)
+
+	cache.Clean()
 }
 
 // TestMainAccWithInvalidPort tests the server's behavior when configured with an invalid port.
@@ -115,6 +118,8 @@ enableWatcher: false
 
 	// Give the server time to start and log the error
 	time.Sleep(100 * time.Millisecond)
+
+	cache.Clean()
 }
 
 // TestServerInitialization tests the server initialization with various configurations.
@@ -242,6 +247,8 @@ enableWatcher: true
 
 		require.Contains(t, output, "Resolved Dehydrated Config")
 	})
+
+	cache.Clean()
 }
 
 // TestServerLifecycle tests the server's lifecycle management.
@@ -407,4 +414,6 @@ plugins:
 		// Give the server time to start and log the error
 		time.Sleep(100 * time.Millisecond)
 	})
+
+	cache.Clean()
 }
