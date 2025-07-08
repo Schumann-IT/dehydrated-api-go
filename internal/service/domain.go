@@ -67,7 +67,7 @@ func (s *DomainService) WithFileWatcher() *DomainService {
 	watcher, err := NewFileWatcher(s.DehydratedConfig.DomainsFile, s.Reload)
 	if err != nil {
 		s.logger.Error("Failed to set up file watcher", zap.Error(err))
-		panic(err)
+		return s
 	}
 	watcher.WithLogger(s.logger)
 	s.watcher = watcher

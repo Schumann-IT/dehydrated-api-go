@@ -18,11 +18,17 @@ type Registry struct {
 }
 
 func New(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger) *Registry {
-	cache.Prepare(baseDir)
-
 	r := &Registry{
 		clients: make(map[string]*client.Client),
 		logger:  logger,
+	}
+
+	err := cache.Prepare(baseDir)
+	if err != nil {
+		logger.Error("Failed to prepare plugin cache",
+			zap.String("baseDir", baseDir),
+			zap.Error(err))
+		return r
 	}
 
 	for n, c := range cfg {
@@ -30,14 +36,20 @@ func New(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger)
 			continue
 		}
 
-		cache.Add(n, c.Registry)
+		_, err := cache.Add(n, c.Registry)
+		if err != nil {
+			r.logger.Error("Failed to add plugin to cache; ignoring plugin",
+				zap.String("plugin", n),
+				zap.Error(err))
+			continue
+		}
 
 		pluginConfig, err := c.ToProto()
 		if err != nil {
-			r.logger.Error("Failed to convert plugin config to proto",
+			r.logger.Error("Failed to convert plugin config to proto; ignoring plugin",
 				zap.String("plugin", n),
 				zap.Error(err))
-			panic("Failed to convert plugin config to proto: " + err.Error())
+			continue
 		}
 		r.register(n, pluginConfig)
 	}
@@ -49,20 +61,20 @@ func (r *Registry) register(name string, cfg map[string]*structpb.Value) {
 	// Get plugin path using the new registry system or fallback to old system
 	pluginPath, err := cache.Get(name)
 	if err != nil {
-		r.logger.Error("Failed to get plugin path",
+		r.logger.Error("Failed to get plugin path; ignoring plugin",
 			zap.String("plugin", name),
 			zap.Error(err))
-		panic("Failed to get plugin path: " + err.Error())
+		return
 	}
 
 	// Create a new client
 	c, err := client.NewClient(context.Background(), name, pluginPath, cfg)
 	if err != nil {
-		r.logger.Error("Failed to create plugin client",
+		r.logger.Error("Failed to create plugin client; ignoring plugin",
 			zap.String("plugin", name),
 			zap.String("path", pluginPath),
 			zap.Error(err))
-		panic("Failed to create client: " + err.Error())
+		return
 	}
 
 	r.clients[name] = c

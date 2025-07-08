@@ -18,7 +18,7 @@ COVERAGE_FILE=coverage.out
 
 build: generate $(BINARY_NAME) ## Build binary
 
-pre-commit: build clean ## Prepare for commit
+pre-commit: test lint release ## Prepare for commit
 
 generate: ## Generate code and documentation
 	@go generate ./...

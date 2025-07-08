@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -16,7 +17,7 @@ var (
 	githubCache   cacheinterface.PluginCache
 )
 
-func Prepare(basePath string) {
+func Prepare(basePath string) error {
 	var err error
 	if basePath == "" {
 		// Use current working directory for cache
@@ -29,18 +30,20 @@ func Prepare(basePath string) {
 
 	cacheBasePath, err = filepath.Abs(filepath.Join(basePath, ".dehydrated-api-go"))
 	if err != nil {
-		panic("Failed to resolve absolute path for cache: " + err.Error())
+		return fmt.Errorf("failed to resolve absolute path for cache: %w", err)
 	}
 	basePath = filepath.Join(cacheBasePath, "plugins")
 	if err = os.MkdirAll(basePath, 0755); err != nil {
-		panic("Failed to create plugin cache directory: " + err.Error())
+		return fmt.Errorf("failed to create plugin cache directory: %w", err)
 	}
 
 	localCache = localfile.New(basePath)
 	githubCache = github.New(basePath)
+
+	return nil
 }
 
-func Add(name string, sourceRegistry *config.RegistryConfig) cacheinterface.PluginCache {
+func Add(name string, sourceRegistry *config.RegistryConfig) (cacheinterface.PluginCache, error) {
 	var c cacheinterface.PluginCache
 	switch sourceRegistry.Type {
 	case config.PluginSourceTypeLocal:
@@ -48,17 +51,15 @@ func Add(name string, sourceRegistry *config.RegistryConfig) cacheinterface.Plug
 	case config.PluginSourceTypeGitHub:
 		c = githubCache
 	default:
-		panic("unsupported registry type: " + sourceRegistry.Type)
+		return nil, fmt.Errorf("unsupported source type: %v", sourceRegistry.Type)
 	}
 
-	c.Add(name, sourceRegistry.Config)
-
-	return c
+	return c.Add(name, sourceRegistry.Config)
 }
 
 func Get(name string) (string, error) {
-	if localCache == nil || githubCache == nil {
-		panic("plugin cache is not initialized, please call NewCache first")
+	if localCache == nil && githubCache == nil {
+		return "", fmt.Errorf("plugin cache is not initialized, please call cache.Prepare() first")
 	}
 
 	// Try to get from local cache first
@@ -72,7 +73,7 @@ func Get(name string) (string, error) {
 		return path, nil
 	}
 
-	panic("plugin not found in any cache: " + name)
+	return "", fmt.Errorf("plugin %s not found in any cache", name)
 }
 
 func Clean() {

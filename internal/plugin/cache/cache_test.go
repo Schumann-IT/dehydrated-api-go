@@ -92,18 +92,17 @@ func TestPluginConfig_NewRegistry(t *testing.T) {
 	}
 
 	tmp := t.TempDir()
-	Prepare(tmp)
+	err := Prepare(tmp)
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			pi, err := Add(tt.name, tt.config.Registry)
 			if tt.expectError {
-				require.Panics(t, func() {
-					Add(tt.name, tt.config.Registry)
-				})
+				require.Error(t, err)
 			} else {
-				Add(tt.name, tt.config.Registry)
-				path, err := Get(tt.name)
 				require.NoError(t, err)
+				path, _ := pi.Path(tt.name)
 				require.Contains(t, path, tt.name)
 			}
 		})

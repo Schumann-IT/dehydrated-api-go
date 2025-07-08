@@ -3,6 +3,7 @@ package localfile
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,61 +18,63 @@ type LocalCache struct {
 
 func New(basePath string) cacheinterface.PluginCache {
 	return &LocalCache{
-		path: filepath.Join(basePath, "local"),
+		path:  filepath.Join(basePath, "local"),
+		files: map[string]string{},
 	}
 }
 
-func (c *LocalCache) Add(name string, s any) {
-	if c.files == nil {
-		c.files = map[string]string{}
+func (c *LocalCache) Add(name string, s any) (cacheinterface.PluginCache, error) {
+	if p, ok := c.files[name]; ok {
+		_, err := os.Stat(p)
+		if err == nil {
+			// plugin exists
+			return c, nil
+		}
 	}
 
 	b, err := json.Marshal(s)
 	if err != nil {
-		panic("failed to marshal local cache config: " + err.Error())
+		return c, fmt.Errorf("error marshaling %v: %w", name, err)
 	}
 	var cfg Config
 	err = json.Unmarshal(b, &cfg)
 	if err != nil {
-		panic("failed to unmarshal local cache config: " + err.Error())
+		return c, fmt.Errorf("error unmarshalling %v: %w", name, err)
 	}
 
 	i, err := os.Stat(cfg.Path)
 	if err != nil || i.IsDir() {
-		panic("cannot find source artifact: " + cfg.Path)
+		return c, fmt.Errorf("%v is not a file", cfg.Path)
 	}
 	sio, err := os.OpenFile(cfg.Path, os.O_RDONLY, 0644)
 	if err != nil {
-		panic("cannot read source: " + cfg.Path + ": " + err.Error())
+		return c, fmt.Errorf("error opening source file %v: %w", cfg.Path, err)
 	}
 
 	path := filepath.Join(c.path, name)
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
-		panic("cannot create directory for target: " + path + " from source: " + cfg.Path + ": " + err.Error())
+		return c, fmt.Errorf("error creating target directory %v: %w", path, err)
 	}
 
 	path = filepath.Join(path, i.Name())
-	if _, err = os.Stat(path); err == nil {
-		c.files[name] = path
-		return
-	}
-
 	tio, err := os.Create(path)
 	if err != nil {
-		panic("cannot create target: " + path + " from source: " + cfg.Path + ": " + err.Error())
+		return c, fmt.Errorf("error creating target %s: %w", path, err)
 	}
 	err = tio.Chmod(0766)
 	if err != nil {
-		panic("cannot set permissions for target: " + path + " from source: " + cfg.Path + ": " + err.Error())
+		return c, fmt.Errorf("cannot set permissions for target %s: %w", path, err)
 	}
 
 	_, err = io.Copy(tio, sio)
 	if err != nil {
-		panic("cannot create target: " + path + " from source: " + cfg.Path + ": " + err.Error())
+		return c, fmt.Errorf("error writing target %s: %w", path, err)
 	}
 
 	c.files[name] = path
+
+	return c, nil
 }
 
 func (c *LocalCache) Path(name string) (string, error) {
