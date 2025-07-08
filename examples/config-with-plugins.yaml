@@ -29,5 +29,5 @@ plugins:
       type: github
       config:
         repository: "Schumann-IT/dehydrated-api-metadata-plugin-openssl"
-        version: "v0.2.0"
+        version: "v0.3.0"
     config: { }
