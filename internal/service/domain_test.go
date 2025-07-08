@@ -2,12 +2,13 @@ package service
 
 import (
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 
 	"go.uber.org/zap"
 

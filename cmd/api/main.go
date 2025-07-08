@@ -6,10 +6,11 @@ package main
 
 import (
 	"flag"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/server"
 	"go.uber.org/zap"

@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/schumann-it/dehydrated-api-go/internal/plugin/cache"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	"github.com/stretchr/testify/require"
