@@ -44,6 +44,11 @@ func New(baseDir string, cfg map[string]config.PluginConfig, logger *zap.Logger)
 			continue
 		}
 
+		// add log level configuration form the main logger, if not set specifically
+		if _, ok := c.Config["logLevel"]; !ok {
+			c.Config["logLevel"] = logger.Level().String()
+		}
+
 		pluginConfig, err := c.ToProto()
 		if err != nil {
 			r.logger.Error("Failed to convert plugin config to proto; ignoring plugin",

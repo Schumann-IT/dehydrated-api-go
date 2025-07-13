@@ -197,7 +197,32 @@ plugins:
       # Plugin-specific configuration
       apiKey: "your-api-key"
       endpoint: "https://api.example.com"
+      # Optional: Override log level for this plugin
+      # logLevel: "debug"
 ```
+
+#### Plugin Log Level Configuration
+
+Plugins automatically inherit the main application's log level unless explicitly configured. You can override the log level for individual plugins by adding a `logLevel` field to the plugin's configuration:
+
+```yaml
+plugins:
+  my-plugin:
+    enabled: true
+    registry:
+      type: local
+      config:
+        path: /path/to/plugin/binary
+    config:
+      # Override log level for this specific plugin
+      logLevel: "debug"
+      # Other plugin-specific configuration
+      apiKey: "your-api-key"
+```
+
+**Available log levels**: `debug`, `info`, `warn`, `error`
+
+If no `logLevel` is specified in the plugin configuration, the plugin will use the same log level as the main application (configured in the `logging.level` section).
 
 ### Creating a Plugin
 

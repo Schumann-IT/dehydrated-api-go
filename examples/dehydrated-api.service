@@ -1,0 +1,35 @@
+[Unit]
+Description=Dehydrated API Service
+Documentation=https://github.com/schumann-it/dehydrated-api-go
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=le-user
+Group=le-user
+
+# use a proxy if needed
+#Environment=no_proxy=*.yourdomain.de
+#Environment=https_proxy=http://proxy:9080
+
+# Working directory where the application and config files are located
+WorkingDirectory=/path/to/working/dir
+
+# Path to the binary
+ExecStart=/path/to/working/dir/dehydrated-api-go -config /path/to/working/dir/config.yaml
+
+# Health check after service starts
+ExecStartPost=/bin/bash -c 'sleep 5 && curl -f http://localhost:3000/health || exit 1'
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+
+# Graceful shutdown timeout (matches the application's graceful shutdown handling)
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target 
