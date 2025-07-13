@@ -277,13 +277,489 @@ func TestDomainHandler(t *testing.T) {
 			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
 		}
 
-		var response model.DomainsResponse
+		var response model.PaginatedDomainsResponse
 		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
 
 		if len(response.Data) != 0 {
 			t.Errorf("Expected 0 domains, got %d", len(response.Data))
+		}
+
+		if response.Pagination == nil {
+			t.Error("Expected pagination info to be present")
+		} else {
+			if response.Pagination.CurrentPage != 1 {
+				t.Errorf("Expected current page 1, got %d", response.Pagination.CurrentPage)
+			}
+			if response.Pagination.PerPage != model.DefaultPerPage {
+				t.Errorf("Expected per page %d, got %d", model.DefaultPerPage, response.Pagination.PerPage)
+			}
+			if response.Pagination.Total != 0 {
+				t.Errorf("Expected total 0, got %d", response.Pagination.Total)
+			}
+		}
+	})
+
+	t.Run("ListDomainsWithPagination", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// Create some test domains
+		domains := []string{"domain1.com", "domain2.com", "domain3.com", "domain4.com", "domain5.com"}
+		for _, domain := range domains {
+			req := model.CreateDomainRequest{
+				Domain:  domain,
+				Enabled: true,
+			}
+			body, _ := json.Marshal(req)
+
+			resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+			resp.Header.Set("Content-Type", "application/json")
+
+			result, err := app.Test(resp)
+			if err != nil {
+				t.Fatalf("Failed to create domain %s: %v", domain, err)
+			}
+			defer result.Body.Close()
+
+			if result.StatusCode != fiber.StatusCreated {
+				t.Fatalf("Failed to create domain %s, got status %d", domain, result.StatusCode)
+			}
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Test pagination with page=1, per_page=2
+		resp := httptest.NewRequest("GET", "/api/v1/domains?page=1&per_page=2", http.NoBody)
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result.Body.Close()
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+		}
+
+		var response model.PaginatedDomainsResponse
+		if respErr := json.NewDecoder(result.Body).Decode(&response); respErr != nil {
+			t.Fatalf("Failed to decode response: %v", respErr)
+		}
+
+		if len(response.Data) != 2 {
+			t.Errorf("Expected 2 domains, got %d", len(response.Data))
+		}
+
+		if response.Pagination == nil {
+			t.Error("Expected pagination info to be present")
+		} else {
+			if response.Pagination.CurrentPage != 1 {
+				t.Errorf("Expected current page 1, got %d", response.Pagination.CurrentPage)
+			}
+			if response.Pagination.PerPage != 2 {
+				t.Errorf("Expected per page 2, got %d", response.Pagination.PerPage)
+			}
+			if response.Pagination.Total != 5 {
+				t.Errorf("Expected total 5, got %d", response.Pagination.Total)
+			}
+			if response.Pagination.TotalPages != 3 {
+				t.Errorf("Expected total pages 3, got %d", response.Pagination.TotalPages)
+			}
+			if !response.Pagination.HasNext {
+				t.Error("Expected has_next to be true")
+			}
+			if response.Pagination.HasPrev {
+				t.Error("Expected has_prev to be false for first page")
+			}
+			if response.Pagination.NextURL == "" {
+				t.Error("Expected next_url to be present")
+			}
+			if response.Pagination.PrevURL != "" {
+				t.Error("Expected prev_url to be empty for first page")
+			}
+		}
+
+		// Test pagination with page=2, per_page=2
+		resp2 := httptest.NewRequest("GET", "/api/v1/domains?page=2&per_page=2", http.NoBody)
+
+		result2, err := app.Test(resp2)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result2.Body.Close()
+
+		if result2.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result2.StatusCode)
+		}
+
+		var response2 model.PaginatedDomainsResponse
+		if err := json.NewDecoder(result2.Body).Decode(&response2); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if len(response2.Data) != 2 {
+			t.Errorf("Expected 2 domains on page 2, got %d", len(response2.Data))
+		}
+
+		if response2.Pagination == nil {
+			t.Error("Expected pagination info to be present")
+		} else {
+			if response2.Pagination.CurrentPage != 2 {
+				t.Errorf("Expected current page 2, got %d", response2.Pagination.CurrentPage)
+			}
+			if !response2.Pagination.HasNext {
+				t.Error("Expected has_next to be true for page 2")
+			}
+			if !response2.Pagination.HasPrev {
+				t.Error("Expected has_prev to be true for page 2")
+			}
+			if response2.Pagination.NextURL == "" {
+				t.Error("Expected next_url to be present for page 2")
+			}
+			if response2.Pagination.PrevURL == "" {
+				t.Error("Expected prev_url to be present for page 2")
+			}
+		}
+	})
+
+	// Test ListDomains with sorting
+	t.Run("ListDomainsWithSorting", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// Create test domains in reverse order
+		domains := []string{"zebra.com", "alpha.com", "beta.com"}
+		for _, domain := range domains {
+			req := model.CreateDomainRequest{
+				Domain:  domain,
+				Enabled: true,
+			}
+			body, _ := json.Marshal(req)
+
+			resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+			resp.Header.Set("Content-Type", "application/json")
+
+			result, err := app.Test(resp)
+			if err != nil {
+				t.Fatalf("Failed to create domain %s: %v", domain, err)
+			}
+			defer result.Body.Close()
+
+			if result.StatusCode != fiber.StatusCreated {
+				t.Fatalf("Failed to create domain %s, got status %d", domain, result.StatusCode)
+			}
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Test no sorting (original order)
+		resp := httptest.NewRequest("GET", "/api/v1/domains", http.NoBody)
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result.Body.Close()
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+		}
+
+		var response model.PaginatedDomainsResponse
+		if respErr := json.NewDecoder(result.Body).Decode(&response); respErr != nil {
+			t.Fatalf("Failed to decode response: %v", respErr)
+		}
+
+		if len(response.Data) != 3 {
+			t.Errorf("Expected 3 domains, got %d", len(response.Data))
+		}
+
+		// Check original order (after file write/reload, domains are automatically sorted alphabetically)
+		if response.Data[0].Domain != "alpha.com" {
+			t.Errorf("Expected first domain to be alpha.com (alphabetical order after file write), got %s", response.Data[0].Domain)
+		}
+		if response.Data[1].Domain != "beta.com" {
+			t.Errorf("Expected second domain to be beta.com (alphabetical order after file write), got %s", response.Data[1].Domain)
+		}
+		if response.Data[2].Domain != "zebra.com" {
+			t.Errorf("Expected third domain to be zebra.com (alphabetical order after file write), got %s", response.Data[2].Domain)
+		}
+
+		// Test ascending sort
+		respAsc := httptest.NewRequest("GET", "/api/v1/domains?sort=asc", http.NoBody)
+
+		resultAsc, err := app.Test(respAsc)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer resultAsc.Body.Close()
+
+		if resultAsc.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, resultAsc.StatusCode)
+		}
+
+		var responseAsc model.PaginatedDomainsResponse
+		if respErr := json.NewDecoder(resultAsc.Body).Decode(&responseAsc); respErr != nil {
+			t.Fatalf("Failed to decode response: %v", respErr)
+		}
+
+		if len(responseAsc.Data) != 3 {
+			t.Errorf("Expected 3 domains, got %d", len(responseAsc.Data))
+		}
+
+		// Check ascending order
+		if responseAsc.Data[0].Domain != "alpha.com" {
+			t.Errorf("Expected first domain to be alpha.com, got %s", responseAsc.Data[0].Domain)
+		}
+		if responseAsc.Data[1].Domain != "beta.com" {
+			t.Errorf("Expected second domain to be beta.com, got %s", responseAsc.Data[1].Domain)
+		}
+		if responseAsc.Data[2].Domain != "zebra.com" {
+			t.Errorf("Expected third domain to be zebra.com, got %s", responseAsc.Data[2].Domain)
+		}
+
+		// Test descending sort
+		respDesc := httptest.NewRequest("GET", "/api/v1/domains?sort=desc", http.NoBody)
+
+		resultDesc, err := app.Test(respDesc)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer resultDesc.Body.Close()
+
+		if resultDesc.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, resultDesc.StatusCode)
+		}
+
+		var responseDesc model.PaginatedDomainsResponse
+		if err := json.NewDecoder(resultDesc.Body).Decode(&responseDesc); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if len(responseDesc.Data) != 3 {
+			t.Errorf("Expected 3 domains, got %d", len(responseDesc.Data))
+		}
+
+		// Check descending order
+		if responseDesc.Data[0].Domain != "zebra.com" {
+			t.Errorf("Expected first domain to be zebra.com, got %s", responseDesc.Data[0].Domain)
+		}
+		if responseDesc.Data[1].Domain != "beta.com" {
+			t.Errorf("Expected second domain to be beta.com, got %s", responseDesc.Data[1].Domain)
+		}
+		if responseDesc.Data[2].Domain != "alpha.com" {
+			t.Errorf("Expected third domain to be alpha.com, got %s", responseDesc.Data[2].Domain)
+		}
+	})
+
+	// Test ListDomains with search
+	t.Run("ListDomainsWithSearch", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Post("/api/v1/domains", handler.CreateDomain)
+		app.Get("/api/v1/domains", handler.ListDomains)
+		app.Get("/api/v1/domains/:domain", handler.GetDomain)
+		app.Put("/api/v1/domains/:domain", handler.UpdateDomain)
+		app.Delete("/api/v1/domains/:domain", handler.DeleteDomain)
+
+		// Create test domains
+		domains := []string{"example.com", "test.com", "example.org", "demo.net"}
+		for _, domain := range domains {
+			req := model.CreateDomainRequest{
+				Domain:  domain,
+				Enabled: true,
+			}
+			body, _ := json.Marshal(req)
+
+			resp := httptest.NewRequest("POST", "/api/v1/domains", bytes.NewReader(body))
+			resp.Header.Set("Content-Type", "application/json")
+
+			result, err := app.Test(resp)
+			if err != nil {
+				t.Fatalf("Failed to create domain %s: %v", domain, err)
+			}
+			defer result.Body.Close()
+
+			if result.StatusCode != fiber.StatusCreated {
+				t.Fatalf("Failed to create domain %s, got status %d", domain, result.StatusCode)
+			}
+		}
+
+		// Reload the service to ensure the cache is updated
+		if err := s.Reload(); err != nil {
+			t.Fatalf("Failed to reload service: %v", err)
+		}
+
+		// Test search for "example"
+		resp := httptest.NewRequest("GET", "/api/v1/domains?search=example", http.NoBody)
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result.Body.Close()
+
+		if result.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result.StatusCode)
+		}
+
+		var response model.PaginatedDomainsResponse
+		if respErr := json.NewDecoder(result.Body).Decode(&response); respErr != nil {
+			t.Fatalf("Failed to decode response: %v", respErr)
+		}
+
+		if len(response.Data) != 2 {
+			t.Errorf("Expected 2 domains matching 'example', got %d", len(response.Data))
+		}
+
+		// Check that both example.com and example.org are returned
+		foundExampleCom := false
+		foundExampleOrg := false
+		for _, domain := range response.Data {
+			if domain.Domain == "example.com" {
+				foundExampleCom = true
+			}
+			if domain.Domain == "example.org" {
+				foundExampleOrg = true
+			}
+		}
+		if !foundExampleCom {
+			t.Error("Expected to find example.com in search results")
+		}
+		if !foundExampleOrg {
+			t.Error("Expected to find example.org in search results")
+		}
+
+		// Test case-insensitive search
+		resp2 := httptest.NewRequest("GET", "/api/v1/domains?search=EXAMPLE", http.NoBody)
+
+		result2, err := app.Test(resp2)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result2.Body.Close()
+
+		if result2.StatusCode != fiber.StatusOK {
+			t.Errorf("Expected status %d, got %d", fiber.StatusOK, result2.StatusCode)
+		}
+
+		var response2 model.PaginatedDomainsResponse
+		if err := json.NewDecoder(result2.Body).Decode(&response2); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if len(response2.Data) != 2 {
+			t.Errorf("Expected 2 domains matching 'EXAMPLE' (case-insensitive), got %d", len(response2.Data))
+		}
+	})
+
+	// Test ListDomains with invalid sort parameter
+	t.Run("ListDomainsWithInvalidSort", func(t *testing.T) {
+		// Create a temporary directory for test files
+		tmpDir := t.TempDir()
+
+		// Create a new Fiber app
+		app := fiber.New()
+
+		// load dehydrated config
+		dc := dehydrated.NewConfig().WithBaseDir(tmpDir).Load()
+
+		// Create domain service
+		s := service.NewDomainService(dc, nil)
+		defer s.Close()
+
+		// Create a new domain handler
+		handler := NewDomainHandler(s)
+
+		// register routes
+		app.Get("/api/v1/domains", handler.ListDomains)
+
+		// Test invalid sort parameter
+		resp := httptest.NewRequest("GET", "/api/v1/domains?sort=invalid", http.NoBody)
+
+		result, err := app.Test(resp)
+		if err != nil {
+			t.Fatalf("Failed to test request: %v", err)
+		}
+		defer result.Body.Close()
+
+		if result.StatusCode != fiber.StatusBadRequest {
+			t.Errorf("Expected status %d, got %d", fiber.StatusBadRequest, result.StatusCode)
+		}
+
+		var response model.PaginatedDomainsResponse
+		if err := json.NewDecoder(result.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if response.Success {
+			t.Error("Expected success to be false")
+		}
+		if response.Error == "" {
+			t.Error("Expected error message to be present")
 		}
 	})
 

@@ -208,3 +208,67 @@ type ConfigResponse struct {
 
 	Error string `json:"error,omitempty" example:"Failed to load config"`
 }
+
+// Pagination constants
+const (
+	DefaultPerPage = 100
+	MaxPerPage     = 1000
+	MinPerPage     = 1
+	MinPage        = 1
+)
+
+// PaginationInfo contains pagination metadata for responses
+// @Description Pagination metadata for responses
+type PaginationInfo struct {
+	// CurrentPage is the current page number (1-based)
+	// @Description Current page number (1-based)
+	CurrentPage int `json:"current_page" example:"2"`
+
+	// PerPage is the number of items per page
+	// @Description Number of items per page
+	PerPage int `json:"per_page" example:"100"`
+
+	// Total is the total number of items
+	// @Description Total number of items
+	Total int `json:"total" example:"150"`
+
+	// TotalPages is the total number of pages
+	// @Description Total number of pages
+	TotalPages int `json:"total_pages" example:"2"`
+
+	// HasNext indicates if there is a next page
+	// @Description Whether there is a next page
+	HasNext bool `json:"has_next" example:"true"`
+
+	// HasPrev indicates if there is a previous page
+	// @Description Whether there is a previous page
+	HasPrev bool `json:"has_prev" example:"true"`
+
+	// NextURL is the URL for the next page
+	// @Description URL for the next page
+	NextURL string `json:"next_url,omitempty" example:"/api/v1/domains?page=3&per_page=100"`
+
+	// PrevURL is the URL for the previous page
+	// @Description URL for the previous page
+	PrevURL string `json:"prev_url,omitempty" example:"/api/v1/domains?page=1&per_page=100"`
+}
+
+// PaginatedDomainsResponse represents a paginated response containing multiple domain entries
+// @Description Paginated response containing multiple domain entries
+type PaginatedDomainsResponse struct {
+	// Success indicates whether the operation was successful
+	// @Description Whether the operation was successful
+	Success bool `json:"success" example:"true"`
+
+	// Data contains the list of domain entries if the operation was successful
+	// @Description List of domain entries if the operation was successful
+	Data DomainEntries `json:"data,omitempty"`
+
+	// Pagination contains pagination metadata
+	// @Description Pagination metadata
+	Pagination *PaginationInfo `json:"pagination,omitempty"`
+
+	// Error contains an error message if the operation failed
+	// @Description Error message if the operation failed
+	Error string `json:"error,omitempty" example:"Failed to load domains"`
+}

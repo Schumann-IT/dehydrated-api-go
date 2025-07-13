@@ -105,10 +105,17 @@ func TestDomainService(t *testing.T) {
 
 			// Test ListDomains
 			t.Run("ListDomains", func(t *testing.T) {
-				entries, err := service.ListDomains()
+				entries, pagination, err := service.ListDomains(1, 100, "asc", "")
 				require.NoError(t, err)
 				require.Len(t, entries, 1)
 				require.Equal(t, "example.com", entries[0].Domain)
+				require.NotNil(t, pagination)
+				require.Equal(t, 1, pagination.CurrentPage)
+				require.Equal(t, 100, pagination.PerPage)
+				require.Equal(t, 1, pagination.Total)
+				require.Equal(t, 1, pagination.TotalPages)
+				require.False(t, pagination.HasNext)
+				require.False(t, pagination.HasPrev)
 			})
 
 			// Test DeleteDomain
@@ -226,7 +233,7 @@ func TestConcurrentOperations(t *testing.T) {
 				}
 
 				// List domains
-				_, err = service.ListDomains()
+				_, _, err = service.ListDomains(1, 100, "asc", "")
 				if err != nil {
 					t.Errorf("Unexpected error listing domains: %v", err)
 				}
@@ -250,9 +257,11 @@ func TestEdgeCases(t *testing.T) {
 		service := NewDomainService(dc, nil)
 		defer service.Close()
 
-		entries, err := service.ListDomains()
+		entries, pagination, err := service.ListDomains(1, 100, "asc", "")
 		require.NoError(t, err)
 		require.Empty(t, entries)
+		require.NotNil(t, pagination)
+		require.Equal(t, 0, pagination.Total)
 	})
 
 	t.Run("FileSystemErrors", func(t *testing.T) {

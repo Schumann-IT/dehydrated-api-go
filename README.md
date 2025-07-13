@@ -246,11 +246,191 @@ The API includes auto-generated Swagger documentation available at:
 
 #### Domain Management
 
-- `GET /api/v1/domains` - List all domains
+- `GET /api/v1/domains` - List all domains (with pagination)
 - `GET /api/v1/domains/{domain}` - Get specific domain
 - `POST /api/v1/domains` - Create new domain
 - `PUT /api/v1/domains/{domain}` - Update domain
 - `DELETE /api/v1/domains/{domain}` - Delete domain
+
+### Pagination
+
+The `ListDomains` endpoint supports pagination to efficiently handle large datasets. This implementation follows the **Hybrid Approach** with query parameters and rich response metadata.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Min | Max | Description |
+|-----------|------|----------|---------|-----|-----|-------------|
+| `page` | integer | No | 1 | 1 | - | Page number (1-based) |
+| `per_page` | integer | No | 100 | 1 | 1000 | Number of items per page |
+| `sort` | string | No | "" | - | - | Sort order for domain field ("asc" or "desc", optional - defaults to alphabetical order) |
+| `search` | string | No | "" | - | - | Search term to filter domains by domain field (case-insensitive contains) |
+
+#### Response Format
+
+The response uses the `PaginatedDomainsResponse` structure:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "domain": "example.com",
+      "alternative_names": ["www.example.com"],
+      "alias": "",
+      "enabled": true,
+      "comment": "Production domain",
+      "metadata": {}
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 100,
+    "total": 150,
+    "total_pages": 2,
+    "has_next": true,
+    "has_prev": false,
+    "next_url": "/api/v1/domains?page=2&per_page=100",
+    "prev_url": ""
+  }
+}
+```
+
+#### Pagination Metadata
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `current_page` | integer | Current page number (1-based) |
+| `per_page` | integer | Number of items per page |
+| `total` | integer | Total number of items across all pages |
+| `total_pages` | integer | Total number of pages |
+| `has_next` | boolean | Whether there is a next page |
+| `has_prev` | boolean | Whether there is a previous page |
+| `next_url` | string | URL for the next page (if available) |
+| `prev_url` | string | URL for the previous page (if available) |
+
+#### Examples
+
+**Basic Usage:**
+```bash
+# Get first page with default settings (100 items per page)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains"
+```
+
+**Custom Page Size:**
+```bash
+# Get first page with 10 items per page
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?page=1&per_page=10"
+```
+
+**Navigation:**
+```bash
+# Get second page with 10 items per page
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?page=2&per_page=10"
+```
+
+**Using Generated URLs:**
+```bash
+# Get first page
+response=$(curl -s -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?page=1&per_page=5")
+
+# Extract next URL
+next_url=$(echo "$response" | jq -r '.pagination.next_url')
+
+# Navigate to next page
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000$next_url"
+```
+
+**Sorting:**
+```bash
+# Get domains in default order (alphabetical, same as sort=asc)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains"
+
+# Sort domains in ascending order (alphabetical)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?sort=asc"
+
+# Sort domains in descending order (reverse alphabetical)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?sort=desc"
+```
+
+**Searching:**
+```bash
+# Search for domains containing "example"
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?search=example"
+
+# Case-insensitive search
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?search=EXAMPLE"
+```
+
+**Combined Features:**
+```bash
+# Search and sort with pagination
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?search=example&sort=desc&page=1&per_page=10"
+```
+
+#### Error Handling
+
+**Invalid Page Number:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?page=0"
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "error": "page parameter must be at least 1"
+}
+```
+
+**Large Page Size (Auto-capped):**
+If `per_page` exceeds 1000, it will be automatically capped to 1000:
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?per_page=2000"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 1000,  // Capped from 2000
+    "total": 150,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false
+  }
+}
+```
+
+**Invalid Sort Parameter:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "http://localhost:3000/api/v1/domains?sort=invalid"
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "error": "sort parameter must be either 'asc' or 'desc'"
+}
+```
 
 ### Authentication
 

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/schumann-it/dehydrated-api-go/internal/plugin/registry"
@@ -328,24 +330,97 @@ func (s *DomainService) GetDomain(domain, alias string) (*model.DomainEntry, err
 	return entryCopy, nil
 }
 
-// ListDomains returns all domain entries with their metadata enriched from plugins.
+// ListDomains returns paginated domain entries with their metadata enriched from plugins.
 // It returns a copy of the cached entries to prevent modification of the cache.
-func (s *DomainService) ListDomains() ([]*model.DomainEntry, error) {
-	s.logger.Info("Load domains")
+func (s *DomainService) ListDomains(page, perPage int, sortOrder, search string) ([]*model.DomainEntry, *model.PaginationInfo, error) {
+	s.logger.Info("Load domains",
+		zap.Int("page", page),
+		zap.Int("perPage", perPage),
+		zap.String("sortOrder", sortOrder),
+		zap.String("search", search))
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	// Return a copy of the cache with enriched metadata
+	// Create a copy of the cache to work with
 	entries := make([]*model.DomainEntry, len(s.cache))
-	for i, entry := range s.cache {
-		entries[i] = entry
-		s.enrichMetadata(entries[i])
+	copy(entries, s.cache)
+
+	// Apply search filter if provided
+	if search != "" {
+		filteredEntries := make([]*model.DomainEntry, 0)
+		for _, entry := range entries {
+			if strings.Contains(strings.ToLower(entry.Domain), strings.ToLower(search)) {
+				filteredEntries = append(filteredEntries, entry)
+			}
+		}
+		entries = filteredEntries
 	}
 
-	s.logger.Info("Loaded domains", zap.Int("count", len(entries)))
+	// Apply sorting only if sortOrder is provided
+	switch sortOrder {
+	case "desc":
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].Domain > entries[j].Domain
+		})
+	case "asc":
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].Domain < entries[j].Domain
+		})
+	}
+	// If sortOrder is empty or any other value, don't sort (keep original order)
 
-	return entries, nil
+	total := len(entries)
+
+	// Calculate pagination info
+	totalPages := (total + perPage - 1) / perPage // Ceiling division
+	hasNext := page < totalPages
+	hasPrev := page > 1
+
+	// Calculate start and end indices
+	start := (page - 1) * perPage
+	end := start + perPage
+
+	// Ensure we don't go beyond the available data
+	if start >= total {
+		// Return empty result for pages beyond available data
+		return []*model.DomainEntry{}, &model.PaginationInfo{
+			CurrentPage: page,
+			PerPage:     perPage,
+			Total:       total,
+			TotalPages:  totalPages,
+			HasNext:     false,
+			HasPrev:     hasPrev,
+		}, nil
+	}
+
+	if end > total {
+		end = total
+	}
+
+	// Return a copy of the paginated entries with enriched metadata
+	resultEntries := make([]*model.DomainEntry, end-start)
+	for i, entry := range entries[start:end] {
+		resultEntries[i] = entry
+		s.enrichMetadata(resultEntries[i])
+	}
+
+	pagination := &model.PaginationInfo{
+		CurrentPage: page,
+		PerPage:     perPage,
+		Total:       total,
+		TotalPages:  totalPages,
+		HasNext:     hasNext,
+		HasPrev:     hasPrev,
+	}
+
+	s.logger.Info("Loaded domains",
+		zap.Int("count", len(resultEntries)),
+		zap.Int("total", total),
+		zap.Int("page", page),
+		zap.Int("totalPages", totalPages))
+
+	return resultEntries, pagination, nil
 }
 
 // UpdateDomain updates an existing domain entry with new information.

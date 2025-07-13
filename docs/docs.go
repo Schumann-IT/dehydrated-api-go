@@ -26,7 +26,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get a list of all configured domains",
+                "description": "Get a paginated list of all configured domains with optional sorting and searching",
                 "consumes": [
                     "application/json"
                 ],
@@ -37,23 +37,62 @@ const docTemplate = `{
                     "domains"
                 ],
                 "summary": "List all domains",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number (1-based, defaults to 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Number of items per page (defaults to 100, max 1000)",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order for domain field (asc or desc, optional - defaults to alphabetical order)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term to filter domains by domain field (case-insensitive contains)",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.DomainsResponse"
+                            "$ref": "#/definitions/model.PaginatedDomainsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid pagination parameters",
+                        "schema": {
+                            "$ref": "#/definitions/model.PaginatedDomainsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized - Invalid or missing authentication token",
                         "schema": {
-                            "$ref": "#/definitions/model.DomainsResponse"
+                            "$ref": "#/definitions/model.PaginatedDomainsResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.DomainsResponse"
+                            "$ref": "#/definitions/model.PaginatedDomainsResponse"
                         }
                     }
                 }
@@ -676,6 +715,83 @@ const docTemplate = `{
                     "description": "Success indicates whether the operation was successful.\n@Description Whether the operation was successful",
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "model.PaginatedDomainsResponse": {
+            "description": "Paginated response containing multiple domain entries",
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "Data contains the list of domain entries if the operation was successful\n@Description List of domain entries if the operation was successful",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DomainEntry"
+                    }
+                },
+                "error": {
+                    "description": "Error contains an error message if the operation failed\n@Description Error message if the operation failed",
+                    "type": "string",
+                    "example": "Failed to load domains"
+                },
+                "pagination": {
+                    "description": "Pagination contains pagination metadata\n@Description Pagination metadata",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.PaginationInfo"
+                        }
+                    ]
+                },
+                "success": {
+                    "description": "Success indicates whether the operation was successful\n@Description Whether the operation was successful",
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "model.PaginationInfo": {
+            "description": "Pagination metadata for responses",
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "description": "CurrentPage is the current page number (1-based)\n@Description Current page number (1-based)",
+                    "type": "integer",
+                    "example": 2
+                },
+                "has_next": {
+                    "description": "HasNext indicates if there is a next page\n@Description Whether there is a next page",
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_prev": {
+                    "description": "HasPrev indicates if there is a previous page\n@Description Whether there is a previous page",
+                    "type": "boolean",
+                    "example": true
+                },
+                "next_url": {
+                    "description": "NextURL is the URL for the next page\n@Description URL for the next page",
+                    "type": "string",
+                    "example": "/api/v1/domains?page=3\u0026per_page=100"
+                },
+                "per_page": {
+                    "description": "PerPage is the number of items per page\n@Description Number of items per page",
+                    "type": "integer",
+                    "example": 100
+                },
+                "prev_url": {
+                    "description": "PrevURL is the URL for the previous page\n@Description URL for the previous page",
+                    "type": "string",
+                    "example": "/api/v1/domains?page=1\u0026per_page=100"
+                },
+                "total": {
+                    "description": "Total is the total number of items\n@Description Total number of items",
+                    "type": "integer",
+                    "example": 150
+                },
+                "total_pages": {
+                    "description": "TotalPages is the total number of pages\n@Description Total number of pages",
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },

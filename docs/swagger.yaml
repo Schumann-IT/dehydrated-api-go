@@ -265,6 +265,87 @@ definitions:
         example: true
         type: boolean
     type: object
+  model.PaginatedDomainsResponse:
+    description: Paginated response containing multiple domain entries
+    properties:
+      data:
+        description: |-
+          Data contains the list of domain entries if the operation was successful
+          @Description List of domain entries if the operation was successful
+        items:
+          $ref: '#/definitions/model.DomainEntry'
+        type: array
+      error:
+        description: |-
+          Error contains an error message if the operation failed
+          @Description Error message if the operation failed
+        example: Failed to load domains
+        type: string
+      pagination:
+        allOf:
+        - $ref: '#/definitions/model.PaginationInfo'
+        description: |-
+          Pagination contains pagination metadata
+          @Description Pagination metadata
+      success:
+        description: |-
+          Success indicates whether the operation was successful
+          @Description Whether the operation was successful
+        example: true
+        type: boolean
+    type: object
+  model.PaginationInfo:
+    description: Pagination metadata for responses
+    properties:
+      current_page:
+        description: |-
+          CurrentPage is the current page number (1-based)
+          @Description Current page number (1-based)
+        example: 2
+        type: integer
+      has_next:
+        description: |-
+          HasNext indicates if there is a next page
+          @Description Whether there is a next page
+        example: true
+        type: boolean
+      has_prev:
+        description: |-
+          HasPrev indicates if there is a previous page
+          @Description Whether there is a previous page
+        example: true
+        type: boolean
+      next_url:
+        description: |-
+          NextURL is the URL for the next page
+          @Description URL for the next page
+        example: /api/v1/domains?page=3&per_page=100
+        type: string
+      per_page:
+        description: |-
+          PerPage is the number of items per page
+          @Description Number of items per page
+        example: 100
+        type: integer
+      prev_url:
+        description: |-
+          PrevURL is the URL for the previous page
+          @Description URL for the previous page
+        example: /api/v1/domains?page=1&per_page=100
+        type: string
+      total:
+        description: |-
+          Total is the total number of items
+          @Description Total number of items
+        example: 150
+        type: integer
+      total_pages:
+        description: |-
+          TotalPages is the total number of pages
+          @Description Total number of pages
+        example: 2
+        type: integer
+    type: object
   model.UpdateDomainRequest:
     description: Request to update an existing domain entry
     properties:
@@ -315,22 +396,52 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a list of all configured domains
+      description: Get a paginated list of all configured domains with optional sorting
+        and searching
+      parameters:
+      - description: Page number (1-based, defaults to 1)
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Number of items per page (defaults to 100, max 1000)
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: per_page
+        type: integer
+      - description: Sort order for domain field (asc or desc, optional - defaults
+          to alphabetical order)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort
+        type: string
+      - description: Search term to filter domains by domain field (case-insensitive
+          contains)
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.DomainsResponse'
+            $ref: '#/definitions/model.PaginatedDomainsResponse'
+        "400":
+          description: Bad Request - Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/model.PaginatedDomainsResponse'
         "401":
           description: Unauthorized - Invalid or missing authentication token
           schema:
-            $ref: '#/definitions/model.DomainsResponse'
+            $ref: '#/definitions/model.PaginatedDomainsResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.DomainsResponse'
+            $ref: '#/definitions/model.PaginatedDomainsResponse'
       security:
       - BearerAuth: []
       summary: List all domains

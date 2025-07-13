@@ -3,6 +3,9 @@
 package handler
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/schumann-it/dehydrated-api-go/internal/model"
 	serviceinterface "github.com/schumann-it/dehydrated-api-go/internal/service/interface"
@@ -30,29 +33,125 @@ func (h *DomainHandler) RegisterRoutes(app fiber.Router) {
 }
 
 // @Summary List all domains
-// @Description Get a list of all configured domains
+// @Description Get a paginated list of all configured domains with optional sorting and searching
 // @Tags domains
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} model.DomainsResponse
-// @Failure 401 {object} model.DomainsResponse "Unauthorized - Invalid or missing authentication token"
-// @Failure 500 {object} model.DomainsResponse "Internal Server Error"
+// @Param page query int false "Page number (1-based, defaults to 1)" minimum(1)
+// @Param per_page query int false "Number of items per page (defaults to 100, max 1000)" minimum(1) maximum(1000)
+// @Param sort query string false "Sort order for domain field (asc or desc, optional - defaults to alphabetical order)" Enums(asc, desc)
+// @Param search query string false "Search term to filter domains by domain field (case-insensitive contains)"
+// @Success 200 {object} model.PaginatedDomainsResponse
+// @Failure 400 {object} model.PaginatedDomainsResponse "Bad Request - Invalid pagination parameters"
+// @Failure 401 {object} model.PaginatedDomainsResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 500 {object} model.PaginatedDomainsResponse "Internal Server Error"
 // @Router /api/v1/domains [get]
 // ListDomains handles GET /api/v1/domains
 func (h *DomainHandler) ListDomains(c *fiber.Ctx) error {
-	entries, err := h.service.ListDomains()
+	// Parse and validate pagination parameters
+	page := c.QueryInt("page", 1)
+	perPage := c.QueryInt("per_page", model.DefaultPerPage)
+
+	// Parse sort and search parameters
+	sortOrder := c.Query("sort", "")
+	search := c.Query("search", "")
+
+	// Validate page parameter
+	if page < model.MinPage {
+		return c.Status(fiber.StatusBadRequest).JSON(model.PaginatedDomainsResponse{
+			Success: false,
+			Error:   "page parameter must be at least 1",
+		})
+	}
+
+	// Validate and cap per_page parameter
+	if perPage < model.MinPerPage {
+		perPage = model.MinPerPage
+	} else if perPage > model.MaxPerPage {
+		perPage = model.MaxPerPage
+	}
+
+	// Validate sort parameter (only if provided)
+	if sortOrder != "" && sortOrder != "asc" && sortOrder != "desc" {
+		return c.Status(fiber.StatusBadRequest).JSON(model.PaginatedDomainsResponse{
+			Success: false,
+			Error:   "sort parameter must be either 'asc' or 'desc'",
+		})
+	}
+
+	// Get paginated domains from service
+	entries, pagination, err := h.service.ListDomains(page, perPage, sortOrder, search)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(model.DomainsResponse{
+		return c.Status(fiber.StatusInternalServerError).JSON(model.PaginatedDomainsResponse{
 			Success: false,
 			Error:   err.Error(),
 		})
 	}
 
-	return c.JSON(model.DomainsResponse{
-		Success: true,
-		Data:    entries,
+	// Generate pagination URLs
+	if pagination != nil {
+		h.generatePaginationURLs(c, pagination)
+	}
+
+	return c.JSON(model.PaginatedDomainsResponse{
+		Success:    true,
+		Data:       entries,
+		Pagination: pagination,
 	})
+}
+
+// generatePaginationURLs generates the next and previous URLs for pagination
+func (h *DomainHandler) generatePaginationURLs(c *fiber.Ctx, pagination *model.PaginationInfo) {
+	baseURL := c.BaseURL() + c.Path()
+
+	// Build query parameters
+	queryParams := make(map[string]string)
+
+	// Add existing query parameters (except pagination ones)
+	c.Context().QueryArgs().VisitAll(func(key, value []byte) {
+		keyStr := string(key)
+		if keyStr != "page" && keyStr != "per_page" {
+			queryParams[keyStr] = string(value)
+		}
+	})
+
+	// Always include per_page in URLs
+	queryParams["per_page"] = fmt.Sprintf("%d", pagination.PerPage)
+
+	// Generate next URL
+	if pagination.HasNext {
+		nextParams := make(map[string]string)
+		for k, v := range queryParams {
+			nextParams[k] = v
+		}
+		nextParams["page"] = fmt.Sprintf("%d", pagination.CurrentPage+1)
+		pagination.NextURL = h.buildURL(baseURL, nextParams)
+	}
+
+	// Generate previous URL
+	if pagination.HasPrev {
+		prevParams := make(map[string]string)
+		for k, v := range queryParams {
+			prevParams[k] = v
+		}
+		prevParams["page"] = fmt.Sprintf("%d", pagination.CurrentPage-1)
+		pagination.PrevURL = h.buildURL(baseURL, prevParams)
+	}
+}
+
+// buildURL constructs a URL with query parameters
+func (h *DomainHandler) buildURL(baseURL string, params map[string]string) string {
+	if len(params) == 0 {
+		return baseURL
+	}
+
+	var queryParts []string
+	for key, value := range params {
+		queryParts = append(queryParts, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	return baseURL + "?" + strings.Join(queryParts, "&")
 }
 
 // @Summary Get a domain

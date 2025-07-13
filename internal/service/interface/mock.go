@@ -14,8 +14,15 @@ import (
 type MockDomainService struct{}
 
 // ListDomains returns an empty list of domains for testing.
-func (m *MockDomainService) ListDomains() ([]*model.DomainEntry, error) {
-	return []*model.DomainEntry{}, nil
+func (m *MockDomainService) ListDomains(page, perPage int, sortOrder, search string) ([]*model.DomainEntry, *model.PaginationInfo, error) {
+	return []*model.DomainEntry{}, &model.PaginationInfo{
+		CurrentPage: page,
+		PerPage:     perPage,
+		Total:       0,
+		TotalPages:  0,
+		HasNext:     false,
+		HasPrev:     false,
+	}, nil
 }
 
 // GetDomain returns a mock domain entry for testing.
@@ -63,8 +70,8 @@ func (m *MockDomainService) Close() error {
 type MockErrDomainService struct{}
 
 // ListDomains returns an empty list of domains for testing.
-func (m *MockErrDomainService) ListDomains() ([]*model.DomainEntry, error) {
-	return nil, fmt.Errorf("mock error")
+func (m *MockErrDomainService) ListDomains(page, perPage int, sortOrder, search string) ([]*model.DomainEntry, *model.PaginationInfo, error) {
+	return nil, nil, fmt.Errorf("mock error")
 }
 
 // GetDomain returns a mock domain entry for testing.
