@@ -18,7 +18,7 @@ COVERAGE_FILE=coverage.out
 
 build: generate $(BINARY_NAME) ## Build binary
 
-pre-commit: test lint release ## Prepare for commit
+pre-commit: clean-all test lint release fmt ## Prepare for commit
 
 generate: ## Generate code and documentation
 	@go generate ./...
@@ -50,6 +50,9 @@ lint: ## Run linter
 
 lint-fix: ## Run linter (and fix issues if possible)
 	@golangci-lint run --fix
+
+fmt: ## Format code
+	@go fmt ./...
 
 #
 # Docker

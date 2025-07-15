@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"sync"
 
@@ -130,17 +131,40 @@ func (s *Server) WithDomainService() *Server {
 
 // Start starts the server and begins listening for requests.
 func (s *Server) Start() {
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
+	if !s.setRunning() {
 		return
 	}
+
+	s.setupMiddleware()
+	s.setupRoutes()
+	s.startServerGoroutine()
+	s.startShutdownGoroutine()
+
+	// Wait for server to start
+	<-s.started
+}
+
+// setRunning sets the server as running and returns false if already running
+func (s *Server) setRunning() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.running {
+		return false
+	}
+
 	s.running = true
 	s.port = s.Config.Port
-	s.mu.Unlock()
+	return true
+}
 
+// setupMiddleware configures CORS and other middleware
+func (s *Server) setupMiddleware() {
 	s.app.Use(cors.New())
+}
 
+// setupRoutes configures all routes including health, swagger, and API routes
+func (s *Server) setupRoutes() {
 	// Add health handler
 	handler.NewHealthHandler().RegisterRoutes(s.app)
 
@@ -149,6 +173,12 @@ func (s *Server) Start() {
 
 	// add API group
 	g := s.app.Group("/api/v1")
+	s.setupAuthMiddleware(g)
+	s.setupDomainRoutes(g)
+}
+
+// setupAuthMiddleware configures authentication middleware for the API group
+func (s *Server) setupAuthMiddleware(g fiber.Router) {
 	if s.Config.Auth != nil {
 		s.Logger.Info("Adding authentication middleware",
 			zap.String("tenant_id", s.Config.Auth.TenantID),
@@ -160,74 +190,136 @@ func (s *Server) Start() {
 	} else {
 		s.Logger.Warn("No authentication middleware configured!!")
 	}
+}
 
-	// Add domain handler to the api group
+// setupDomainRoutes configures domain-related routes
+func (s *Server) setupDomainRoutes(g fiber.Router) {
 	if s.domainService != nil {
 		handler.NewDomainHandler(s.domainService).RegisterRoutes(g)
 		handler.NewConfigHandler(s.domainService.DehydratedConfig).RegisterRoutes(s.app)
 	}
+}
 
+// startServerGoroutine starts the server in a separate goroutine
+func (s *Server) startServerGoroutine() {
 	s.wg.Add(1)
-
-	// Start the server
 	go func() {
 		defer s.wg.Done()
-		host := "0.0.0.0" // Listen on all interfaces
+		s.runServer()
+	}()
+}
 
-		s.mu.RLock()
-		port := s.port
-		s.mu.RUnlock()
+// runServer handles the actual server startup and listening
+func (s *Server) runServer() {
+	host := "0.0.0.0" // Listen on all interfaces
 
-		// Signal that we're about to start
-		close(s.started)
+	s.mu.RLock()
+	port := s.port
+	s.mu.RUnlock()
 
-		s.Logger.Info("Starting server",
+	// Signal that we're about to start
+	close(s.started)
+
+	s.Logger.Info("Starting server",
+		zap.String("host", host),
+		zap.Int("port", port),
+		zap.Bool("watcher_enabled", s.Config.EnableWatcher),
+	)
+
+	err := s.listenOnPort(host, port)
+	if err != nil {
+		s.handleServerError(err, host, port)
+	}
+}
+
+// listenOnPort handles listening on the specified port
+func (s *Server) listenOnPort(host string, port int) error {
+	if port == 0 {
+		return s.listenOnDynamicPort(host)
+	}
+
+	// Use the specified port
+	return s.app.Listen(fmt.Sprintf("%s:%d", host, port))
+}
+
+// listenOnDynamicPort handles listening on a dynamically assigned port
+func (s *Server) listenOnDynamicPort(host string) error {
+	// Use a custom listener to get the assigned port
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
+	if err != nil {
+		s.Logger.Error("Failed to create listener",
+			zap.Error(err),
+			zap.String("host", host),
+		)
+		return err
+	}
+
+	// Get the actual assigned port
+	addr := listener.Addr().(*net.TCPAddr)
+	assignedPort := addr.Port
+
+	// Update the server's port field
+	s.mu.Lock()
+	s.port = assignedPort
+	s.mu.Unlock()
+
+	s.Logger.Info("Server assigned to port",
+		zap.Int("assigned_port", assignedPort),
+	)
+
+	// Close the listener and let Fiber create its own
+	listener.Close()
+
+	// Start Fiber with the assigned port
+	return s.app.Listen(fmt.Sprintf("%s:%d", host, assignedPort))
+}
+
+// handleServerError handles server startup errors
+func (s *Server) handleServerError(err error, host string, port int) {
+	// Only log if it's not a normal shutdown
+	if err.Error() != "server closed" {
+		s.Logger.Error("Server error",
+			zap.Error(err),
 			zap.String("host", host),
 			zap.Int("port", port),
-			zap.Bool("watcher_enabled", s.Config.EnableWatcher),
 		)
+	}
+}
 
-		if err := s.app.Listen(fmt.Sprintf("%s:%d", host, port)); err != nil {
-			// Only log if it's not a normal shutdown
-			if err.Error() != "server closed" {
-				s.Logger.Error("Server error",
-					zap.Error(err),
-					zap.String("host", host),
-					zap.Int("port", port),
-				)
-			}
-		}
-	}()
-
-	// Handle shutdown in a separate goroutine
+// startShutdownGoroutine starts the shutdown handler in a separate goroutine
+func (s *Server) startShutdownGoroutine() {
+	s.wg.Add(1)
 	go func() {
-		// Wait for shutdown signal
-		<-s.shutdown
-
-		s.mu.Lock()
-		s.running = false
-		s.mu.Unlock()
-
-		// Graceful shutdown
-		s.Logger.Info("Starting graceful shutdown")
-
-		if s.domainService != nil {
-			s.domainService.Close()
-		}
-
-		if err := s.app.Shutdown(); err != nil {
-			s.Logger.Error("Error during shutdown",
-				zap.Error(err),
-			)
-		} else {
-			s.Logger.Info("Server shutdown completed successfully")
-		}
-
-		s.Logger.Sync()
+		defer s.wg.Done()
+		s.handleShutdown()
 	}()
+}
 
-	// Wait for server to start
-	<-s.started
+// handleShutdown handles graceful shutdown of the server
+func (s *Server) handleShutdown() {
+	// Wait for shutdown signal
+	<-s.shutdown
+
+	s.mu.Lock()
+	s.running = false
+	s.mu.Unlock()
+
+	// Graceful shutdown
+	s.Logger.Info("Starting graceful shutdown")
+
+	if s.domainService != nil {
+		s.domainService.Close()
+	}
+
+	if err := s.app.Shutdown(); err != nil {
+		s.Logger.Error("Error during shutdown",
+			zap.Error(err),
+		)
+	} else {
+		s.Logger.Info("Server shutdown completed successfully")
+	}
+
+	s.Logger.Sync()
 }
 
 // Shutdown gracefully shuts down the server and its associated resources.

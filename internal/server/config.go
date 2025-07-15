@@ -102,8 +102,8 @@ func (c *Config) Load(path string) *Config {
 		return c
 	}
 
-	// Merge non-zero values from file config
-	if fc.Port != 0 {
+	// Only assign loaded values if the config file exists
+	if _, err := os.Stat(absConfigPath); err == nil {
 		c.Port = fc.Port
 	}
 	if fc.DehydratedBaseDir != "" {

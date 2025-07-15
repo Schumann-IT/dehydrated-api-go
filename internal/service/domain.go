@@ -91,7 +91,7 @@ func (s *DomainService) Reload() error {
 		return err
 	}
 
-	// Convert entries to pointers
+	// Convert entries to pointers (entries can be empty slice, which is valid)
 	pointerEntries := make([]*model.DomainEntry, len(entries))
 	copy(pointerEntries, entries)
 
@@ -100,7 +100,6 @@ func (s *DomainService) Reload() error {
 	s.mutex.Unlock()
 
 	s.logger.Info("Entries reloaded", zap.Int("count", len(pointerEntries)))
-
 	return nil
 }
 
@@ -253,10 +252,10 @@ func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.Dom
 	}
 
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
 	existing, _ := s.findDomainEntry(req.Domain, req.Alias)
 	if existing != nil {
+		s.mutex.Unlock()
 		s.logger.Error("Domain already exists", zap.Any("entry", entry))
 		return nil, errors.New("domain exists")
 	}
@@ -268,10 +267,18 @@ func (s *DomainService) CreateDomain(req *model.CreateDomainRequest) (*model.Dom
 	if err := s.writeCacheToFile(); err != nil {
 		// Revert cache on error
 		s.cache = s.cache[:len(s.cache)-1]
+		s.mutex.Unlock()
 		s.logger.Error("Failed to write domains file", zap.Error(err))
+		// Re-enable watcher even on error
+		if s.watcher != nil {
+			s.watcher.Enable()
+		}
 		return nil, err
 	}
 
+	s.mutex.Unlock()
+
+	// Re-enable watcher after successful write (outside of locked section)
 	if s.watcher != nil {
 		s.watcher.Enable()
 	}
@@ -433,7 +440,6 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	}
 
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
 	alias := ""
 	if req.Alias != nil {
@@ -441,6 +447,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 	}
 	entry, index := s.findDomainEntry(domain, alias)
 	if entry == nil {
+		s.mutex.Unlock()
 		s.logger.Error("Domain not found", zap.String("domain", domain), zap.Any("req", req))
 		return nil, errors.New("domain not found")
 	}
@@ -449,6 +456,7 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 	// Validate the updated entry
 	if !model.IsValidDomainEntry(updatedEntry) {
+		s.mutex.Unlock()
 		s.logger.Error("Invalid domain entry", zap.Any("entry", updatedEntry))
 		return nil, errors.New("invalid domain entry")
 	}
@@ -458,7 +466,12 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 
 		// Write back to file
 		if err := s.writeCacheToFile(); err != nil {
+			s.mutex.Unlock()
 			s.logger.Error("Failed to write domains file", zap.Error(err))
+			// Re-enable watcher even on error
+			if s.watcher != nil {
+				s.watcher.Enable()
+			}
 			return nil, err
 		}
 
@@ -467,6 +480,9 @@ func (s *DomainService) UpdateDomain(domain string, req model.UpdateDomainReques
 		s.logger.Info("No changes detected for domain", zap.String("domain", domain), zap.Any("req", req))
 	}
 
+	s.mutex.Unlock()
+
+	// Re-enable watcher after successful write (outside of locked section)
 	if s.watcher != nil {
 		s.watcher.Enable()
 	}
@@ -484,25 +500,33 @@ func (s *DomainService) DeleteDomain(domain string, req model.DeleteDomainReques
 	}
 
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
 	newEntries, found := s.entriesWithout(domain, req.Alias)
 	if !found {
+		s.mutex.Unlock()
 		s.logger.Error("Domain without alias not found", zap.String("domain", domain), zap.Any("req", req))
 		return errors.New("domain without specified alias not found")
 	}
 
 	// Write back to file
 	if err := s.writeEntriesToFile(newEntries); err != nil {
+		s.mutex.Unlock()
 		s.logger.Error("Failed to write domains file", zap.Error(err))
+		// Re-enable watcher even on error
+		if s.watcher != nil {
+			s.watcher.Enable()
+		}
 		return err
 	}
 
 	// Update cache only after successful write
 	s.cache = newEntries
 
+	s.mutex.Unlock()
+
 	s.logger.Info("Deleted domain", zap.String("domain", domain), zap.Any("req", req))
 
+	// Re-enable watcher after successful write (outside of locked section)
 	if s.watcher != nil {
 		s.watcher.Enable()
 	}

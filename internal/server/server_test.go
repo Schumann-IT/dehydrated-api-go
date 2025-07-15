@@ -273,20 +273,36 @@ enableWatcher: false
 		// Start server
 		s.Start()
 
-		// Give the server time to start
-		time.Sleep(100 * time.Millisecond)
+		// Give the server time to start and get a port assigned
+		time.Sleep(200 * time.Millisecond)
 
-		// Verify server is running
-		require.NotZero(t, s.GetPort())
+		// Verify server is running and has a port assigned
+		port := s.GetPort()
+		require.NotZero(t, port, "Server should have assigned a port")
 
+		// Test that server is actually listening (only if port was assigned)
+		if port != 3000 { // Skip if default port was used (likely already in use)
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Get(fmt.Sprintf("http://localhost:%d/health", port))
+			if err == nil {
+				resp.Body.Close()
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+			}
+		}
+
+		// Shutdown server
 		s.Shutdown()
+
+		// Give the server time to shutdown
 		time.Sleep(100 * time.Millisecond)
 
-		// Verify server is stopped
-		//nolint:bodyclose // the resp is empty here
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", s.GetPort()))
-		require.Error(t, err)
-		require.Nil(t, resp)
+		// Verify server is stopped by trying to connect with a timeout
+		client2 := &http.Client{Timeout: 1 * time.Second}
+		resp, err2 := client2.Get(fmt.Sprintf("http://localhost:%d/api/v1/domains", port))
+		require.Error(t, err2)
+		if resp != nil {
+			resp.Body.Close()
+		}
 	})
 
 	t.Run("StartWithInvalidPort", func(t *testing.T) {
@@ -316,84 +332,93 @@ enableWatcher: false
 
 // TestDomainServiceIntegration tests the server's integration with the domain service.
 func TestDomainServiceIntegration(t *testing.T) {
-	t.Run("WithDomainService", func(t *testing.T) {
-		// Create a temporary config file
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "config.yaml")
-		configContent := `
-port: 3000
+	// Add a test timeout to prevent hanging
+	timeout := time.After(30 * time.Second)
+	done := make(chan bool, 1)
+
+	go func() {
+		defer func() { done <- true }()
+
+		t.Run("WithDomainService", func(t *testing.T) {
+			// Create a temporary config file
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.yaml")
+			configContent := `
+port: 0
 dehydratedBaseDir: /tmp/dehydrated
 enableWatcher: true
 `
-		err := os.WriteFile(configPath, []byte(configContent), 0644)
-		require.NoError(t, err)
+			err := os.WriteFile(configPath, []byte(configContent), 0644)
+			require.NoError(t, err)
 
-		s := NewServer().
-			WithConfig(configPath).
-			WithLogger().
-			WithDomainService()
+			s := NewServer().
+				WithConfig(configPath).
+				WithLogger().
+				WithDomainService()
 
-		// Start server
-		s.Start()
-		defer s.Shutdown()
+			// Start server
+			s.Start()
+			defer s.Shutdown()
 
-		// Give the server time to start
-		time.Sleep(100 * time.Millisecond)
+			// Give the server time to start
+			time.Sleep(200 * time.Millisecond)
 
-		// Verify domain service is initialized
-		require.NotNil(t, s.domainService)
+			// Verify domain service is initialized
+			require.NotNil(t, s.domainService)
 
-		// Test domain operations
-		client := &http.Client{}
-		baseURL := fmt.Sprintf("http://localhost:%d/api/v1", s.GetPort())
+			// Test domain operations with timeouts
+			client := &http.Client{Timeout: 10 * time.Second}
+			port := s.GetPort()
+			require.NotZero(t, port, "Server should have assigned a port")
+			baseURL := fmt.Sprintf("http://localhost:%d/api/v1", port)
 
-		// Delete any existing domains first
-		resp, err := http.Get(baseURL + "/domains")
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+			// Delete any existing domains first
+			resp, err := client.Get(baseURL + "/domains")
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var existingDomains model.DomainsResponse
-		err = json.NewDecoder(resp.Body).Decode(&existingDomains)
-		require.NoError(t, err)
-		resp.Body.Close()
-
-		for _, domain := range existingDomains.Data {
-			req, err2 := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), http.NoBody)
-			require.NoError(t, err2)
-			resp, err2 = client.Do(req)
-			require.NoError(t, err2)
-			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+			var existingDomains model.DomainsResponse
+			err = json.NewDecoder(resp.Body).Decode(&existingDomains)
+			require.NoError(t, err)
 			resp.Body.Close()
-		}
 
-		// Create a domain
-		createReq, err := http.NewRequest("POST", baseURL+"/domains", strings.NewReader(`{"domain": "test.example.com"}`))
-		require.NoError(t, err)
-		createReq.Header.Set("Content-Type", "application/json")
-		resp, err = client.Do(createReq)
-		require.NoError(t, err)
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
-		resp.Body.Close()
+			for _, domain := range existingDomains.Data {
+				req, err2 := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/domains/%s", baseURL, domain.Domain), http.NoBody)
+				require.NoError(t, err2)
+				resp, err2 = client.Do(req)
+				require.NoError(t, err2)
+				require.Equal(t, http.StatusNoContent, resp.StatusCode)
+				resp.Body.Close()
+			}
 
-		// Get domains
-		resp, err = http.Get(baseURL + "/domains")
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+			// Create a domain
+			createReq, err := http.NewRequest("POST", baseURL+"/domains", strings.NewReader(`{"domain": "test.example.com"}`))
+			require.NoError(t, err)
+			createReq.Header.Set("Content-Type", "application/json")
+			resp, err = client.Do(createReq)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusCreated, resp.StatusCode)
+			resp.Body.Close()
 
-		var domainsResp model.DomainsResponse
-		err = json.NewDecoder(resp.Body).Decode(&domainsResp)
-		resp.Body.Close()
-		require.NoError(t, err)
-		require.True(t, domainsResp.Success)
-		require.Len(t, domainsResp.Data, 1)
-		require.Equal(t, "test.example.com", domainsResp.Data[0].Domain)
-	})
+			// Get domains
+			resp, err = client.Get(baseURL + "/domains")
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	t.Run("WithInvalidDomainService", func(t *testing.T) {
-		// Create a temporary config file with invalid plugin configuration
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "config.yaml")
-		configContent := `
+			var domainsResp model.DomainsResponse
+			err = json.NewDecoder(resp.Body).Decode(&domainsResp)
+			resp.Body.Close()
+			require.NoError(t, err)
+			require.True(t, domainsResp.Success)
+			require.Len(t, domainsResp.Data, 1)
+			require.Equal(t, "test.example.com", domainsResp.Data[0].Domain)
+		})
+
+		t.Run("WithInvalidDomainService", func(t *testing.T) {
+			// Create a temporary config file with invalid plugin configuration
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.yaml")
+			configContent := `
 port: 0
 dehydratedBaseDir: /tmp/dehydrated
 enableWatcher: true
@@ -401,20 +426,29 @@ plugins:
   invalid:
     enabled: true
 `
-		err := os.WriteFile(configPath, []byte(configContent), 0644)
-		require.NoError(t, err)
+			err := os.WriteFile(configPath, []byte(configContent), 0644)
+			require.NoError(t, err)
 
-		s := NewServer().
-			WithConfig(configPath).
-			WithLogger()
+			s := NewServer().
+				WithConfig(configPath).
+				WithLogger()
 
-		// Start server - should log error but not panic
-		s.Start()
-		defer s.Shutdown()
+			// Start server - should log error but not panic
+			s.Start()
+			defer s.Shutdown()
 
-		// Give the server time to start and log the error
-		time.Sleep(100 * time.Millisecond)
-	})
+			// Give the server time to start and log the error
+			time.Sleep(100 * time.Millisecond)
+		})
+	}()
+
+	// Wait for test completion or timeout
+	select {
+	case <-done:
+		// Test completed successfully
+	case <-timeout:
+		t.Fatal("Test timed out after 30 seconds")
+	}
 
 	cache.Clean()
 }

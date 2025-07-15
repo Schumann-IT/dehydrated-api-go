@@ -1,0 +1,15 @@
+# Server configuration
+port: 3000
+
+# Dehydrated base directory (where certificates and data are stored)
+dehydratedBaseDir: ./data
+dehydratedConfigFile: config
+
+# Enable file watcher for automatic reloading
+enableWatcher: true
+
+# Logging configuration
+logging:
+  level: debug
+  encoding: console
+  outputPath: ""
