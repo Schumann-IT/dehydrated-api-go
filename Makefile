@@ -41,8 +41,8 @@ test: $(EXAMPLE_PLUGIN_DIR)/$(EXAMPLE_PLUGIN_NAME)/$(EXAMPLE_PLUGIN_NAME) ## Run
 test-scripts: ## Run script tests
 	@./scripts/test-update-config.sh
 
-test-coverage: $(COVERAGE_FILE) ## Show coverage report
-	@go test -v -coverprofile=$(COVERAGE_FILE) -coverpkg=./cmd/...,./internal/...,./plugin/proto/config.go,./plugin/proto/metadata.go,./plugin/server/...
+test-coverage: ## Show coverage report
+	@go test -v -coverprofile=$(COVERAGE_FILE) -v ./...
 	@go tool cover -html=$(COVERAGE_FILE)
 
 lint: ## Run linter

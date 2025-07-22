@@ -161,7 +161,32 @@ auth:
   allowedAudiences:
     - "https://graph.microsoft.com"
     - "https://your-domain.com/your-client-id"
+  # Enable JWT signature validation (recommended for production)
+  enableSignatureValidation: true
+  # Key cache TTL (e.g., "24h", "1h", "30m")
+  keyCacheTTL: "24h"
 ```
+
+#### JWT Signature Validation
+
+The authentication system now supports **JWT signature validation** for enhanced security:
+
+- **Enabled by default**: Signature validation is enabled by default for production use
+- **Azure AD integration**: Automatically fetches and caches public keys from Azure AD
+- **Configurable caching**: Keys are cached for 24 hours by default (configurable)
+- **Fallback mode**: Can be disabled to use claim-based validation only
+
+**Security Modes:**
+
+1. **Full Validation (Recommended)**: `enableSignatureValidation: true`
+   - Validates JWT signature using Azure AD public keys
+   - Validates all claims (expiration, audience, issuer)
+   - Provides maximum security
+
+2. **Claim-Only Validation**: `enableSignatureValidation: false`
+   - Validates claims only (expiration, audience, issuer)
+   - Does not validate cryptographic signature
+   - Suitable for development/testing environments
 
 ### Configuration Options
 
@@ -173,6 +198,8 @@ auth:
 | `logging.level`      | string | `info`    | Log level (debug, info, warn, error) |
 | `logging.encoding`   | string | `console` | Log encoding (console, json)         |
 | `logging.outputPath` | string | `""`      | Log file path (empty for stdout)     |
+| `auth.enableSignatureValidation` | bool | true | Enable JWT signature validation |
+| `auth.keyCacheTTL`   | string | `24h`     | Key cache time-to-live |
 
 ## 🔌 Plugin System
 

@@ -1,30 +1,23 @@
-# Simple configuration file for dehydrated-api-go (no plugins)
-# Mount this file to /data/dehydrated/config.yaml in the container
-
-# Server configuration
 port: 3000
-
-# Dehydrated base directory (where certificates and data are stored)
 dehydratedBaseDir: ./data
-
-# Enable file watcher for automatic reloading
 enableWatcher: false
-
-# Logging configuration
 logging:
   level: debug
   encoding: console
   outputPath: ""
 
-# Azure AD authentication configuration using Microsoft Graph
+# Azure AD authentication configuration using Custom API
 auth:
   # The Azure AD tenant ID
   tenantId: "cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
-  # Microsoft Graph resource ID
-  clientId: "00000003-0000-0000-c000-000000000000"
+  # The API application ID (resource)
+  clientId: "ed30460e-b740-48c6-ad60-06fa2231d053"
   # The authority URL for Azure AD
   authority: "https://login.microsoftonline.com/cbad5bb1-018a-4ff8-bbba-cdbc0c575788"
   # List of allowed audience values in the JWT token
   allowedAudiences:
-    - "https://graph.microsoft.com"
-    - "https://schumann-it.com/00000003-0000-0000-c000-000000000000"
+    - "api://ed30460e-b740-48c6-ad60-06fa2231d053"
+  # Enable JWT signature validation (recommended for production)
+  enableSignatureValidation: true
+  # Key cache TTL (e.g., "24h", "1h", "30m")
+  keyCacheTTL: "24h"
